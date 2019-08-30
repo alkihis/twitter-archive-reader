@@ -46,7 +46,7 @@ const INITIAL_VALIDATORS: TweetSearchValidator[] = [
       let tns = query.split('|');
 
       if (tns && tns.length) {
-        tns = tns.map(e => e.startsWith('@') ? e.split('@', 2)[1] : e);
+        tns = tns.map(e => e.trim()).map(e => e.startsWith('@') ? e.split('@', 2)[1] : e);
 
         return tweet => {
           // If one of the tns verify
@@ -73,7 +73,7 @@ const INITIAL_VALIDATORS: TweetSearchValidator[] = [
       let tns = query.split('|');
 
       if (tns && tns.length) {
-        tns = tns.map(e => e.startsWith('@') ? e.split('@', 2)[1] : e);
+        tns = tns.map(e => e.trim()).map(e => e.startsWith('@') ? e.split('@', 2)[1] : e);
 
         return tweet => {
           return !!tweet.retweeted_status && tns.some(tn => {
@@ -89,20 +89,43 @@ const INITIAL_VALIDATORS: TweetSearchValidator[] = [
 ];
 
 const INITIAL_STATIC: { [staticName: string]: TweetSearchStaticValidator } = {
-  retweet_only: tweet => !!tweet.retweeted_status,
+  retweets_only: tweet => !!tweet.retweeted_status,
+  no_retweets: tweet => !tweet.retweeted_status,
   medias_only: tweet => isWithMedia(tweet),
   videos_only: tweet => isWithVideo(tweet),
-}
+};
 
-export const TweetSearcher = new class {
+export const TweetSearcher = new class TweetSearcher {
+  /**
+   * Keywords to use in search query.
+   * Each keyword represents a pair **keyword**:**content**.
+   * 
+   * Keywords are used to add search parameters (conditions) that requires a user input
+   * (like tweets before a specific date, retweets of a desired user...).
+   * 
+   * If you want to add a condition that is static (test if is a retweet,
+   * test if tweet has medias...), see `.static_validators`.
+   * 
+   * See how to add keywords in `TweetSearchValidator` interface.
+   */
   validators: TweetSearchValidator[] = INITIAL_VALIDATORS;
+
+  /**
+   * Defined "static validators": Validators that does not depends on user query,
+   * like test if a tweet is a retweet or keep only tweets with medias.
+   * 
+   * Validators are represented by its name (in key) 
+   * and the validator itself (the check function, in value).
+   * 
+   * You can use them when you search tweets by specifing the static validators names
+   * in the `static_validators` parameter of `search()` method.
+   */
   static_validators: { [staticName: string]: TweetSearchStaticValidator } = INITIAL_STATIC;
 
   /**
-   * Search into {tweets} parameters using {query}.
-   * Query is converted to regex if {is_regex}==true, 
-   * after keywords are removed from the query.
+   * Search into **tweets** using **query**.
    * 
+   * Query can contain keywords.
    * Default available keywords are:
    * - `since:{YYYY-MM-DD}`
    * - `until:{YYYY-MM-DD}`
@@ -112,39 +135,80 @@ export const TweetSearcher = new class {
    * To be in the result array, a tweet must validate ALL the keywords.
    * 
    * You can add your custom validators by pushing 
-   * to **this.validators** a **TweetSearchValidator** variable.
+   * to **this.validators** a object implementing `TweetSearchValidator`.
    * 
    * @param tweets Partial tweets array.
    * @param query String to be searched for in the tweet.text
    * @param is_regex If the string should be considered as a regex during text.match or not.
-   * @param static_validators Array of static validators names that should used.
+   * - If **is_regex** is `true`, regex will be enabled without flags.
+   * - If **is_regex** is `false`, **query** will be regex escaped.
+   * - If **is_regex** is a `String`, regex will be enabled with **is_regex** as flags.
    * 
-   * @throws Format "{keyword}: Invalid query" if user input is invalid
+   * Validators inside the query, such as `since:2018-01-01` will be removed from the query regex/string.
+   * 
+   * @param static_validators Array of static validators names that should used. 
+   * See `.static_validators`.
+   * 
+   * Default defined static validators are:
+   * - `retweets_only`
+   * - `medias_only`
+   * - `videos_only`
+   * - `no_retweets`
+   * 
+   * @param search_in Tweet properties to search. This is NOT dynamic you can't specify the property you want.
+   * Available properties are:
+   * - `text`
+   * - `user.screen_name`
+   * - `user.name`
+   * 
+   * Default activated properties are `text` and `user.screen_name`.
+   * 
+   * @throws Format `{keyword}: Invalid query` if user input is invalid
    * for a specific validator.
    * 
-   * @throws "Validator {name} does not exists" when a invalid static validator is used.
+   * @throws `Validator {name} does not exists` when a invalid static validator is used.
    */
-  searchIntoTweets(tweets: PartialTweet[], query: string, is_regex: boolean = false, static_validators: string[] = []) {
+  search(
+    tweets: PartialTweet[], 
+    query: string, 
+    is_regex: boolean | string = false, 
+    static_validators: string[] = [],
+    search_in: string[] = ["text", "user.screen_name"]
+  ) {
     // Search for keywords
     const validators: ((tweet: PartialTweet) => boolean)[] = [];
 
+    // Iterating over validators
     for (const { keyword, validator } of this.validators) {
+      // Looking for keyword
       const kw_reg = new RegExp(keyword + ':(\\S+)');
 
       let res: RegExpMatchArray = kw_reg.exec(query);
+
+      // If match found
       while (res && res[1]) {
+        // Deleting the keyword:value of the query
         query = query.replace(new RegExp(kw_reg), '').trim();
-        const v = validator(res[1]);
+        let v: ValidatorExecFunction;
+
+        // Generate the validator
+        try {
+          v = validator(res[1]);
+        } catch (e) {}
 
         if (!v) {
           throw new Error(keyword + ": Invalid query");
         }
         
+        // Store the validator
         validators.push(v);
+
+        // Re-execute the regex (if same keyword presents multiple times)
         res = kw_reg.exec(query);
       }
     }
 
+    // Add user choosen static validators to validators
     for (const v of static_validators) {
       if (v in this.static_validators) {
         validators.push(this.static_validators[v]);
@@ -154,31 +218,52 @@ export const TweetSearcher = new class {
       }
     }
 
-    const result: PartialTweet[] = [];
+    // Building regex
+    const flags = typeof is_regex === 'string' ? is_regex : undefined;
+    const regex_search = query ? new RegExp(is_regex !== false ? query.trim() : escapeRegExp(query), flags) : null;
 
-    const regex_search = query ? new RegExp(is_regex ? query.trim() : escapeRegExp(query)) : null;
+    const results: PartialTweet[] = [];
+
+    // Search for desired properties
+    const [search_text, search_name, search_sn] = [
+      search_in.includes("text"), 
+      search_in.includes("user.name"), 
+      search_in.includes("user.screen_name")
+    ];
 
     for (const t of tweets) {
+      // Each validator must be verified
       if (validators.every(v => v(t))) {
+        // If a query exists (user can just have typed keywords)
         if (regex_search) {
-          if (regex_search.test(t.text)) {
-            result.push(t);
+          // Test desired property
+          if (search_text && regex_search.test(t.text)) {
+            results.push(t);
+          }
+          else if (search_name && regex_search.test(t.user.name)) {
+            results.push(t);
+          }
+          else if (search_sn && regex_search.test(t.user.screen_name)) {
+            results.push(t);
           }
         }
         else {
-          result.push(t);
+          results.push(t);
         }
       }
     }
 
-    return result;
+    return results;
   }
 
+  /** Reset validators. This does NOT work if you have modified the inner initial objects ! */
   reset() {
     this.validators = INITIAL_VALIDATORS;
     this.static_validators = INITIAL_STATIC;
   }
 };
+
+export default TweetSearcher;
 
 export interface TweetSearchValidator {
   /** 
@@ -194,12 +279,42 @@ export interface TweetSearchValidator {
    * You should verify user-input stored inside {user_query}. 
    * 
    * If the return type is null-ish (`undefined`, `null`, `false`,...), search will be **aborted**
-   * with **unwell-formed query error**.
+   * with thrown **unwell-formed query error**.
+   * 
+   * ---
+   * 
+   * For example, if you want to validate tweets that are above a date
+   * entered by the user, with the schema: `keyword:YYYY-MM-DD`,
+   * `YYYY-MM-DD` entered by the user will be given in parameter to this attribute (`.validator`),
+   * which should return a function that test if the tweet date is above user entered `YYYY-MM-DD`.
+   * 
+   * **EXAMPLE**
+   * 
+   * *Do not use this example in real case, it does not check well user input.*
+   * 
+   * ```ts
+   * validator: user_query => {
+   *  // Parse user input
+   *  const time = (new Date(user_query)).getTime();
+   * 
+   *  // Check some data validity
+   *  if (isNaN(time)) {
+   *    // Data could not be used, validator is invalid, returns undefined.
+   *    // This will throw an Error.
+   *    return undefined;
+   *  }
+   *  
+   *  // Return the validator function that returns true if tweet date >= user's date.
+   *  return tweet => dateFromTweet(tweet).getTime() >= time;
+   * }
+   * ```
    */
-  validator: (user_query: string) => ((tweet: PartialTweet) => boolean);
+  validator: (user_query: string) => ValidatorExecFunction;
 }
 
-export type TweetSearchStaticValidator = (tweet: PartialTweet) => boolean;
+type ValidatorExecFunction = (tweet: PartialTweet) => boolean;
+
+export type TweetSearchStaticValidator = ValidatorExecFunction;
 
 function escapeRegExp(string: string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string

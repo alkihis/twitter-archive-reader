@@ -1,0 +1,4 @@
+# .npmignore
+node_modules
+test_dir
+js/test.js

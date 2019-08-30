@@ -116,6 +116,14 @@ class Archive {
   }
 }
 
+/**
+ * Represents a full TwitterArchive. Support GDPR and classic archive.
+ * 
+ * Remember that tweets, in searchs in particular are **NOT** sorted.
+ * 
+ * Direct messages, parsed if archive is a GDPR archive, stored in `.messages`, 
+ * are returned and sorted from the most older to the more recent.
+ */
 export class TwitterArchive {
   protected _ready: Promise<void> = Promise.resolve();
   protected archive: Archive;

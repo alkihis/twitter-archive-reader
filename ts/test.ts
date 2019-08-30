@@ -2,6 +2,7 @@ import commander from 'commander';
 import { TwitterArchive } from './Archive';
 import { readFileSync, writeFileSync } from 'fs';
 import { inspect } from 'util';
+import TweetSearcher from './TweetSearcher';
 
 commander
   .option('-f, --file <zipFile>', "Archive ZIP to load")
@@ -33,10 +34,20 @@ const write = (name: string, data: any) => {
   console.log(archive.length, "tweets in archive");
 
   console.log("Search test: trying to find 'hello', case insensitive");
-  console.log("archive.all.filter(e => /hello/i.test(e.text))");
   const res = archive.all.filter(e => /hello/i.test(e.text));
   console.log(res.length, "results");
   write('search', res);
+
+  // Advanced search
+  console.log("Search test: trying to find retweets containing 'lgbt' since 2016/01/01 and until 2019/02/01, case insensitive");
+  const res2 = TweetSearcher.search(archive.all, "since:2016-01-01 until:2019-02-01 lgbt", "i", ["retweets_only"]);
+  console.log(res2.length, "results");
+  write('adv_search', res2);
+
+  console.log("Search test: trying to find tweets (only) containing 'bonjour' at the beginning of the tweet, before 2018/03/25, case insensitive");
+  const res3 = TweetSearcher.search(archive.all, "until:2018-03-25 ^bonjour", "i", ["no_retweets"]);
+  console.log(res3.length, "results");
+  write('adv_search2', res3);
 
   // Tweets archive does NOT provide search functions except date helpers:
   // Because there is tons of fields in tweets and you can search in all of them.
