@@ -9,10 +9,24 @@ export function dateFromTweet(tweet: PartialTweet) : Date {
   return tweet.created_at_d = new Date(tweet.created_at);
 }
 
+export function isWithMedia(tweet: PartialTweet) {
+  return tweet.entities.media.length > 0;
+}
+
+export function isWithVideo(tweet: PartialTweet) {
+  if (tweet.extended_entities) {
+    if (tweet.extended_entities.media) {
+      return tweet.extended_entities.media.some(m => m.type !== "photo");
+    }
+  }
+
+  return false;
+}
+
 export type AcceptedZipSources = string | number[] | Uint8Array | ArrayBuffer | Blob | NodeJS.ReadableStream | JSZip;
 
 class Archive {
-  protected _ready: Promise<void> = Promise.reject();
+  protected _ready: Promise<void> = Promise.resolve();
   protected archive: JSZip;
 
   constructor(file: AcceptedZipSources) {
@@ -103,7 +117,7 @@ class Archive {
 }
 
 export class TwitterArchive {
-  protected _ready: Promise<void> = Promise.reject();
+  protected _ready: Promise<void> = Promise.resolve();
   protected archive: Archive;
 
   protected _index: ArchiveIndex = {
@@ -233,8 +247,8 @@ export class TwitterArchive {
     // Gérer le cas des retweets
     const rt_data = /^RT @(.+): (.+)/.exec(tweet.full_text);
 
-    if (rt_data.length) {
-      const [arobase, text] = rt_data;
+    if (rt_data && rt_data.length) {
+      const [, arobase, text] = rt_data;
       const rt = Object.assign({}, tweet) as unknown as PartialTweet;
       rt.user = Object.assign({}, rt.user);
 
