@@ -1,0 +1,21 @@
+{
+  "name": "twitter-archive-reader",
+  "version": "1.0.0",
+  "description": "",
+  "main": "js/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Louis Béranger",
+  "license": "CC BY-SA 4.0",
+  "repository": "https://github.com/alkihis/twitter-archive-reader",
+  "bugs": "https://github.com/alkihis/twitter-archive-reader/issues",
+  "dependencies": {
+    "jszip": "^3.2.2",
+    "twitter-d": "^0.4.0"
+  },
+  "devDependencies": {
+    "@types/jszip": "^3.1.6",
+    "commander": "^3.0.1"
+  }
+}
