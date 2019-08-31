@@ -1,6 +1,26 @@
 import JSZip from 'jszip';
-import { ArchiveIndex, PartialTweetGDPR, PartialTweet, AccountGDPR, ProfileGDPR, ClassicTweetIndex, ClassicPayloadDetails, TwitterUserDetails, DMFile, PartialTweetUser } from './TwitterTypes';
+import { ArchiveIndex, PartialTweetGDPR, PartialTweet, AccountGDPR, ProfileGDPR, ClassicTweetIndex, ClassicPayloadDetails, TwitterUserDetails, DMFile, PartialTweetUser, GDPRFollowings, GDPRFollowers, GDPRFavorites, GDPRMutes, InnerGDPRPersonalization, GPDRScreenNameHistory, GPDRProtectedHistory, GDPRBlocks, GDPRAgeInfo, InnerGDPRAgeInfo, GDPRMoment, GDPRMomentFile } from './TwitterTypes';
 import DMArchive from './DMArchive';
+
+export type AcceptedZipSources = string | number[] | Uint8Array | ArrayBuffer | Blob | NodeJS.ReadableStream | JSZip;
+
+export interface ExtendedGDPRInfo {
+  followers: Set<string>;
+  followings: Set<string>;
+  favorites: Set<string>;
+  mutes: Set<string>;
+  blocks: Set<string>;
+  lists: {
+    created: string[];
+    member_of: string[];
+    subscribed: string[];
+  };
+  personalization: InnerGDPRPersonalization;
+  screen_name_history: GPDRScreenNameHistory[];
+  protected_history: GPDRProtectedHistory[];
+  age_info: InnerGDPRAgeInfo;
+  moments: GDPRMoment[];
+}
 
 export function dateFromTweet(tweet: PartialTweet) : Date {
   if (tweet.created_at_d) {
@@ -22,8 +42,6 @@ export function isWithVideo(tweet: PartialTweet) {
 
   return false;
 }
-
-export type AcceptedZipSources = string | number[] | Uint8Array | ArrayBuffer | Blob | NodeJS.ReadableStream | JSZip;
 
 class Archive {
   protected _ready: Promise<void> = Promise.resolve();
@@ -128,6 +146,8 @@ export class TwitterArchive {
   protected _ready: Promise<void> = Promise.resolve();
   protected archive: Archive;
 
+  extended_gdpr: ExtendedGDPRInfo;
+
   protected _index: ArchiveIndex = {
     info: {
       screen_name: "",
@@ -151,13 +171,13 @@ export class TwitterArchive {
 
   protected user_cache: PartialTweetUser;
 
-  constructor(file: AcceptedZipSources) {
+  constructor(file: AcceptedZipSources, build_extended = false) {
     this.archive = new Archive(file);
     this._ready = this.archive.ready()
       .then(() => {
         // Initialisation de l'archive Twitter
         if (this.isGDPRArchive()) {
-          return this.initGDPR();
+          return this.initGDPR(build_extended);
         }
         else {
           return this.initClassic();
@@ -165,7 +185,7 @@ export class TwitterArchive {
       });
   }
 
-  protected async initGDPR() {
+  protected async initGDPR(extended = false) {
     // Init informations
     const account_arr: AccountGDPR = await this.archive.get('account.js');
     const profile_arr: ProfileGDPR = await this.archive.get('profile.js');
@@ -236,6 +256,89 @@ export class TwitterArchive {
     }
     // DMs should be ok
 
+    if (extended) {
+      await this.initExtendedGDPR();
+    }
+  }
+
+  protected async initExtendedGDPR() {
+    // Followings
+    const f_following: GDPRFollowings = await this.archive.get('following.js');
+    const followings = new Set<string>();
+    for (const f of f_following) {
+      followings.add(f.following.accountId);
+    }
+
+    // Followers
+    const f_follower: GDPRFollowers = await this.archive.get('follower.js');
+    const followers = new Set<string>();
+    for (const f of f_follower) {
+      followers.add(f.follower.accountId);
+    }
+
+    // Favorites
+    const f_fav: GDPRFavorites = await this.archive.get('like.js');
+    const favorites = new Set<string>();
+    for (const f of f_fav) {
+      favorites.add(f.like.tweetId);
+    }
+
+    // Mutes
+    const f_mutes: GDPRMutes = await this.archive.get('mute.js');
+    const mutes = new Set<string>();
+    for (const f of f_mutes) {
+      mutes.add(f.muting.accountId);
+    }
+
+    // Blocks
+    const f_block: GDPRBlocks = await this.archive.get('block.js');
+    const blocks = new Set<string>();
+    for (const f of f_block) {
+      blocks.add(f.blocking.accountId);
+    }
+
+    // Lists
+    const lists = {
+      created: (await this.archive.get('lists-created.js'))[0].userListInfo.urls,
+      member_of: (await this.archive.get('lists-member.js'))[0].userListInfo.urls,
+      subscribed: (await this.archive.get('lists-subscribed.js'))[0].userListInfo.urls
+    };
+
+    // Personalization
+    const personalization = (await this.archive.get('personalization.js'))[0].p13nData;
+
+    const age_info = (await this.archive.get('ageinfo.js') as GDPRAgeInfo)[0].ageMeta;
+
+    // SN history
+    const f_history = await this.archive.get('screen-name-change.js') as { screenNameChange: GPDRScreenNameHistory }[];
+    const screen_name_history: GPDRScreenNameHistory[] = [];
+    for (const e of f_history) {
+      screen_name_history.push(e.screenNameChange);
+    }
+
+    // Protected history
+    const f_phistory = await this.archive.get('protected-history.js') as { protectedHistory: GPDRProtectedHistory }[];
+    const protected_history: GPDRProtectedHistory[] = [];
+    for (const e of f_phistory) {
+      protected_history.push(e.protectedHistory);
+    }
+
+    // Moments
+    const moments: GDPRMoment[] = (await this.archive.get('moment.js') as GDPRMomentFile).map(e => e.moment);
+
+    this.extended_gdpr = {
+      moments,
+      protected_history,
+      screen_name_history,
+      age_info,
+      personalization,
+      lists,
+      favorites,
+      followers,
+      followings,
+      mutes,
+      blocks
+    };
   }
 
   protected convertToPartial(tweet: PartialTweetGDPR, pic_prof: string) : PartialTweet {
@@ -400,6 +503,23 @@ export class TwitterArchive {
     }
 
     return null;
+  }
+
+  dmImage(name: string, is_group = false) : Promise<Blob> {
+    if (!this.is_gdpr) {
+      return Promise.reject("Archive not supported");
+    }
+
+    const directory = this.archive.dir(
+      is_group ? "direct_message_group_media" : "direct_message_media"
+    );
+
+    const results = directory.search(new RegExp(name + "\.(.+)$"));
+
+    if (results) {
+      return this.archive.read(results[0], "blob");
+    }
+    return Promise.reject("File not found");
   }
 
   get all() : PartialTweet[] {

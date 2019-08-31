@@ -2,6 +2,12 @@
 
 > Read data from classic Twitter archive and GDPR archive (not all features are supported)
 
+This module helps to read data from Twitter archives.
+Not all data is available, in particular in the case of the GDPR archive.
+
+This module is developed in mind to treat classic and GDPR archives the same way:
+All the data specific of the GDPR archive will be ignored (except direct messages).
+
 ## Getting started
 
 
