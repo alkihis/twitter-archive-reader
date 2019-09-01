@@ -295,10 +295,13 @@ abstract class ConversationBase {
 
 export class Conversation extends ConversationBase {
   protected info: FullConversationInfo;
+  protected unindexed: DirectMessage[] = [];
 
   /** 
    * Create a new Conversation instance, from raw GDPR conversation. 
    * Need self user_id to recognize which user is you.
+   * 
+   * Note that **.add()** is automatically call with the given conversation.
    */
   constructor(conv: GDPRConversation, me_id: string) {
     super();
@@ -310,7 +313,9 @@ export class Conversation extends ConversationBase {
 
   /** 
    * Add a new conversation part to actual conversation. 
-   * Actual conversation and new part must have the same ID ! 
+   * Actual conversation and new part must have the same ID.
+   * 
+   * After you've imported all parts, you **must** call **.indexate()** to see messages !
    */
   add(conv: GDPRConversation) {
     // TODO optimize
@@ -318,16 +323,28 @@ export class Conversation extends ConversationBase {
       throw new Error("You must add into a existing conversation a conversation with the same ID");
     }
     
+    this.unindexed.push(
+      ...conv.dmConversation.messages
+        .map(e => e.welcomeMessageCreate ? e.welcomeMessageCreate : e.messageCreate)
+        .filter(e => e) // Supprime les possibles undefined (clé messageXXX non connue)
+    );
+  }
+
+  /** 
+   * Index imported messages. 
+   * Needed to see all DMs. 
+   * 
+   * Should be call after you've imported all with **.add()**.
+   */
+  indexate() {
     const participants = new Set<string>();
 
-    const id = conv.dmConversation.conversationId;
-
     // Récupération des messages et tri par le plus vieux (ID le plus bas)
-    const msgs: DirectMessage[] | LinkedDirectMessage[] = conv.dmConversation.messages
-      .map(e => e.welcomeMessageCreate ? e.welcomeMessageCreate : e.messageCreate)
-      .filter(e => e) // Supprime les possibles undefined (clé messageXXX non connue)
-      .concat(this.all) // Ajoute le set de messages actuel (réindexe tout)
-      .sort((a, b) => Number(BigInt(a.id) - BigInt(b.id)));
+    const msgs: DirectMessage[] | LinkedDirectMessage[] = this.unindexed
+        .concat(this.all) // Ajoute le set de messages actuel (réindexe tout)
+        .sort((a, b) => Number(BigInt(a.id) - BigInt(b.id)));
+
+    this.unindexed = [];
 
     this.unregisterAll();
 
@@ -358,11 +375,7 @@ export class Conversation extends ConversationBase {
     }
 
     // Enregistrement infos
-    this.info = {
-      id,
-      participants,
-      me: this.info.me
-    };
+    this.info.participants = participants;
   }
 
   /** Conversation ID */
