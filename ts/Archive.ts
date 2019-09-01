@@ -1,6 +1,7 @@
 import JSZip from 'jszip';
 import { ArchiveIndex, PartialTweetGDPR, PartialTweet, AccountGDPR, ProfileGDPR, ClassicTweetIndex, ClassicPayloadDetails, TwitterUserDetails, DMFile, PartialTweetUser, GDPRFollowings, GDPRFollowers, GDPRFavorites, GDPRMutes, InnerGDPRPersonalization, GPDRScreenNameHistory, GPDRProtectedHistory, GDPRBlocks, GDPRAgeInfo, InnerGDPRAgeInfo, GDPRMoment, GDPRMomentFile } from './TwitterTypes';
 import DMArchive from './DMArchive';
+import { EventTarget, defineEventAttribute } from 'event-target-shim';
 
 export type AcceptedZipSources = string | number[] | Uint8Array | ArrayBuffer | Blob | NodeJS.ReadableStream | JSZip;
 
@@ -134,6 +135,28 @@ class Archive {
   }
 }
 
+type TwitterArchiveEvents = {
+  zipready: CustomEvent<void>;
+  userinfosready: CustomEvent<void>;
+  tweetsread: CustomEvent<void>;
+  indexready: CustomEvent<void>;
+  willreaddm: CustomEvent<void>;
+  willreadextended: CustomEvent<void>;
+  ready: CustomEvent<void>;
+  error: CustomEvent<any>;
+};
+
+type TwitterArchiveOnEvents = {
+  onzipready: CustomEvent<void>;
+  onuserinfosready: CustomEvent<void>;
+  ontweetsread: CustomEvent<void>;
+  onindexready: CustomEvent<void>;
+  onwillreaddm: CustomEvent<void>;
+  onwillreadextended: CustomEvent<void>;
+  onready: CustomEvent<void>;
+  onerror: CustomEvent<any>;
+};
+
 /**
  * Represents a full TwitterArchive. Support GDPR and classic archive.
  * 
@@ -142,7 +165,7 @@ class Archive {
  * Direct messages, parsed if archive is a GDPR archive, stored in `.messages`, 
  * are returned and sorted from the most older to the more recent.
  */
-export class TwitterArchive {
+export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArchiveOnEvents> {
   protected _ready: Promise<void> = Promise.resolve();
   protected archive: Archive;
 
@@ -172,9 +195,13 @@ export class TwitterArchive {
   protected user_cache: PartialTweetUser;
 
   constructor(file: AcceptedZipSources, build_extended = false) {
+    super();
+
     this.archive = new Archive(file);
     this._ready = this.archive.ready()
       .then(() => {
+        this.dispatchEvent(new CustomEvent('zipready'));
+
         // Initialisation de l'archive Twitter
         if (this.isGDPRArchive()) {
           return this.initGDPR(build_extended);
@@ -182,6 +209,13 @@ export class TwitterArchive {
         else {
           return this.initClassic();
         }
+      })
+      .then(() => {
+        this.dispatchEvent(new CustomEvent('ready'));
+      })
+      .catch(e => {
+        this.dispatchEvent(new CustomEvent('error', { detail: e }));
+        return Promise.reject(e);
       });
   }
 
@@ -201,6 +235,8 @@ export class TwitterArchive {
       created_at: account.createdAt
     };
 
+    this.dispatchEvent(new CustomEvent('userinfosready'));
+
     // Init tweet indexes
     const tweets: PartialTweetGDPR[] = await this.archive.get('tweet.js');
 
@@ -211,6 +247,8 @@ export class TwitterArchive {
       tweets.push(...(await this.archive.get(`tweet-part${i}.js`)));
       i++;
     }
+
+    this.dispatchEvent(new CustomEvent('tweetsread'));
 
     // Build index
     for (let i = 0; i < tweets.length; i++) {
@@ -234,11 +272,15 @@ export class TwitterArchive {
       this.index.by_id[tweets[i].id_str] = converted;
     }
 
+    this.dispatchEvent(new CustomEvent('indexready'));
+
     // Register info
     this._index.archive.tweets = tweets.length;
 
     // Init DMs
     this.dms = new DMArchive(this.owner);
+
+    this.dispatchEvent(new CustomEvent('willreaddm'));
     
     const conversations: DMFile = await this.archive.get('direct-message.js');
     this.dms.add(conversations);
@@ -255,6 +297,8 @@ export class TwitterArchive {
       this.dms.add(await this.archive.get('direct-message-group.js') as DMFile);
     }
     // DMs should be ok
+
+    this.dispatchEvent(new CustomEvent('willreadextended'));
 
     if (extended) {
       await this.initExtendedGDPR();
@@ -390,6 +434,8 @@ export class TwitterArchive {
     this.index.info = user;
     this.index.archive = payload;
 
+    this.dispatchEvent(new CustomEvent('userinfosready'));
+
     const files_to_read = index.map(e => e.file_name);
 
     const tweets: PartialTweet[] = [];
@@ -397,6 +443,8 @@ export class TwitterArchive {
     for (const file of files_to_read) {
       tweets.push(...await this.archive.get(file) as PartialTweet[]);
     }
+
+    this.dispatchEvent(new CustomEvent('tweetsread'));
 
     // Build index (read tweets)
     for (let i = 0; i < tweets.length; i++) {
@@ -418,6 +466,8 @@ export class TwitterArchive {
       this.index.years[year][month][tweets[i].id_str] = tweets[i];
       this.index.by_id[tweets[i].id_str] = tweets[i];
     }
+
+    this.dispatchEvent(new CustomEvent('indexready'));
   }
 
   protected isGDPRArchive() {
@@ -565,3 +615,13 @@ export class TwitterArchive {
     return this._ready;
   }
 }
+
+// Define onevents
+defineEventAttribute(TwitterArchive.prototype, "zipready");
+defineEventAttribute(TwitterArchive.prototype, "userinfosready");
+defineEventAttribute(TwitterArchive.prototype, "tweetsread");
+defineEventAttribute(TwitterArchive.prototype, "indexready");
+defineEventAttribute(TwitterArchive.prototype, "willreaddm");
+defineEventAttribute(TwitterArchive.prototype, "willreadextended");
+defineEventAttribute(TwitterArchive.prototype, "ready");
+defineEventAttribute(TwitterArchive.prototype, "error");
