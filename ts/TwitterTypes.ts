@@ -335,44 +335,46 @@ export interface PartialTweet {
   created_at: string;
   created_at_d?: Date;
   user: PartialTweetUser;
-  entities: {
-    user_mentions: {
-      name: string;
-      screen_name: string;
-      indices: [number, number];
-      id_str: string;
-    }[],
-    media: {
-      expanded_url: string;
-      indices: [number, number];
-      url: string;
-      /** URL TO USE TO SHOW PICTURE */
-      media_url_https: string;
-      /** USE media_url_https INSTEAD */
-      media_url: string;
-      id_str: string;
-      sizes: {
-        h: number;
-        w: number;
-        resize: "fit" | "crop";
-      }[];
-      media_alt: string;
-      display_url: string;
-    }[];
-    hashtags: {
-      text: string;
-      indices: [number, number];
-    }[];
-    urls: {
-      indices: [number, number];
-      url: string;
-      expanded_url: string;
-      display_url: string;
-    }[];
-  };
+  entities: PartialTweetEntity;
   extended_entities?: {
     media?: MediaGDPREntity[];
   }
+}
+
+export interface PartialTweetEntity {
+  user_mentions: {
+    name: string;
+    screen_name: string;
+    indices: [number, number];
+    id_str: string;
+  }[],
+  media: {
+    expanded_url: string;
+    indices: [number, number];
+    url: string;
+    /** URL TO USE TO SHOW PICTURE */
+    media_url_https: string;
+    /** USE media_url_https INSTEAD */
+    media_url: string;
+    id_str: string;
+    sizes: {
+      h: number;
+      w: number;
+      resize: "fit" | "crop";
+    }[];
+    media_alt: string;
+    display_url: string;
+  }[];
+  hashtags: {
+    text: string;
+    indices: [number, number];
+  }[];
+  urls: {
+    indices: [number, number];
+    url: string;
+    expanded_url: string;
+    display_url: string;
+  }[];
 }
 
 export interface PartialTweetUser {
