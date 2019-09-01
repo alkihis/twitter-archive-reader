@@ -281,6 +281,11 @@ abstract class ConversationBase {
   get raw_index() : DirectMessageDateIndex {
     return this.index_by_date;
   }
+
+  /** Number of messages in this conversation */
+  get length() {
+    return this.all.length;
+  }
 }
 
 export class Conversation extends ConversationBase {

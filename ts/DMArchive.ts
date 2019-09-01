@@ -24,6 +24,20 @@ export class DMArchive {
   get all() {
     return Object.values(this.index);
   }
+
+  /** Message count */
+  get count() {
+    let c = 0;
+    for (const conv of this.all) {
+      c += conv.length;
+    }
+    return c;
+  }
+
+  /** Conversation count */
+  get length() {
+    return this.all.length;
+  }
 }
 
 export default DMArchive;
