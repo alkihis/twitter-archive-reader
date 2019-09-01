@@ -21,6 +21,9 @@ const write = (name: string, data: any) => {
 
   console.log("Archive ok");
 
+  console.log(archive.messages.count);
+  return;
+
   // List the 30 first tweets in the archive
   write('30_first', archive.all.slice(0, 5));
 

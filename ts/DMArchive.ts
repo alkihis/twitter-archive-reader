@@ -11,14 +11,24 @@ export class DMArchive {
   add(convs: DMFile) {
     for (const conv of convs) {
       if (conv.dmConversation.messages.length) {
-        const tmp = new Conversation(conv, this.me_id);
-        this.index[tmp.id] = tmp;
+        if (this.has(conv.dmConversation.conversationId)) {
+          const c = this.get(conv.dmConversation.conversationId);
+          c.add(conv);
+        }
+        else {
+          const tmp = new Conversation(conv, this.me_id);
+          this.index[tmp.id] = tmp;
+        }
       }
     }
   }
 
   get(id: string) {
     return this.index[id];
+  }
+
+  has(id: string) {
+    return id in this.index;
   }
 
   get all() {

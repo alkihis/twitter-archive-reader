@@ -57,19 +57,24 @@ abstract class ConversationBase {
       msg.createdAtDate.getFullYear()
     ];
 
-    if (!(year in this.index_by_date)) {
+    if (!this.index_by_date[year]) {
       this.index_by_date[year] = {};
     }
 
-    if (!(month in this.index_by_date[year])) {
+    if (!this.index_by_date[year][month]) {
       this.index_by_date[year][month] = {};
     }
 
-    if (!(day in this.index_by_date[year][month])) {
+    if (!this.index_by_date[year][month][day]) {
       this.index_by_date[year][month][day] = {};
     }
 
     this.index_by_date[year][month][day][msg.id] = msg;
+  }
+
+  protected unregisterAll() {
+    this._index = {},
+    this.index_by_date = {};
   }
 
   /** Get direct messages from a specific month. */
@@ -297,6 +302,22 @@ export class Conversation extends ConversationBase {
    */
   constructor(conv: GDPRConversation, me_id: string) {
     super();
+
+    this.info = { id: conv.dmConversation.conversationId, me: me_id, participants: new Set };
+
+    this.add(conv);
+  }
+
+  /** 
+   * Add a new conversation part to actual conversation. 
+   * Actual conversation and new part must have the same ID ! 
+   */
+  add(conv: GDPRConversation) {
+    // TODO optimize
+    if (conv.dmConversation.conversationId !== this.info.id) {
+      throw new Error("You must add into a existing conversation a conversation with the same ID");
+    }
+    
     const participants = new Set<string>();
 
     const id = conv.dmConversation.conversationId;
@@ -305,7 +326,10 @@ export class Conversation extends ConversationBase {
     const msgs: DirectMessage[] | LinkedDirectMessage[] = conv.dmConversation.messages
       .map(e => e.welcomeMessageCreate ? e.welcomeMessageCreate : e.messageCreate)
       .filter(e => e) // Supprime les possibles undefined (clé messageXXX non connue)
+      .concat(this.all) // Ajoute le set de messages actuel (réindexe tout)
       .sort((a, b) => Number(BigInt(a.id) - BigInt(b.id)));
+
+    this.unregisterAll();
 
     // Indexation (ajout d'une clé next et previous)
     let previous_message: LinkedDirectMessage | null = null;
@@ -337,7 +361,7 @@ export class Conversation extends ConversationBase {
     this.info = {
       id,
       participants,
-      me: me_id
+      me: this.info.me
     };
   }
 
