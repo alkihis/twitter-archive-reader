@@ -4,6 +4,7 @@ import DMArchive from './DMArchive';
 import { EventTarget, defineEventAttribute } from 'event-target-shim';
 
 export type AcceptedZipSources = string | number[] | Uint8Array | ArrayBuffer | Blob | NodeJS.ReadableStream | JSZip;
+export type ArchiveReadState = "idle" | "reading" | "indexing" | "tweet_read" | "user_read" | "dm_read" | "extended_read" | "ready";
 
 export interface ExtendedGDPRInfo {
   followers: Set<string>;
@@ -168,6 +169,7 @@ type TwitterArchiveOnEvents = {
 export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArchiveOnEvents> {
   protected _ready: Promise<void> = Promise.resolve();
   protected archive: Archive;
+  public state: ArchiveReadState = "idle";
 
   extended_gdpr: ExtendedGDPRInfo;
 
@@ -197,6 +199,8 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   constructor(file: AcceptedZipSources, build_extended = false) {
     super();
 
+    this.state = "reading";
+
     this.archive = new Archive(file);
     this._ready = this.archive.ready()
       .then(() => {
@@ -220,6 +224,8 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   }
 
   protected async initGDPR(extended = false) {
+    this.state = "user_read";
+
     // Init informations
     const account_arr: AccountGDPR = await this.archive.get('account.js');
     const profile_arr: ProfileGDPR = await this.archive.get('profile.js');
@@ -237,6 +243,8 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
 
     this.dispatchEvent({type: 'userinfosready'});
 
+    this.state = "tweet_read";
+
     // Init tweet indexes
     const tweets: PartialTweetGDPR[] = await this.archive.get('tweet.js');
 
@@ -249,6 +257,8 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     }
 
     this.dispatchEvent({type: 'tweetsread'});
+
+    this.state = "indexing";
 
     // Build index
     for (let i = 0; i < tweets.length; i++) {
@@ -273,13 +283,14 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     }
 
     this.dispatchEvent({type: 'indexready'});
-
+    
     // Register info
     this._index.archive.tweets = tweets.length;
-
+    
     // Init DMs
     this.dms = new DMArchive(this.owner);
-
+    
+    this.state = "dm_read";
     this.dispatchEvent({type: 'willreaddm'});
     
     const conversations: DMFile = await this.archive.get('direct-message.js');
@@ -298,11 +309,13 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     }
     // DMs should be ok
 
+    this.state = "extended_read";
     this.dispatchEvent({type: 'willreadextended'});
 
     if (extended) {
       await this.initExtendedGDPR();
     }
+    this.state = "ready";
   }
 
   protected async initExtendedGDPR() {
@@ -410,6 +423,8 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       rt.text = text;
       rt.user.screen_name = arobase;
       rt.user.name = arobase;
+      // @ts-ignore
+      rt.retweeted = true;
 
       // Recherche si un ID est disponible par exemple dans les medias (sinon tant pis)
       if (rt.extended_entities && rt.extended_entities.media) {
@@ -425,6 +440,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   }
 
   protected async initClassic() {
+    this.state = "user_read";
     const js_dir = this.archive.dir('data').dir('js');
 
     const index: ClassicTweetIndex = await js_dir.get('tweet_index.js');
@@ -440,12 +456,14 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
 
     const tweets: PartialTweet[] = [];
 
+    this.state = "tweet_read";
     for (const file of files_to_read) {
       tweets.push(...await this.archive.get(file) as PartialTweet[]);
     }
 
     this.dispatchEvent({type: 'tweetsread'});
 
+    this.state = "indexing";
     // Build index (read tweets)
     for (let i = 0; i < tweets.length; i++) {
       const date = new Date(tweets[i].created_at);
@@ -468,6 +486,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     }
 
     this.dispatchEvent({type: 'indexready'});
+    this.state = "ready";
   }
 
   protected isGDPRArchive() {
