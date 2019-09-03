@@ -21,7 +21,9 @@ const write = (name: string, data: any) => {
 
   console.log("Archive ok");
 
-  console.log(archive.messages.count);
+  //console.log(archive.messages.count);
+
+  console.log(TweetSearcher.search(archive.all, 'from:erykyu'));
   return;
 
   // List the 30 first tweets in the archive

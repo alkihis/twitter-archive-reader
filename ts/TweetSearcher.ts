@@ -46,19 +46,19 @@ const INITIAL_VALIDATORS: TweetSearchValidator[] = [
       let tns = query.split('|');
 
       if (tns && tns.length) {
-        tns = tns.map(e => e.trim()).map(e => e.startsWith('@') ? e.split('@', 2)[1] : e);
+        const regs = tns.map(e => e.trim()).map(e => e.startsWith('@') ? e.split('@', 2)[1] : e).map(e => new RegExp(e, "i"));
 
         return tweet => {
           // If one of the tns verify
-          return tns.some(tn => {
+          return regs.some(tn => {
             // If the screen name or the name contain the TN
             // Or if the screen name or the name of the retweeted tweet
             // contain the TN.
-            return tweet.user.screen_name.includes(tn) ||
-              tweet.user.name.includes(tn) ||
+            return tweet.user.screen_name.match(tn) ||
+              tweet.user.name.match(tn) ||
               (tweet.retweeted_status ? (
-                tweet.retweeted_status.user.screen_name.includes(tn) ||
-                tweet.retweeted_status.user.name.includes(tn)
+                tweet.retweeted_status.user.screen_name.match(tn) ||
+                tweet.retweeted_status.user.name.match(tn)
               ) : false);
           });
         };
@@ -73,14 +73,14 @@ const INITIAL_VALIDATORS: TweetSearchValidator[] = [
       let tns = query.split('|');
 
       if (tns && tns.length) {
-        tns = tns.map(e => e.trim()).map(e => e.startsWith('@') ? e.split('@', 2)[1] : e);
+        const rters = tns.map(e => e.trim()).map(e => e.startsWith('@') ? e.split('@', 2)[1] : e).map(e => new RegExp(e, "i"));
 
         return tweet => {
-          return !!tweet.retweeted_status && tns.some(tn => {
+          return !!tweet.retweeted_status && rters.some(tn => {
             // If tweet is a retweet and if retweets
             // belong to one of the TN
-            return tweet.retweeted_status.user.screen_name.includes(tn) ||
-              tweet.retweeted_status.user.name.includes(tn);
+            return tweet.retweeted_status.user.screen_name.match(tn) ||
+              tweet.retweeted_status.user.name.match(tn);
           });
         };
       }
