@@ -43,7 +43,7 @@ const INITIAL_VALIDATORS: TweetSearchValidator[] = [
     keyword: 'from',
     validator: query => {
       // Check if query is ok
-      let tns = query.split('|');
+      let tns = query.split(',');
 
       if (tns && tns.length) {
         const regs = tns.map(e => e.trim()).map(e => e.startsWith('@') ? e.split('@', 2)[1] : e).map(e => new RegExp(e, "i"));
@@ -70,7 +70,7 @@ const INITIAL_VALIDATORS: TweetSearchValidator[] = [
     keyword: 'retweet_of',
     validator: query => {
       // Check if query is ok
-      let tns = query.split('|');
+      let tns = query.split(',');
 
       if (tns && tns.length) {
         const rters = tns.map(e => e.trim()).map(e => e.startsWith('@') ? e.split('@', 2)[1] : e).map(e => new RegExp(e, "i"));
@@ -129,8 +129,8 @@ export const TweetSearcher = new class TweetSearcher {
    * Default available keywords are:
    * - `since:{YYYY-MM-DD}`
    * - `until:{YYYY-MM-DD}`
-   * - `from:{screen_name|screen_name_2|screen_name_3}`
-   * - `retweet_of:{screen_name} (use of | is allowed, like from:)`
+   * - `from:{screen_name,screen_name_2,screen_name_3}`
+   * - `retweet_of:{screen_name} (use of , is allowed, like from:)`
    * 
    * To be in the result array, a tweet must validate ALL the keywords.
    * 
