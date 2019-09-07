@@ -26,6 +26,14 @@ npm i twitter-archive-reader
 
 This package internally use [JSZip](https://stuk.github.io/jszip/documentation) to read ZIP archives, you can load archives in this module the same way you load them in JSZip.
 
+```ts
+// ESModules
+import TwitterArchive from 'twitter-archive-reader';
+
+// CommonJS
+const { TwitterArchive } = require('twitter-archive-reader');
+```
+
 ## Features
 
 ### For both classic and GDPR archives
@@ -49,7 +57,7 @@ This package internally use [JSZip](https://stuk.github.io/jszip/documentation) 
 
 ### Getting ready
 
-Once you've created the instance, you must the ready-ness status of the object with the `.ready()` promise.
+Once you've created the instance, you must wait for the ready-ness status of the object with the `.ready()` promise.
 
 ```ts
 // You can create TwitterArchive with all supported 
