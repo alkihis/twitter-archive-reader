@@ -1,17 +1,55 @@
 # twitter-archive-reader
 
-> Read data from classic Twitter archive and GDPR archive (not all features are supported)
+> Read data from classic Twitter archive and GDPR archive
 
 This module helps to read data from Twitter archives.
-Not all data is available, in particular in the case of the GDPR archive.
 
-This module is developed in mind to treat classic and GDPR archives the same way:
-All the data specific of the GDPR archive will be ignored (except direct messages).
+## Foreword
+
+This module is developed in mind to treat classic and GDPR archives the same way.
+
+Tweets registered in GDPR archive are not well-formed: sometimes, long tweets (140+ characters)
+are truncated (without possibility to read a longer version) and retweet data is not present.
+
+Unobtenaible data will be infereed from patterns (like tweets beginning with `RT @...` for retweets) in
+order to convert them in a classic format.
+
+Quoted tweet data are, for both types of archives, inexistant.
 
 ## Getting started
 
+Install package using NPM.
+
+```bash
+npm i twitter-archive-reader
+```
+
+This package internally use [JSZip](https://stuk.github.io/jszip/documentation) to read ZIP archives, you can load archives in this module the same way you load them in JSZip.
+
+## Features
+
+### For both classic and GDPR archives
+
+- Access tweets using date selectors (by month, interval)
+- Search in tweets with custom filters
+- Get a single tweet by ID
+- Access user data stored in archive, like screen name, name or profile picture
+- Read both classic and full GDPR archive
+
+### For GDPR archives
+
+- Access direct messages with query selectors (conversation, date, content, context around one message)
+- Access images linked to messages
+- List of favorites, blocks, mutes, followers and followings
+- Screen name history
+- Twitter moments
+- Subscribed and created lists
 
 ## Usage
+
+### Getting ready
+
+Once you've created the instance, you must the ready-ness status of the object with the `.ready()` promise.
 
 ```ts
 // You can create TwitterArchive with all supported 
@@ -23,54 +61,181 @@ console.log("Reading archive...");
 // You must wait for ZIP reading and archive object build
 await archive.ready();
 
+// Archive is ready !
+```
+
+### Tweet access
+
+Several methods exists for tweet access.
+Remember that tweets are not sorted when you access them.
+
+Tweets are returned usally in a `PartialTweet[]`. You can check defined properties in `TwitterTypes(.d).ts` file built-in the module.
+
+- `.all` getter, which returns to you all existing tweets in the archive
+
+
+```ts
 // List the 30 first tweets in the archive
 archive.all.slice(0, 30)
+```
 
+- `.between(since: Date, until: Date)`
+
+Find tweets between two dates.
+
+```ts
 // Get all the tweets sent between two dates
 archive.between(new Date("2018-01-24"), new Date("2018-02-10"));
+```
 
+- `.month(month: string, year: string)`
+
+Get all the tweets from one month.
+
+```ts
 // Get all the tweets sent in one month
 archive.month("1", "2018");
+```
 
-// Get the number of tweets stored in the archive
-archive.length;
+- `.id(id: string)`
 
-// Tweets archive does NOT provide search functions except date helpers:
-// Because there is tons of fields in tweets and you can search in all of them.
+Return the tweet with ID `id`.
 
-// DMs archive DOES provide search function and sub-objecting.
-// DMs archive is group-conversation ready.
-if (archive.is_gdpr) {
-  // List the conversations available in the archive (GDPR archive)
-  archive.messages.all
+### Properties
+
+- `.length`: Number of tweets in archive.
+- `.owner`: User ID of the archive owner.
+- `.owner_screen_name`: Screen name of the archive owner.
+- `.generation_date`: Archive creation date.
+- `.is_gdpr`: True if archive is a GDPR archive.
+- `.index`: Raw access to archive information / index. See `ArchiveIndex` interface.
+
+### GDPR archive specificities
+
+Some properties are restricted for the GDPR archive.
+
+- `.messages`: Access to the `DMArchive` instance.
+- `.extended_gdpr`: Access to GDPR's extended data (favorites, blocks...)
+
+Specific methods:
+- `.dmImage(name: string, is_group: boolean)`: Extract direct message file from its name (returns a `Promise<Blob>`).
+- `.dmImageFromUrl(url: string, is_group: boolean)`: Extract direct message file from the Twitter media URL contained in `DirectMessage` object (returns a `Promise<Blob>`).
+
+### Search in tweets
+
+A `TweetSearcher` instance is available to find tweets into `PartialTweet[]`.
+
+See its own documentation.
+
+```ts
+import { TweetSearcher } from 'twitter-archive-reader';
+
+TweetSearcher.search(archive.all, "My query");
+```
+
+### Direct messages browsing
+
+Access to the `DMArchive` object with `.messages` accessor in `TwitterArchive` instance.
+
+#### Explore direct message archive
+
+The `DMArchive` object is a container for `Conversation`s objects.
+
+Please note that every conversation may have one or more participants and the screen name of each participant is unknown. Conversation are only aware of Twitter's user identifiers.
+
+- `DMArchive.all: Conversation[]`
+
+Access to every conversation stored.
+
+```ts
+// List every conversation stored in archive
+archive.messages.all
     .map(e => `Conversation #${e.id} between #${[...e.participants].join(', #')}`)
+```
 
-  // List the 30 DMs of the first conversation
-  archive.messages.all[0].all.slice(0, 30);
+- `DMArchive.groups: Conversation[]`
 
-  const conversation = archive.messages.all[0];
-  
-  // Search for messages around a specific DM
-  conversation.around("MESSAGE_ID", 30 /* Want 30 messages before and 30 messages after */);
+Retrives the group conversations only.
 
-  // Search for messages sent in a specific date
-  conversation.between(new Date("2019-01-01"), new Date("2019-02-04"));
+- `DMArchive.directs: Conversation[]`
 
-  // Search for messages between two specific DMs
-  conversation.between("MESSAGE_ID", "MESSAGE_2_ID");
-  
-  // Search for messages having specific text (use a RegExp to validate)
-  conversation.find(/Hello !/i);
+Retrives the directs (between less or equal than two users) conversations.
 
-  // Search for messages received by a specific user
-  conversation.recipient("USER_ID");
+- `DMArchive.count: number`
 
-  // Every truncature method [.find(), .between(), .month(), .sender(), .recipient()]
-  // returns a sub-object (SubConversation) that have his own index and own methods.
-  // This allow you to chain methods:
-  conversation
-    .find(/Hello/i)
-    .between(new Date("2019-01-01"), new Date("2019-02-01"))
-    .recipient(["MY_USER_1", "MY_USER_2"]);
+Number of messages in this archive.
+
+- `DMArchive.length: number`
+
+Number of conversations in this archive.
+
+#### Explore conversations
+
+Once you've get a conversation with `DMArchive`, you have access to its messages.
+Note that some filtering methods returns a `SubConversation` object, that expose the same public methods that `Conversation`.
+
+`Conversation` give access to included some `LinkedDirectMessage`s, that hold the data of one message.
+
+Specificity of `LinkedDirectMessage`s is that they keep a reference of the message before (in time relativity) and after them, in the `.previous` and `.next` properties.
+
+- `Conversation.all: LinkedDirectMessage[]`
+
+Basic access to every direct message stored in current `Conversation`.
+
+- `Conversation.find(query: RegExp): SubConversation`
+
+Find direct messages using a query. Return a filtered conversation.
+
+```ts
+// Search for messages having specific text (use a RegExp to validate)
+conversation.find(/Hello !/i);
+```
+
+- `Conversation.month(month: string, year: string): SubConversation`
+
+Get a subconversation containing all the messages of a specific month.
+
+- `Conversation.sender(ids: string | string[]): SubConversation`
+
+Find direct messages sender by a specific user ID. Return a filtered conversation.
+
+- `Conversation.recipient(ids: string | string[]): SubConversation`
+
+Find direct messages recieved by a specific user ID. Return a filtered conversation.
+
+- `Conversation.between(since: Date, until: Date): SubConversation`
+
+Find direct messages send between two dates. Return a filtered conversation.
+
+```ts
+// Search for messages sent in a specific date
+conversation.between(new Date("2019-01-01"), new Date("2019-02-04"));
+```
+
+- `Conversation.around(id: string, context?: number)`
+
+Find context around a direct message. Returns a object containing the n-before and the n-after messages asked with *context*.
+
+```ts
+conversation.around("19472928432");
+
+=> {
+  before: LinkedDirectMessage[],
+  current: LinkedDirectMessage,
+  after: LinkedDirectMessage[]
 }
+```
+
+- Chaining
+
+You can chain methods that returns `SubConversation` objects.
+
+```ts
+// Every truncature method [.find(), .between(), .month(), .sender(), .recipient()]
+// returns a sub-object (SubConversation) that have his own index and own methods.
+// This allow you to chain methods:
+conversation
+  .find(/Hello/i)
+  .between(new Date("2019-01-01"), new Date("2019-02-01"))
+  .recipient(["MY_USER_1", "MY_USER_2"]);
 ```

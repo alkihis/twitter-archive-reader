@@ -91,8 +91,8 @@ const INITIAL_VALIDATORS: TweetSearchValidator[] = [
 const INITIAL_STATIC: { [staticName: string]: TweetSearchStaticValidator } = {
   retweets_only: tweet => !!tweet.retweeted_status,
   no_retweets: tweet => !tweet.retweeted_status,
-  medias_only: tweet => isWithMedia(tweet),
-  videos_only: tweet => isWithVideo(tweet),
+  medias_only: isWithMedia,
+  videos_only: isWithVideo,
 };
 
 export const TweetSearcher = new class TweetSearcher {
@@ -138,7 +138,10 @@ export const TweetSearcher = new class TweetSearcher {
    * to **this.validators** a object implementing `TweetSearchValidator`.
    * 
    * @param tweets Partial tweets array.
-   * @param query String to be searched for in the tweet.text
+   * 
+   * @param query String to be searched for in the tweet.text / screen_name.
+   * You should remember that in tweets, `>` and `<` are encoded as `&gt;` and `&lt;`.
+   * 
    * @param is_regex If the string should be considered as a regex during text.match or not.
    * - If **is_regex** is `true`, regex will be enabled without flags.
    * - If **is_regex** is `false`, **query** will be regex escaped.

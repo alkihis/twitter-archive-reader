@@ -1,5 +1,6 @@
 import { GDPRConversation, DirectMessage, LinkedDirectMessage } from "./TwitterTypes";
 
+/** Register the number of messages in each year, month and day, and let you access those messages. */
 interface ConversationIndex {
   count: number,
   years: {
@@ -293,6 +294,9 @@ abstract class ConversationBase {
   }
 }
 
+/**
+ * Conversation between the owner of archive and one or more participants.
+ */
 export class Conversation extends ConversationBase {
   protected info: FullConversationInfo;
   protected unindexed: DirectMessage[] = [];
@@ -384,6 +388,7 @@ export class Conversation extends ConversationBase {
   }
 }
 
+/** Part of a real conversation that have its own index and message count. */
 export class SubConversation extends ConversationBase {
   constructor(messages: LinkedDirectMessage[], me_id: string) {
     super();

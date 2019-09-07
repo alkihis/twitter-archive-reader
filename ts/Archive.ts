@@ -6,6 +6,11 @@ import { EventTarget, defineEventAttribute } from 'event-target-shim';
 export type AcceptedZipSources = string | number[] | Uint8Array | ArrayBuffer | Blob | NodeJS.ReadableStream | JSZip;
 export type ArchiveReadState = "idle" | "reading" | "indexing" | "tweet_read" | "user_read" | "dm_read" | "extended_read" | "ready";
 
+/** Raw informations stored in GDPR, extracted for a simpler use.
+ * 
+ * This includes list of followers, followings, favorites, mutes, blocks,
+ * registered and subscribed lists, history of screen names, and Twitter moments.
+ */
 export interface ExtendedGDPRInfo {
   followers: Set<string>;
   followings: Set<string>;
@@ -24,6 +29,7 @@ export interface ExtendedGDPRInfo {
   moments: GDPRMoment[];
 }
 
+/** Return the `Date` object affiliated to **tweet**. */
 export function dateFromTweet(tweet: PartialTweet) : Date {
   if (tweet.created_at_d) {
     return tweet.created_at_d;
@@ -31,10 +37,20 @@ export function dateFromTweet(tweet: PartialTweet) : Date {
   return tweet.created_at_d = new Date(tweet.created_at);
 }
 
+/** 
+ * Return true if **tweet** contains media(s).
+ * 
+ * This includes photos, videos or animated GIF.
+ */
 export function isWithMedia(tweet: PartialTweet) {
   return tweet.entities.media.length > 0;
 }
 
+/**
+ * Return true if **tweet** contains a video or one animated GIF.
+ * 
+ * Twitter's GIF are mp4 encoded.
+ */
 export function isWithVideo(tweet: PartialTweet) {
   if (tweet.extended_entities) {
     if (tweet.extended_entities.media) {
@@ -169,8 +185,15 @@ type TwitterArchiveOnEvents = {
 export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArchiveOnEvents> {
   protected _ready: Promise<void> = Promise.resolve();
   protected archive: Archive;
+
+  /** Current archive load state. */
   public state: ArchiveReadState = "idle";
 
+  /** 
+   * Access to extended infos. See `ExtendedGDPRInfo` interface. 
+   * 
+   * Defined only if `.is_gdpr === true`.
+   * */
   extended_gdpr: ExtendedGDPRInfo;
 
   protected _index: ArchiveIndex = {
@@ -196,7 +219,13 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
 
   protected user_cache: PartialTweetUser;
 
-  constructor(file: AcceptedZipSources, build_extended = false) {
+  /**
+   * Build a new instance of TwitterArchive.
+   * 
+   * @param file Accept any source that `JSZip` library accepts.
+   * @param build_extended True if `.extended_gdpr` should be built (only if **file** is a GDPR archive.)
+   */
+  constructor(file: AcceptedZipSources, build_extended = true) {
     super();
 
     this.state = "reading";
@@ -509,6 +538,11 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     return this._is_gdpr = this.archive.search(/^tweets\.csv$/).length === 0;
   }
 
+  /**
+   * True if given tweet is coming from a GDPR archive.
+   * 
+   * Tweets getted by available getters are NOT GDPR tweets, they've been converted !
+   */
   isGDPRTweet(tweet: PartialTweetGDPR): true;
   isGDPRTweet(tweet: PartialTweet): false;
 
@@ -516,6 +550,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     return 'retweet_count' in tweet;
   }
 
+  /** Extract tweets from a specifc month. */
   month(month: string, year: string) : PartialTweet[] {
     if (year in this.index.years) {
       if (month in this.index.years[year]) {
@@ -526,7 +561,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     return [];
   }
 
-  // TODO TESTER
+  /** Get tweets in a specific time interval. */
   between(since: Date, until: Date) {
     if (since.getTime() > until.getTime()) {
       throw new Error("Since can't be superior to until");
@@ -582,6 +617,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     return tweets;
   }
 
+  /** Get a single tweet by ID. Returns `null` if tweet does not exists. */
   id(id_str: string) : PartialTweet | null {
     if (id_str in this.index.by_id) {
       return this.index.by_id[id_str];
@@ -590,6 +626,17 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     return null;
   }
 
+  /** Give the media url in direct message, obtain the Blob-bed image. */
+  dmImageFromUrl(url: string, is_group = false) {
+    const [, , , , id, , image] = url.split('/');
+
+    if (id && image) {
+      return this.dmImage(id + "-" + image, is_group)
+    }
+    return Promise.reject();
+  }
+
+  /** Extract a direct message image from GDPR archive (exact filename required). */
   dmImage(name: string, is_group = false) : Promise<Blob> {
     if (!this.is_gdpr) {
       return Promise.reject("Archive not supported");
@@ -607,16 +654,17 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     return Promise.reject("File not found");
   }
 
+  /** All tweets registered in this archive. */
   get all() : PartialTweet[] {
     return Object.values(this.index.by_id);
   }
 
-  /** Access to the DMArchive */
+  /** Access to the DMArchive object. Will be undefined if `.is_gdpr === false`. */
   get messages() {
     return this.dms;
   }
 
-  /** ID of the user who created this archive */
+  /** ID of the user who created this archive. */
   get owner() {
     return this._index.info.id;
   }
@@ -629,23 +677,27 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     return this._index.info.screen_name;
   }
 
-  /** Not accurate in GDPR archive (will be the current date) */
+  /** Archive creation date. Not accurate in GDPR archive (will be the current date). */
   get generation_date() {
     return new Date(this._index.archive.created_at);
   }
 
+  /** Archive information and tweet index. */
   get index() {
     return this._index;
   }
 
+  /** Number of tweets in this archive. */
   get length() {
     return this.index.archive.tweets;
   }
 
+  /** True if archive is a GDPR archive. */
   get is_gdpr() {
     return this._is_gdpr;
   }
 
+  /** Resolved when archive read is over. */
   ready() {
     return this._ready;
   }

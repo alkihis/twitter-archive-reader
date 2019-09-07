@@ -1,6 +1,9 @@
 import { DMFile } from './TwitterTypes'
 import Conversation from "./Conversation";
 
+/**
+ * Hold all the direct messages contained in a Twitter GDPR archive.
+ */
 export class DMArchive {
   protected index: {
     [convId: string]: Conversation
@@ -8,6 +11,7 @@ export class DMArchive {
 
   constructor(protected me_id: string) { }
 
+  /** Add a direct message file in current conversation object. */
   add(convs: DMFile) {
     for (const conv of convs) {
       if (conv.dmConversation.messages.length) {
@@ -53,7 +57,7 @@ export class DMArchive {
     return Object.values(this.index);
   }
 
-  /** Message count */
+  /** Message count. */
   get count() {
     let c = 0;
     for (const conv of this.all) {
@@ -62,7 +66,7 @@ export class DMArchive {
     return c;
   }
 
-  /** Conversation count */
+  /** Conversation count. */
   get length() {
     return this.all.length;
   }
