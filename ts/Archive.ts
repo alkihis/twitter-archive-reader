@@ -415,7 +415,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     // Gérer le cas des retweets
     const rt_data = /^RT @(.+): (.+)/.exec(tweet.full_text);
 
-    if (rt_data && rt_data.length) {
+    if (rt_data && rt_data.length && !("retweeted_status" in tweet)) {
       const [, arobase, text] = rt_data;
       const rt = Object.assign({}, tweet) as unknown as PartialTweet;
       rt.user = Object.assign({}, rt.user);
@@ -454,12 +454,25 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
 
     const files_to_read = index.map(e => e.file_name);
 
-    const tweets: PartialTweet[] = [];
+    let tweets: PartialTweet[] = [];
 
     this.state = "tweet_read";
+    const tweet_file_promises: Promise<void>[] = [];
+
     for (const file of files_to_read) {
-      tweets.push(...await this.archive.get(file) as PartialTweet[]);
+      tweet_file_promises.push(
+        this.archive.get(file).then((t: PartialTweet[]) => {
+          tweets.push(...t);
+        })
+      );
     }
+    
+    await Promise.all(tweet_file_promises);
+
+    // Tri les tweets par ID (le plus récent, plus grand en premier)
+    tweets = tweets.sort((a, b) => {
+      return Number(BigInt(b.id_str) - BigInt(a.id_str));
+    });
 
     this.dispatchEvent({type: 'tweetsread'});
 
@@ -484,6 +497,9 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       this.index.years[year][month][tweets[i].id_str] = tweets[i];
       this.index.by_id[tweets[i].id_str] = tweets[i];
     }
+
+    // Setting right tweet number
+    this.index.archive.tweets = Object.keys(this.index.by_id).length;
 
     this.dispatchEvent({type: 'indexready'});
     this.state = "ready";
