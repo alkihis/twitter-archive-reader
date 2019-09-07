@@ -55,6 +55,8 @@ const { TwitterArchive } = require('twitter-archive-reader');
 
 ## Usage
 
+This package is usable inside a browser or in Node.js, but be aware that loading a GDPR archive is very RAM-consuming, as the ZIP can exceed the gigabyte of data, so use this feature with care.
+
 ### Getting ready
 
 Once you've created the instance, you must wait for the ready-ness status of the object with the `.ready()` promise.
@@ -247,3 +249,19 @@ conversation
   .between(new Date("2019-01-01"), new Date("2019-02-01"))
   .recipient(["MY_USER_1", "MY_USER_2"]);
 ```
+
+- `Conversation.index: ConversationIndex`
+
+Get the conversation details, with messages sorted by year, month and day.
+
+- `Conversation.length: number`
+
+Number of messages in this conversation.
+
+- `Conversation.participants: Set<string>`
+
+User IDs of the participants of this conversation.
+
+- `Conversation.is_group_conversation: boolean`
+
+True if the conversation is a group conversation.
