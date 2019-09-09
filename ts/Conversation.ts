@@ -85,7 +85,7 @@ abstract class ConversationBase {
   /** Get direct messages from a specific month. */
   month(month: string, year: string) : SubConversation {
     if (year in this.index_by_date && month in this.index_by_date[year]) {
-      const messages = [].concat(...Object.values(this.index_by_date[year][month]));
+      const messages = [].concat(...Object.values(this.index_by_date[year][month]).map(e => Object.values(e)));
       
       return new SubConversation(messages, this.info.me);
     }
