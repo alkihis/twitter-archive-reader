@@ -52,6 +52,10 @@ abstract class ConversationBase {
   protected register(msg: LinkedDirectMessage) {
     this._index[msg.id] = msg;
 
+    if (!msg.createdAtDate) {
+      msg.createdAtDate = new Date(msg.createdAt);
+    }
+
     const [day, month, year] = [
       msg.createdAtDate.getDate(), 
       msg.createdAtDate.getMonth() + 1, 
