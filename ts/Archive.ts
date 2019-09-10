@@ -646,9 +646,9 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       is_group ? "direct_message_group_media" : "direct_message_media"
     );
 
-    const results = directory.search(new RegExp(name + "\.(.+)$"));
+    const results = directory.search(new RegExp(name + "(\.?.*)$"));
 
-    if (results) {
+    if (results.length) {
       return this.archive.read(results[0], "blob");
     }
     return Promise.reject("File not found");
