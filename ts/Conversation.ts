@@ -362,6 +362,9 @@ export class Conversation extends ConversationBase {
     for (const actual_msg of msgs) {
       const swallow = actual_msg as LinkedDirectMessage;
 
+      if (!swallow.recipientId || !swallow.senderId)
+        continue;
+
       swallow.previous = previous_message;
       swallow.next = null;
       swallow.createdAtDate = new Date(swallow.createdAt);
