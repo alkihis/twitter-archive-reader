@@ -393,6 +393,18 @@ export class Conversation extends ConversationBase {
   get id() : string {
     return this.info.id;
   }
+
+  /** First DM in this conversation. Access to next messages with LinkedDirectMessage.next */
+  get first() {
+    return this.all[0];
+  }
+
+  /** Last DM in this conversation. Access to previous messages with LinkedDirectMessage.previous */
+  get last() {
+    const all = this.all;
+
+    return all[all.length - 1];
+  }
 }
 
 /** Part of a real conversation that have its own index and message count. */

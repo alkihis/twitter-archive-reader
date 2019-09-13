@@ -281,6 +281,14 @@ User IDs of the participants of this conversation.
 
 True if the conversation is a group conversation.
 
+- `Conversation.first: LinkedDirectMessage`
+
+First DM in the conversation.
+
+- `Conversation.last: LinkedDirectMessage`
+
+Last DM in the conversation.
+
 ## Events
 
 Archive is quite long to read: You have to unzip, read tweets, read user informations, direct messages, and some other informations...
