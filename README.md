@@ -65,7 +65,22 @@ Once you've created the instance, you must wait for the ready-ness status of the
 // You can create TwitterArchive with all supported 
 // formats by JSZip's loadAsync() method 
 // (see https://stuk.github.io/jszip/documentation/api_jszip/load_async.html).
+
+// By a Node.js buffer
 const archive = new TwitterArchive(readFileSync('filename.zip'));
+
+// By a file input (File object)
+const archive = new TwitterArchive(document.querySelector('input[type="file"]').files[0]);
+
+// Initialization can be long (unzipping, tweets & DMs reading...) 
+// So archive supports events, you can listen for initialization steps
+archive.addEventListener('zipready', () => {
+  // ZIP is unzipped
+});
+archive.addEventListener('tweetsread', () => {
+  // Tweet files has been read
+});
+// See all available listeners in Events section.
 
 console.log("Reading archive...");
 // You must wait for ZIP reading and archive object build
@@ -265,3 +280,56 @@ User IDs of the participants of this conversation.
 - `Conversation.is_group_conversation: boolean`
 
 True if the conversation is a group conversation.
+
+## Events
+
+Archive is quite long to read: You have to unzip, read tweets, read user informations, direct messages, and some other informations...
+So you might want to display current loading step to the end-user.
+
+The `TwitterArchive` provides a event system compatible with Node.js and classic browser JS.
+
+You could listen to events with `.addEventListener()` method or `.on**event_name**` attributes, like DOM elements.
+
+Events are listed in their order of apparition.
+
+Any of the described events, except `error`, contain elements in it (in `detail` attribute).
+
+#### zipready
+
+Fires when archive is unzipped (its content has not been read yet !).
+
+#### userinfosready
+
+Fires when basic user informations (archive creation date, user details) **has been read**.
+
+
+#### indexready
+
+Fires when tweet index (months, tweet number) **has been read**.
+
+#### tweetsread
+
+Fires when tweet files **has been read**.
+
+#### willreaddm
+
+Fires when direct messages files are **about to be read**.
+*This event does not fire when a classic archive is given*.
+
+#### willreadextended
+
+Fires when misc infos (favorites, moments...) are **about to be read**.
+*This event does not fire when a classic archive is given*.
+
+#### ready
+
+Fires when the reading process is over. 
+
+Linked to `.ready()` promise (fulfilled).
+
+#### error
+
+Fires when read fails.
+Contain, in the `detail` attribute, the throwed error.
+
+Linked to `.ready()` promise (rejected).
