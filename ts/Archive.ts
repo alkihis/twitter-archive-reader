@@ -2,6 +2,8 @@ import JSZip from 'jszip';
 import { ArchiveIndex, PartialTweetGDPR, PartialTweet, AccountGDPR, ProfileGDPR, ClassicTweetIndex, ClassicPayloadDetails, TwitterUserDetails, DMFile, PartialTweetUser, GDPRFollowings, GDPRFollowers, GDPRFavorites, GDPRMutes, InnerGDPRPersonalization, GPDRScreenNameHistory, GPDRProtectedHistory, GDPRBlocks, GDPRAgeInfo, InnerGDPRAgeInfo, GDPRMoment, GDPRMomentFile } from './TwitterTypes';
 import DMArchive from './DMArchive';
 import { EventTarget, defineEventAttribute } from 'event-target-shim';
+import bigInt from 'big-integer';
+import { supportsBigInt } from './helpers';
 
 export type AcceptedZipSources = string | number[] | Uint8Array | ArrayBuffer | Blob | NodeJS.ReadableStream | JSZip;
 export type ArchiveReadState = "idle" | "reading" | "indexing" | "tweet_read" | "user_read" | "dm_read" | "extended_read" | "ready";
@@ -499,9 +501,12 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     await Promise.all(tweet_file_promises);
 
     // Tri les tweets par ID (le plus récent, plus grand en premier)
-    tweets = tweets.sort((a, b) => {
-      return Number(BigInt(b.id_str) - BigInt(a.id_str));
-    });
+    if (supportsBigInt()) {
+      tweets = tweets.sort((a, b) => Number(BigInt(b.id_str) - BigInt(a.id_str)));
+    }
+    else {
+      tweets = tweets.sort((a, b) => (bigInt(b.id_str).minus(bigInt(a.id_str))).toJSNumber());
+    }
 
     this.dispatchEvent({type: 'tweetsread'});
 

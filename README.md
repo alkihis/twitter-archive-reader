@@ -20,6 +20,12 @@ Quoted tweet data are, for both types of archives, inexistant.
 
 Install package using NPM.
 
+This module use **BigInt**, so at least **Node 10.4** or a **`BigInt` compatible browser** is *recommanded*.
+
+Module will use a fallback to `big-integer` npm module if `BigInt` does not exists.
+**Please note that, for performance reasons, a `BigInt` compatible system is hugely recommanded.**
+
+
 ```bash
 npm i twitter-archive-reader
 ```

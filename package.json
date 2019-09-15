@@ -11,6 +11,7 @@
   "repository": "https://github.com/alkihis/twitter-archive-reader",
   "bugs": "https://github.com/alkihis/twitter-archive-reader/issues",
   "dependencies": {
+    "big-integer": "^1.6.44",
     "event-target-shim": "^5.0.1",
     "events": "^3.0.0",
     "jszip": "^3.2.2",

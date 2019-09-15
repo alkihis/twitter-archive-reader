@@ -1,4 +1,6 @@
 import { GDPRConversation, DirectMessage, LinkedDirectMessage } from "./TwitterTypes";
+import { supportsBigInt } from "./helpers";
+import bigInt from 'big-integer';
 
 /** Register the number of messages in each year, month and day, and let you access those messages. */
 interface ConversationIndex {
@@ -193,10 +195,19 @@ abstract class ConversationBase {
   }
 
   protected betweenIds(id1: string, id2: string) {
-    if (BigInt(id1) > BigInt(id2)) {
-      const tmp = id2;
-      id2 = id1;
-      id1 = tmp;
+    if (supportsBigInt()) {
+      if (BigInt(id1) > BigInt(id2)) {
+        const tmp = id2;
+        id2 = id1;
+        id1 = tmp;
+      }
+    }
+    else {
+      if (bigInt(id1).lesser(bigInt(id2))) {
+        const tmp = id2;
+        id2 = id1;
+        id1 = tmp;
+      }
     }
 
     let current = this.single(id1);
@@ -348,9 +359,18 @@ export class Conversation extends ConversationBase {
     const participants = new Set<string>();
 
     // Récupération des messages et tri par le plus vieux (ID le plus bas)
-    const msgs: DirectMessage[] | LinkedDirectMessage[] = this.unindexed
+    let msgs: DirectMessage[] | LinkedDirectMessage[];
+    
+    if (supportsBigInt()) {
+      msgs = this.unindexed
         .concat(this.all) // Ajoute le set de messages actuel (réindexe tout)
         .sort((a, b) => Number(BigInt(a.id) - BigInt(b.id)));
+    }
+    else {
+      msgs = this.unindexed
+        .concat(this.all) // Ajoute le set de messages actuel (réindexe tout)
+        .sort((a, b) => (bigInt(a.id).minus(bigInt(b.id))).toJSNumber());
+    }
 
     this.unindexed = [];
 
