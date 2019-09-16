@@ -5,7 +5,7 @@ import { EventTarget, defineEventAttribute } from 'event-target-shim';
 import bigInt from 'big-integer';
 import { supportsBigInt } from './helpers';
 
-export type AcceptedZipSources = string | number[] | Uint8Array | ArrayBuffer | Blob | NodeJS.ReadableStream | JSZip;
+export type AcceptedZipSources = string | number[] | Uint8Array | ArrayBuffer | Blob | NodeJS.ReadableStream | JSZip | Archive;
 export type ArchiveReadState = "idle" | "reading" | "indexing" | "tweet_read" | "user_read" | "dm_read" | "extended_read" | "ready";
 
 /** Raw informations stored in GDPR, extracted for a simpler use.
@@ -68,6 +68,12 @@ class Archive {
   protected archive: JSZip;
 
   constructor(file: AcceptedZipSources) {
+    if (file instanceof Archive) {
+      this._ready = Promise.resolve();
+      this.archive = file.archive;
+      return;
+    }
+
     if (file instanceof JSZip) {
       this._ready = Promise.resolve();
       this.archive = file;
@@ -152,6 +158,16 @@ class Archive {
 
     return files;
   }
+
+  /**
+   * Create a new instance of Archive from a file contained in this archive.
+   * 
+   * @param name File name
+   */
+  async fromFile(name: string) {
+    const f: ArrayBuffer = await this.get(name, "arraybuffer", false);
+    return new Archive(f);
+  }
 }
 
 type TwitterArchiveEvents = {
@@ -216,6 +232,9 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   };
 
   protected dms: DMArchive;
+
+  protected dm_img_archive: Archive;
+  protected dm_img_group_archive: Archive;
 
   protected _is_gdpr = false;
 
@@ -339,6 +358,24 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       this.dms.add(await this.archive.get('direct-message-group.js') as DMFile);
     }
     // DMs should be ok
+
+    // Test if archive contain DM images as zip
+    if (this.archive.searchDir(new RegExp('direct_message_media')).length) {
+      const folder = this.archive.dir('direct_message_media');
+      const query = folder.search(/\.zip$/);
+      if (query.length) {
+        console.log("Creating archive from archive (single)");
+        this.dm_img_archive = await this.archive.fromFile(query[0].name);
+      }
+    }
+    if (this.archive.searchDir(new RegExp('direct_message_group_media')).length) {
+      const folder = this.archive.dir('direct_message_group_media');
+      const query = folder.search(/\.zip$/);
+      if (query.length) {
+        console.log("Creating archive from archive (group)");
+        this.dm_img_group_archive = await this.archive.fromFile(query[0].name);
+      }
+    }
 
     this.state = "extended_read";
     this.dispatchEvent({type: 'willreadextended'});
@@ -631,7 +668,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     return null;
   }
 
-  /** Give the media url in direct message, obtain the Blob-bed image. */
+  /** Give the media url in direct message, obtain the Blob-bed image. This does **not** work on Node.js ! */
   dmImageFromUrl(url: string, is_group = false) {
     const [, , , , id, , image] = url.split('/');
 
@@ -641,22 +678,45 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     return Promise.reject();
   }
 
-  /** Extract a direct message image from GDPR archive (exact filename required). */
+  /** Extract a direct message image from GDPR archive (exact filename required). This does **not** work on Node.js ! */
   dmImage(name: string, is_group = false) : Promise<Blob> {
     if (!this.is_gdpr) {
       return Promise.reject("Archive not supported");
     }
 
-    const directory = this.archive.dir(
-      is_group ? "direct_message_group_media" : "direct_message_media"
-    );
+    if (this.dm_img_archive || this.dm_img_group_archive) {
+      // Les dm sont dans un ZIP
+      let zip: Archive;
+      if (is_group) {
+        zip = this.dm_img_group_archive;
+      }
+      else {
+        zip = this.dm_img_archive;
+      }
 
-    const results = directory.search(new RegExp(name + "(\.?.*)$"));
+      if (!zip) {
+        return Promise.reject("Image archive is not loaded, impossible to get media.");
+      }
 
-    if (results.length) {
-      return this.archive.read(results[0], "blob");
+      const results = zip.search(new RegExp(name + "(\.?.*)$"));
+  
+      if (results.length) {
+        return zip.read(results[0], "blob");
+      }
+      return Promise.reject("File not found");
     }
-    return Promise.reject("File not found");
+    else {
+      const directory = this.archive.dir(
+        is_group ? "direct_message_group_media" : "direct_message_media"
+      );
+  
+      const results = directory.search(new RegExp(name + "(\.?.*)$"));
+  
+      if (results.length) {
+        return this.archive.read(results[0], "blob");
+      }
+      return Promise.reject("File not found");
+    }
   }
 
   /** All tweets registered in this archive. */
@@ -700,6 +760,11 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   /** True if archive is a GDPR archive. */
   get is_gdpr() {
     return this._is_gdpr;
+  }
+
+  /** Raw Archive object. Can be used to get specific files. */
+  get raw() {
+    return this.archive;
   }
 
   /** Resolved when archive read is over. */
