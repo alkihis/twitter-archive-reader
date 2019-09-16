@@ -382,7 +382,7 @@ export class Conversation extends ConversationBase {
     for (const actual_msg of msgs) {
       const swallow = actual_msg as LinkedDirectMessage;
 
-      if (!swallow.recipientId || !swallow.senderId)
+      if (!swallow.senderId)
         continue;
 
       swallow.previous = previous_message;
@@ -396,7 +396,7 @@ export class Conversation extends ConversationBase {
       previous_message = swallow;
 
       // Enregistrement participants
-      if (swallow.recipientId !== "0")
+      if (swallow.recipientId && swallow.recipientId !== "0")
         participants.add(swallow.recipientId);
 
       participants.add(swallow.senderId);
