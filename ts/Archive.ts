@@ -364,7 +364,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       const folder = this.archive.dir('direct_message_media');
       const query = folder.search(/\.zip$/);
       if (query.length) {
-        console.log("Creating archive from archive (single)");
+        // console.log("Creating archive from archive (single)");
         this.dm_img_archive = await this.archive.fromFile(query[0].name);
       }
     }
@@ -372,7 +372,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       const folder = this.archive.dir('direct_message_group_media');
       const query = folder.search(/\.zip$/);
       if (query.length) {
-        console.log("Creating archive from archive (group)");
+        // console.log("Creating archive from archive (group)");
         this.dm_img_group_archive = await this.archive.fromFile(query[0].name);
       }
     }
