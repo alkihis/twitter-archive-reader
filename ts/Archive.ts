@@ -522,7 +522,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     (tweet as unknown as PartialTweet).text = tweet.full_text;
 
     // Gérer le cas des retweets
-    const rt_data = /^RT @(.+): (.+)/.exec(tweet.full_text);
+    const rt_data = /^RT @(.+?): (.+)/.exec(tweet.full_text);
 
     if (rt_data && rt_data.length && !("retweeted_status" in tweet)) {
       const [, arobase, text] = rt_data;
