@@ -388,65 +388,106 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
 
   protected async initExtendedGDPR() {
     // Followings
-    const f_following: GDPRFollowings = await this.archive.get('following.js');
     const followings = new Set<string>();
-    for (const f of f_following) {
-      followings.add(f.following.accountId);
-    }
+    
+    try {
+      const f_following: GDPRFollowings = await this.archive.get('following.js');
+      for (const f of f_following) {
+        followings.add(f.following.accountId);
+      }
+    } catch (e) { }
 
     // Followers
-    const f_follower: GDPRFollowers = await this.archive.get('follower.js');
     const followers = new Set<string>();
-    for (const f of f_follower) {
-      followers.add(f.follower.accountId);
-    }
+
+    try {
+      const f_follower: GDPRFollowers = await this.archive.get('follower.js');
+      for (const f of f_follower) {
+        followers.add(f.follower.accountId);
+      }
+    } catch (e) { }
 
     // Favorites
-    const f_fav: GDPRFavorites = await this.archive.get('like.js');
     const favorites = new Set<string>();
-    for (const f of f_fav) {
-      favorites.add(f.like.tweetId);
-    }
+    
+    try {
+      const f_fav: GDPRFavorites = await this.archive.get('like.js');
+      for (const f of f_fav) {
+        favorites.add(f.like.tweetId);
+      }
+    } catch (e) { }
 
     // Mutes
-    const f_mutes: GDPRMutes = await this.archive.get('mute.js');
     const mutes = new Set<string>();
-    for (const f of f_mutes) {
-      mutes.add(f.muting.accountId);
-    }
+
+    try {
+      const f_mutes: GDPRMutes = await this.archive.get('mute.js');
+      for (const f of f_mutes) {
+        mutes.add(f.muting.accountId);
+      }
+    } catch (e) { }
 
     // Blocks
-    const f_block: GDPRBlocks = await this.archive.get('block.js');
     const blocks = new Set<string>();
-    for (const f of f_block) {
-      blocks.add(f.blocking.accountId);
-    }
+
+    try {
+      const f_block: GDPRBlocks = await this.archive.get('block.js');
+      for (const f of f_block) {
+        blocks.add(f.blocking.accountId);
+      }
+    } catch (e) { }
 
     // Lists
-    const lists = {
-      created: (await this.archive.get('lists-created.js'))[0].userListInfo.urls,
-      member_of: (await this.archive.get('lists-member.js'))[0].userListInfo.urls,
-      subscribed: (await this.archive.get('lists-subscribed.js'))[0].userListInfo.urls
+    const lists : {
+      created: string[];
+      member_of: string[];
+      subscribed: string[];
+    } = {
+      created: [],
+      member_of: [],
+      subscribed: []
     };
 
-    // Personalization
-    const personalization = (await this.archive.get('personalization.js'))[0].p13nData;
+    try {
+      lists.created = (await this.archive.get('lists-created.js'))[0].userListInfo.urls;
+      lists.member_of = (await this.archive.get('lists-member.js'))[0].userListInfo.urls;
+      lists.subscribed = (await this.archive.get('lists-subscribed.js'))[0].userListInfo.urls;
+    } catch (e) { }
 
-    const age_info = (await this.archive.get('ageinfo.js') as GDPRAgeInfo)[0].ageMeta;
+    // Personalization
+    let personalization: InnerGDPRPersonalization = { 
+      demographics: undefined, 
+      locationHistory: [],  
+      interests: undefined 
+    };
+    try {
+      personalization = (await this.archive.get('personalization.js'))[0].p13nData;
+    } catch (e) { }
+
+    let age_info: InnerGDPRAgeInfo;
+    try {
+      age_info = (await this.archive.get('ageinfo.js') as GDPRAgeInfo)[0].ageMeta;
+    } catch (e) { }
 
     // SN history
-    const f_history = await this.archive.get('screen-name-change.js') as { screenNameChange: GPDRScreenNameHistory }[];
     const screen_name_history: GPDRScreenNameHistory[] = [];
-    for (const e of f_history) {
-      screen_name_history.push(e.screenNameChange);
-    }
+    
+    try {
+      const f_history = await this.archive.get('screen-name-change.js') as { screenNameChange: GPDRScreenNameHistory }[];
+      for (const e of f_history) {
+        screen_name_history.push(e.screenNameChange);
+      }
+    } catch (e) { }
 
     // Protected history
-    const f_phistory = await this.archive.get('protected-history.js') as { protectedHistory: GPDRProtectedHistory }[];
     const protected_history: GPDRProtectedHistory[] = [];
-    for (const e of f_phistory) {
-      protected_history.push(e.protectedHistory);
-    }
+
+    try {
+      const f_phistory = await this.archive.get('protected-history.js') as { protectedHistory: GPDRProtectedHistory }[];
+      for (const e of f_phistory) {
+        protected_history.push(e.protectedHistory);
+      }
+    } catch (e) { }
 
     // Moments
     const moments: GDPRMoment[] = (await this.archive.get('moment.js') as GDPRMomentFile).map(e => e.moment);
