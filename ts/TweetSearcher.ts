@@ -1,5 +1,6 @@
 import { PartialTweet } from "./TwitterTypes";
 import { dateFromTweet, isWithMedia, isWithVideo } from "./Archive";
+import moment from 'moment';
 
 const INITIAL_VALIDATORS: TweetSearchValidator[] = [
   /** since: validator */
@@ -11,7 +12,12 @@ const INITIAL_VALIDATORS: TweetSearchValidator[] = [
       
       if (data && data.length) {
         // full query
-        const d = new Date(data[0]);
+        let d: Date;
+        try {
+          d = moment(data[0]).toDate();
+        } catch (e) {
+          d = new Date;
+        }
 
         if (!isNaN(d.getTime())) {
           return tweet => dateFromTweet(tweet).getTime() >= d.getTime();
@@ -28,7 +34,12 @@ const INITIAL_VALIDATORS: TweetSearchValidator[] = [
       
       if (data && data.length) {
         // full query
-        const d = new Date(data[0]);
+        let d: Date;
+        try {
+          d = moment(data[0]).toDate();
+        } catch (e) {
+          d = new Date;
+        }
 
         if (!isNaN(d.getTime())) {
           d.setDate(d.getDate() + 1);

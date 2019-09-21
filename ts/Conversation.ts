@@ -1,6 +1,7 @@
 import { GDPRConversation, DirectMessage, LinkedDirectMessage } from "./TwitterTypes";
 import { supportsBigInt } from "./helpers";
 import bigInt from 'big-integer';
+import moment from 'moment';
 
 /** Register the number of messages in each year, month and day, and let you access those messages. */
 interface ConversationIndex {
@@ -55,7 +56,8 @@ abstract class ConversationBase {
     this._index[msg.id] = msg;
 
     if (!msg.createdAtDate) {
-      msg.createdAtDate = new Date(msg.createdAt);
+      msg.createdAtDate = moment(msg.createdAt).toDate();
+      
     }
 
     const [day, month, year] = [
