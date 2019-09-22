@@ -4,7 +4,6 @@ import DMArchive from './DMArchive';
 import { EventTarget, defineEventAttribute } from 'event-target-shim';
 import bigInt from 'big-integer';
 import { supportsBigInt } from './helpers';
-import moment from 'moment';
 
 export type AcceptedZipSources = string | number[] | Uint8Array | ArrayBuffer | Blob | NodeJS.ReadableStream | JSZip | Archive;
 export type ArchiveReadState = "idle" | "reading" | "indexing" | "tweet_read" | "user_read" | "dm_read" | "extended_read" | "ready";
@@ -37,7 +36,22 @@ export function dateFromTweet(tweet: PartialTweet) : Date {
   if (tweet.created_at_d) {
     return tweet.created_at_d;
   }
-  return tweet.created_at_d = moment(tweet.created_at).toDate();
+  return tweet.created_at_d = parseTwitterDate(tweet.created_at);
+}
+
+export function parseTwitterDate(date: string) : Date {
+  try {
+    const d = new Date(date);
+
+    if (isNaN(d.getTime())) {
+      throw "";
+    }
+    else {
+      return d;
+    }
+  } catch (e) {
+    return new Date(date.replace(/\s(.+)\s.+/, 'T$1.000Z'));
+  }
 }
 
 /** 
@@ -313,7 +327,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
 
     // Build index
     for (let i = 0; i < tweets.length; i++) {
-      const date = moment(tweets[i].created_at).toDate();
+      const date = parseTwitterDate(tweets[i].created_at);
 
       const month = String(date.getMonth() + 1);
       const year = String(date.getFullYear());
@@ -592,7 +606,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     this.state = "indexing";
     // Build index (read tweets)
     for (let i = 0; i < tweets.length; i++) {
-      const date = moment(tweets[i].created_at).toDate();
+      const date = parseTwitterDate(tweets[i].created_at);
 
       const month = String(date.getMonth() + 1);
       const year = String(date.getFullYear());
@@ -786,7 +800,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
 
   /** Archive creation date. Not accurate in GDPR archive (will be the current date). */
   get generation_date() {
-    return moment(this._index.archive.created_at).toDate();
+    return parseTwitterDate(this._index.archive.created_at);
   }
 
   /** Archive information and tweet index. */

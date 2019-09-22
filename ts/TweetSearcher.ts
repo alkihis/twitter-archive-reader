@@ -1,6 +1,5 @@
 import { PartialTweet } from "./TwitterTypes";
 import { dateFromTweet, isWithMedia, isWithVideo } from "./Archive";
-import moment from 'moment';
 
 const INITIAL_VALIDATORS: TweetSearchValidator[] = [
   /** since: validator */
@@ -14,7 +13,7 @@ const INITIAL_VALIDATORS: TweetSearchValidator[] = [
         // full query
         let d: Date;
         try {
-          d = moment(data[0]).toDate();
+          d = new Date(data[0]);
         } catch (e) {
           d = new Date;
         }
@@ -36,7 +35,7 @@ const INITIAL_VALIDATORS: TweetSearchValidator[] = [
         // full query
         let d: Date;
         try {
-          d = moment(data[0]).toDate();
+          d = new Date(data[0]);
         } catch (e) {
           d = new Date;
         }

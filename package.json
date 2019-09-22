@@ -15,7 +15,6 @@
     "event-target-shim": "^5.0.1",
     "events": "^3.0.0",
     "jszip": "^3.2.2",
-    "moment": "^2.24.0",
     "twitter-d": "^0.4.0"
   },
   "devDependencies": {
