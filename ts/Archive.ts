@@ -275,7 +275,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     this.archive = new Archive(file);
     this._ready = this.archive.ready()
       .then(() => {
-        console.log("Available files:", Object.keys(this.archive.ls()));
+        // console.log("Available files:", Object.keys(this.archive.ls()));
 
         this.dispatchEvent({type:'zipready'});
 
