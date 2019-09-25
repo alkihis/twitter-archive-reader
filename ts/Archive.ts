@@ -659,6 +659,19 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     return [];
   }
 
+  /** Find tweets made on the same day (= month, = day), but in all years. */
+  day() : PartialTweet[] {
+    const now = new Date;
+    const now_m = now.getMonth();
+    const now_d = now.getDate();
+
+    // TODO optimize
+    return this.all.filter(t => {
+      const d = dateFromTweet(t);
+      return d.getMonth() === now_m && d.getDate() === now_d;
+    });
+  }
+
   /** Get tweets in a specific time interval. */
   between(since: Date, until: Date) {
     if (since.getTime() > until.getTime()) {
