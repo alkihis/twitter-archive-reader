@@ -121,7 +121,13 @@ class Archive {
     = "text",
     parse_auto = true
   ) {
-    return this.read(this.archive.file(name), type, parse_auto);
+    const f = this.archive.file(name);
+
+    if (!f) {
+      throw new Error("File not found: " + name);
+    }
+
+    return this.read(f, type, parse_auto);
   }
 
   search(query: RegExp) {
@@ -269,6 +275,8 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     this.archive = new Archive(file);
     this._ready = this.archive.ready()
       .then(() => {
+        console.log("Available files:", Object.keys(this.archive.ls()));
+
         this.dispatchEvent({type:'zipready'});
 
         // Initialisation de l'archive Twitter
