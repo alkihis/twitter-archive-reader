@@ -121,6 +121,11 @@ class Archive {
     = "text",
     parse_auto = true
   ) {
+    if (!this.has(name)) {
+      // @ts-ignore
+      name = this.archive.root + name;
+    }
+
     const f = this.archive.file(name);
 
     if (!f) {
@@ -164,16 +169,24 @@ class Archive {
   }
 
   ls(current_dir_only = true) {
-    if (!current_dir_only) {
-      return this.archive.files;
-    }
-
     const l = this.archive.files;
     const files: { [name: string]: JSZip.JSZipObject } = {};
+    // @ts-ignore
+    let current_dir: string = this.archive.root;
+
+    if (!current_dir) {
+      current_dir = "";
+    }
 
     for (const key in l) {
-      if (!key.includes('/')) {
-        files[key] = l[key];
+      if (key.startsWith(current_dir)) {
+        const real_name = key.slice(current_dir.length);
+
+        if (current_dir_only && real_name.match(/\/.+$/)) {
+          continue;
+        }
+
+        files[real_name] = l[key];
       }
     }
 
@@ -183,10 +196,16 @@ class Archive {
   /**
    * Create a new instance of Archive from a file contained in this archive.
    * 
-   * @param name File name
+   * @param name File name or file object
    */
-  async fromFile(name: string) {
-    const f: ArrayBuffer = await this.get(name, "arraybuffer", false);
+  async fromFile(name: string | JSZip.JSZipObject) {
+    let f: ArrayBuffer;
+    if (typeof name === 'string') {
+      f = await this.get(name, "arraybuffer", false);
+    }
+    else {
+      f = await this.read(name, "arraybuffer", false);
+    }
     return new Archive(f);
   }
 }
@@ -276,6 +295,33 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     this._ready = this.archive.ready()
       .then(() => {
         this.dispatchEvent({type:'zipready'});
+
+        // Check si l'archive est dans un dossier à l'intérieur de l'archive
+        while (true) {
+          const files = this.archive.ls();
+
+          // Search for profile.js or tweets.csv (markers of archives)
+          if ('profile.js' in files || 'tweets.csv' in files) {
+            break;
+          }
+
+          // Now, search for directories
+          let folder = "";
+
+          for (const [name, f] of Object.entries(files)) {
+            if (f.dir) {
+              folder = name;
+              break;
+            }
+          }
+
+          if (folder) {
+            this.archive = this.archive.dir(folder);
+          }
+          else {
+            break;
+          }
+        }
 
         // Initialisation de l'archive Twitter
         if (this.isGDPRArchive()) {
@@ -386,7 +432,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       const query = folder.search(/\.zip$/);
       if (query.length) {
         // console.log("Creating archive from archive (single)");
-        this.dm_img_archive = await this.archive.fromFile(query[0].name);
+        this.dm_img_archive = await folder.fromFile(query[0]);
       }
     }
     if (this.archive.searchDir(new RegExp('direct_message_group_media')).length) {
@@ -394,7 +440,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       const query = folder.search(/\.zip$/);
       if (query.length) {
         // console.log("Creating archive from archive (group)");
-        this.dm_img_group_archive = await this.archive.fromFile(query[0].name);
+        this.dm_img_group_archive = await folder.fromFile(query[0]);
       }
     }
 
