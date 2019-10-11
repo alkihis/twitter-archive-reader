@@ -307,7 +307,6 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
 
           // Now, search for directories
           let folder = "";
-
           for (const [name, f] of Object.entries(files)) {
             if (f.dir) {
               folder = name;

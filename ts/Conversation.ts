@@ -309,6 +309,10 @@ abstract class ConversationBase {
   get length() {
     return this.all.length;
   }
+
+  get infos() {
+    return this.info;
+  }
 }
 
 /**
