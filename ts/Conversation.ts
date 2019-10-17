@@ -228,6 +228,46 @@ abstract class ConversationBase {
     return this._index[id];
   }
 
+  /** Get conversation from a specific day (default to current day) */
+  day(day?: Date) {
+    if (!day) {
+      day = new Date;
+    }
+
+    const year = day.getFullYear(), month = day.getMonth() + 1, date = day.getDate();
+
+    if (year in this.index_by_date) {
+      if (month in this.index_by_date[year]) {
+        if (date in this.index_by_date[year][month]) {
+          return new SubConversation(Object.values(this.index_by_date[year][month][date]), this.info.me);
+        }
+      }
+    }
+
+    return new SubConversation([], this.info.me);
+  }
+
+  /** Get conversation of the same day as **day**, but also in previous years. */
+  fromThatDay(day?: Date) {
+    if (!day) {
+      day = new Date;
+    }
+
+    const month = day.getMonth() + 1, date = day.getDate();
+
+    const messages: LinkedDirectMessage[] = [];
+
+    for (const year in this.index_by_date) {
+      if (month in this.index_by_date[year]) {
+        if (date in this.index_by_date[year][month]) {
+          messages.push(...Object.values(this.index_by_date[year][month][date]));
+        }
+      }
+    }
+
+    return new SubConversation(messages, this.info.me);
+  } 
+
   /** Iterates all over the direct messages stored in this conversation. */
   *[Symbol.iterator]() {
     yield* this.all;

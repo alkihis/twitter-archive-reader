@@ -208,6 +208,10 @@ class Archive {
     }
     return new Archive(f);
   }
+
+  get raw() {
+    return this.archive;
+  }
 }
 
 type TwitterArchiveEvents = {
@@ -285,8 +289,9 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
    * 
    * @param file Accept any source that `JSZip` library accepts.
    * @param build_extended True if `.extended_gdpr` should be built (only if **file** is a GDPR archive.)
+   * @param keep_loaded If possible, free the memory after load if set to false.
    */
-  constructor(file: AcceptedZipSources, build_extended = true) {
+  constructor(file: AcceptedZipSources, build_extended = true, keep_loaded = false) {
     super();
 
     this.state = "reading";
@@ -324,10 +329,14 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
 
         // Initialisation de l'archive Twitter
         if (this.isGDPRArchive()) {
-          return this.initGDPR(build_extended);
+          return this.initGDPR(build_extended, keep_loaded);
         }
         else {
-          return this.initClassic();
+          return this.initClassic().then(() => {
+            if (!keep_loaded) {
+              this.archive = undefined;
+            }
+          });
         }
       })
       .then(() => {
@@ -339,14 +348,19 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       });
   }
 
-  protected async initGDPR(extended = false) {
+  protected async initGDPR(extended: boolean, keep_loaded: boolean) {
     this.state = "user_read";
+
+    try {
+      // Delete the tweet media folder (big & useless)
+      this.archive.raw.remove('tweet_media');
+    } catch (e) { }
 
     // Init informations
     const account_arr: AccountGDPR = await this.archive.get('account.js');
     const profile_arr: ProfileGDPR = await this.archive.get('profile.js');
 
-    const [account, profile] = [account_arr[0].account, profile_arr[0].profile];
+    const account = account_arr[0].account, profile = profile_arr[0].profile;
 
     this.index.info = {
       screen_name: account.username,
@@ -426,12 +440,18 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     // DMs should be ok
 
     // Test if archive contain DM images as zip
+    let can_unload_archive = !keep_loaded;
+
     if (this.archive.searchDir(new RegExp('direct_message_media')).length) {
       const folder = this.archive.dir('direct_message_media');
       const query = folder.search(/\.zip$/);
       if (query.length) {
         // console.log("Creating archive from archive (single)");
         this.dm_img_archive = await folder.fromFile(query[0]);
+      }
+      else {
+        // cannot unload
+        can_unload_archive = false;
       }
     }
     if (this.archive.searchDir(new RegExp('direct_message_group_media')).length) {
@@ -450,6 +470,10 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       await this.initExtendedGDPR();
     }
     this.state = "ready";
+
+    if (can_unload_archive) {
+      this.archive = undefined;
+    }
   }
 
   protected async initExtendedGDPR() {
@@ -711,7 +735,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   }
 
   /** Find tweets made on the same day (= month, = day), but in all years. */
-  day() : PartialTweet[] {
+  fromThatDay() : PartialTweet[] {
     const now = new Date;
     const now_m = now.getMonth();
     const now_d = now.getDate();
