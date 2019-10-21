@@ -614,7 +614,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     // @ts-ignore
     tweet.retweet_count = Number(tweet.retweet_count);
     // @ts-ignore
-    tweet.favorite_count = Number(tweet.retweetfavorite_count_count);
+    tweet.favorite_count = Number(tweet.favorite_count);
 
     // Gérer le cas des retweets
     const rt_data = /^RT @(.+?): (.+)/.exec(tweet.full_text);
