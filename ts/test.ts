@@ -25,7 +25,7 @@ const write = (name: string, data: any) => {
   if (archive.is_gdpr) {
     // @ts-ignore
     console.log(archive.dm_img_archive);
-    const blob = await archive.dmImage("648239666517442563-Opsnl201.jpg");
+    // const blob = await archive.dmImage("648239666517442563-Opsnl201.jpg");
   }
 
   //console.log(archive.messages.count);

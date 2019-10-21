@@ -336,6 +336,8 @@ export interface PartialTweet {
   created_at_d?: Date;
   user: PartialTweetUser;
   entities: PartialTweetEntity;
+  retweet_count?: number;
+  favorite_count?: number;
   extended_entities?: {
     media?: MediaGDPREntity[];
   }

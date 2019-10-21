@@ -611,6 +611,11 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     (tweet as unknown as PartialTweet).user = this.user_cache;
     (tweet as unknown as PartialTweet).text = tweet.full_text;
 
+    // @ts-ignore
+    tweet.retweet_count = Number(tweet.retweet_count);
+    // @ts-ignore
+    tweet.favorite_count = Number(tweet.retweetfavorite_count_count);
+
     // Gérer le cas des retweets
     const rt_data = /^RT @(.+?): (.+)/.exec(tweet.full_text);
 
@@ -624,6 +629,8 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       rt.user.name = arobase;
       // @ts-ignore
       rt.retweeted = true;
+      rt.retweet_count = Number(rt.retweet_count);
+      rt.favorite_count = Number(rt.favorite_count);
 
       // Recherche si un ID est disponible par exemple dans les medias (sinon tant pis)
       if (rt.extended_entities && rt.extended_entities.media) {
