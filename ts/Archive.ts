@@ -291,13 +291,16 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
    * @param build_extended True if `.extended_gdpr` should be built (only if **file** is a GDPR archive.)
    * @param keep_loaded If possible, free the memory after load if set to false.
    */
-  constructor(file: AcceptedZipSources, build_extended = true, keep_loaded = false) {
+  constructor(file: AcceptedZipSources | Promise<AcceptedZipSources>, build_extended = true, keep_loaded = false) {
     super();
 
     this.state = "reading";
 
-    this.archive = new Archive(file);
-    this._ready = this.archive.ready()
+    this._ready = 
+      (file instanceof Promise ? 
+        file.then(f => (this.archive = new Archive(f)).ready())
+        : (this.archive = new Archive(file)).ready()
+      )
       .then(() => {
         this.dispatchEvent({type:'zipready'});
 
