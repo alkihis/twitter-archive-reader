@@ -141,12 +141,12 @@ abstract class ConversationBase {
   /** Get all messages recived or sended by a specific user (by ID) */
   from(id: string): SubConversation;
   /** Get all messages recived or sended by a pool of users (by ID) */
-  from(ids: Set<string>): SubConversation;
-  from(ids: string | Set<string> | string[]) {
+  from(ids: Iterable<string>): SubConversation;
+  from(ids: string | Iterable<string>) {
     if (typeof ids === 'string') {
       ids = new Set([ids]);
     }
-    if (Array.isArray(ids)) {
+    if (!(ids instanceof Set)) {
       ids = new Set(ids);
     }
 
@@ -159,12 +159,12 @@ abstract class ConversationBase {
   /** Get all messages sended by a specific user (by ID) */
   sender(id: string): SubConversation;
   /** Get all messages sended by a pool of users (by ID) */
-  sender(ids: Set<string>): SubConversation;
-  sender(ids: string | Set<string> | string[]) {
+  sender(ids: Iterable<string>): SubConversation;
+  sender(ids: string | Iterable<string>) {
     if (typeof ids === 'string') {
       ids = new Set([ids]);
     }
-    if (Array.isArray(ids)) {
+    if (!(ids instanceof Set)) {
       ids = new Set(ids);
     }
 
@@ -174,12 +174,12 @@ abstract class ConversationBase {
   /** Get all messages received by a specific user (by ID) */
   recipient(id: string): SubConversation;
   /** Get all messages received by a pool of users (by ID) */
-  recipient(ids: Set<string> | string[]): SubConversation;
-  recipient(ids: string | Set<string> | string[]) {
+  recipient(ids: Iterable<string>): SubConversation;
+  recipient(ids: string | Iterable<string>) {
     if (typeof ids === 'string') {
       ids = new Set([ids]);
     }
-    if (Array.isArray(ids)) {
+    if (!(ids instanceof Set)) {
       ids = new Set(ids);
     }
 
