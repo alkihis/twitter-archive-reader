@@ -138,6 +138,24 @@ abstract class ConversationBase {
     return undefined;
   }
 
+  /** Get all messages recived or sended by a specific user (by ID) */
+  from(id: string): SubConversation;
+  /** Get all messages recived or sended by a pool of users (by ID) */
+  from(ids: Set<string>): SubConversation;
+  from(ids: string | Set<string> | string[]) {
+    if (typeof ids === 'string') {
+      ids = new Set([ids]);
+    }
+    if (Array.isArray(ids)) {
+      ids = new Set(ids);
+    }
+
+    return new SubConversation(
+      this.all.filter(m => (ids as Set<string>).has(m.senderId) || (ids as Set<string>).has(m.recipientId)), 
+      this.info.me
+    );
+  }
+
   /** Get all messages sended by a specific user (by ID) */
   sender(id: string): SubConversation;
   /** Get all messages sended by a pool of users (by ID) */

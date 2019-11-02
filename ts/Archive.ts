@@ -343,10 +343,10 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
         }
       })
       .then(() => {
-        this.dispatchEvent({type: 'ready'});
+        this.dispatchEvent({ type: 'ready' });
       })
       .catch(e => {
-        this.dispatchEvent({type: 'error', detail: e });
+        this.dispatchEvent({ type: 'error', detail: e });
         return Promise.reject(e);
       });
   }
