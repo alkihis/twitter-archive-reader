@@ -67,13 +67,22 @@ This package is usable inside a browser or in Node.js, but be aware that loading
 
 Once you've created the instance, you must wait for the ready-ness status of the object with the `.ready()` promise.
 
+Supported loading methods:
+- `File` from browser
+- `Buffer` or `ArrayBuffer`
+- `string` (filename) for loading files in Node.js
+- `number[]` or `Uint8Array`, bytes arrays
+- `JSZip` instances
+- `Archive` instances (see `StreamZip.ts/Archive` class)
+
 ```ts
 // You can create TwitterArchive with all supported 
 // formats by JSZip's loadAsync() method 
 // (see https://stuk.github.io/jszip/documentation/api_jszip/load_async.html).
+// You can also use filename or node Buffer.
 
-// By a Node.js buffer
-const archive = new TwitterArchive(readFileSync('filename.zip'));
+// By a filename
+const archive = new TwitterArchive('filename.zip');
 
 // By a file input (File object)
 const archive = new TwitterArchive(document.querySelector('input[type="file"]').files[0]);

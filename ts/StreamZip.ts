@@ -1,7 +1,6 @@
 import zlib from 'zlib';
 import events from 'events';
 import stream from 'stream';
-import JSZip from 'jszip';
 import fs from 'fs';
 
 export type AcceptedFile = File | string;
