@@ -1,19 +1,19 @@
 import commander from 'commander';
-import { TwitterArchive } from './Archive';
+import { TwitterArchive } from '../Archive';
 import { readFileSync, writeFileSync } from 'fs';
 import { inspect } from 'util';
-import TweetSearcher from './TweetSearcher';
+import TweetSearcher from '../TweetSearcher';
 
 commander
   .option('-f, --file <zipFile>', "Archive ZIP to load")
 .parse(process.argv);
 
 const write = (name: string, data: any) => {
-  writeFileSync('test_dir/'+name, typeof data === 'string' ? data : inspect(data, false, Infinity));
+  writeFileSync('test_dir/' + name, typeof data === 'string' ? data : inspect(data, false, Infinity));
 };
 
 (async () => {
-  const archive = new TwitterArchive(readFileSync(commander.file));
+  const archive = new TwitterArchive(commander.file);
 
   console.log("Reading archive...");
   // You must wait for ZIP reading and archive object build
@@ -22,16 +22,16 @@ const write = (name: string, data: any) => {
   console.log("Archive ok");
 
   // Test dm
-  if (archive.is_gdpr) {
+  if (false && archive.is_gdpr) {
     // @ts-ignore
     console.log(archive.dm_img_archive);
-    // const blob = await archive.dmImage("648239666517442563-Opsnl201.jpg");
+    const blob = await archive.dmImage("925270685353734148-ZOaODCV7.jpg");
   }
 
   //console.log(archive.messages.count);
 
-  console.log(TweetSearcher.search(archive.all, 'from:erykyu'));
-  return;
+  // console.log(TweetSearcher.search(archive.all, 'from:erykyu'));
+  console.log(archive.all.slice(0, 5))
 
   // List the 30 first tweets in the archive
   write('30_first', archive.all.slice(0, 5));
@@ -41,6 +41,8 @@ const write = (name: string, data: any) => {
 
   // Get all the tweets sent in one month
   write('2018_01', archive.month("1", "2018").length);
+
+  return
 
   // Get the number of tweets stored in the archive
   console.log(archive.length, "tweets in archive");

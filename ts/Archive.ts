@@ -1,11 +1,10 @@
-import JSZip from 'jszip';
+import { AcceptedZipSources, Archive, BaseArchive, constructArchive } from './StreamArchive';
 import { ArchiveIndex, PartialTweetGDPR, PartialTweet, AccountGDPR, ProfileGDPR, ClassicTweetIndex, ClassicPayloadDetails, TwitterUserDetails, DMFile, PartialTweetUser, GDPRFollowings, GDPRFollowers, GDPRFavorites, GDPRMutes, InnerGDPRPersonalization, GPDRScreenNameHistory, GPDRProtectedHistory, GDPRBlocks, GDPRAgeInfo, InnerGDPRAgeInfo, GDPRMoment, GDPRMomentFile } from './TwitterTypes';
 import DMArchive from './DMArchive';
 import { EventTarget, defineEventAttribute } from 'event-target-shim';
 import bigInt from 'big-integer';
 import { supportsBigInt } from './helpers';
 
-export type AcceptedZipSources = string | number[] | Uint8Array | ArrayBuffer | Blob | NodeJS.ReadableStream | JSZip | Archive;
 export type ArchiveReadState = "idle" | "reading" | "indexing" | "tweet_read" | "user_read" | "dm_read" | "extended_read" | "ready";
 
 /** Raw informations stored in GDPR, extracted for a simpler use.
@@ -78,142 +77,6 @@ export function isWithVideo(tweet: PartialTweet) {
   return false;
 }
 
-class Archive {
-  protected _ready: Promise<void> = Promise.resolve();
-  protected archive: JSZip;
-
-  constructor(file: AcceptedZipSources) {
-    if (file instanceof Archive) {
-      this._ready = Promise.resolve();
-      this.archive = file.archive;
-      return;
-    }
-
-    if (file instanceof JSZip) {
-      this._ready = Promise.resolve();
-      this.archive = file;
-      return;
-    }
-
-    this._ready = JSZip.loadAsync(file)
-      .then(data => {
-        this.archive = data;
-      });
-  }
-
-  ready() {
-    return this._ready;
-  }
-
-  dir(name: string) {
-    return new Archive(this.archive.folder(name));
-  }
-
-  has(name: string) {
-    return this.search(new RegExp(`^${name}$`)).length > 0;
-  }
-
-  get(
-    name: string, 
-    type: "text" 
-      | "arraybuffer" 
-      | "blob" 
-    = "text",
-    parse_auto = true
-  ) {
-    if (!this.has(name)) {
-      // @ts-ignore
-      name = this.archive.root + name;
-    }
-
-    const f = this.archive.file(name);
-
-    if (!f) {
-      throw new Error("File not found: " + name);
-    }
-
-    return this.read(f, type, parse_auto);
-  }
-
-  search(query: RegExp) {
-    return this.archive.file(query);
-  }
-
-  searchDir(query: RegExp) {
-    return this.archive.folder(query);
-  }
-
-  read(
-    file: JSZip.JSZipObject, 
-    type: "text" 
-      | "arraybuffer" 
-      | "blob" 
-    = "text",
-    parse_auto = true
-  ) {
-    const p = file.async(type);
-
-    if (parse_auto) {
-      return p.then(data => {
-        if (typeof data === 'string') {
-          return JSON.parse(data.substr(data.indexOf('=') + 1).trimLeft());
-        }
-        else {
-          return data;
-        }
-      }); 
-    }
-    else {
-      return p;
-    }
-  }
-
-  ls(current_dir_only = true) {
-    const l = this.archive.files;
-    const files: { [name: string]: JSZip.JSZipObject } = {};
-    // @ts-ignore
-    let current_dir: string = this.archive.root;
-
-    if (!current_dir) {
-      current_dir = "";
-    }
-
-    for (const key in l) {
-      if (key.startsWith(current_dir)) {
-        const real_name = key.slice(current_dir.length);
-
-        if (current_dir_only && real_name.match(/\/.+$/)) {
-          continue;
-        }
-
-        files[real_name] = l[key];
-      }
-    }
-
-    return files;
-  }
-
-  /**
-   * Create a new instance of Archive from a file contained in this archive.
-   * 
-   * @param name File name or file object
-   */
-  async fromFile(name: string | JSZip.JSZipObject) {
-    let f: ArrayBuffer;
-    if (typeof name === 'string') {
-      f = await this.get(name, "arraybuffer", false);
-    }
-    else {
-      f = await this.read(name, "arraybuffer", false);
-    }
-    return new Archive(f);
-  }
-
-  get raw() {
-    return this.archive;
-  }
-}
-
 type TwitterArchiveEvents = {
   zipready: CustomEvent<void>;
   userinfosready: CustomEvent<void>;
@@ -246,7 +109,7 @@ type TwitterArchiveOnEvents = {
  */
 export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArchiveOnEvents> {
   protected _ready: Promise<void> = Promise.resolve();
-  protected archive: Archive;
+  protected archive: BaseArchive<any>;
 
   /** Current archive load state. */
   public state: ArchiveReadState = "idle";
@@ -298,8 +161,8 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
 
     this._ready = 
       (file instanceof Promise ? 
-        file.then(f => (this.archive = new Archive(f)).ready())
-        : (this.archive = new Archive(file)).ready()
+        file.then(f => (this.archive = constructArchive(f)).ready())
+        : (this.archive = constructArchive(file)).ready()
       )
       .then(() => {
         this.dispatchEvent({type:'zipready'});
@@ -356,7 +219,9 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
 
     try {
       // Delete the tweet media folder (big & useless)
-      this.archive.raw.remove('tweet_media');
+      if (this.archive instanceof Archive) {
+        this.archive.raw.remove('tweet_media');
+      }
     } catch (e) { }
 
     // Init informations
