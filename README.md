@@ -137,8 +137,6 @@ new TwitterArchive(
    * If `false`, DMs images will be unavailable.
    * If `undefined`, Twitter will extract in RAM in browser mode, and leave the ZIP untouched in Node.js.
    * 
-   * You still have the possibility to load these archive using `.importDmImageZip()` (custom ZIP).
-   * 
    * If you want to load the DM image ZIP present in the archive when you want, use `.loadCurrentDmImageZip()`. 
    * **Please note that `keep_loaded` should be set to `true` to use this method !**
    */
