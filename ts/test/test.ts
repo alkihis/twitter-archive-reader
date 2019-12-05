@@ -17,9 +17,11 @@ const write = (name: string, data: any) => {
 
   console.log("Reading archive...");
   // You must wait for ZIP reading and archive object build
-  await archive.ready();
+  //await archive.ready();
+  console.log(await archive.ready().catch(console.error));
 
   await archive.loadCurrentDmImageZip();
+
 
   console.log("Archive ok");
 

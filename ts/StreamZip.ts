@@ -344,6 +344,7 @@ export default class StreamZip<T, S = T> extends events.EventEmitter {
         if (buffer.readUInt32LE(bufferPosition) === this.op.sig) {
           this.op.lastBufferPosition = bufferPosition;
           this.op.lastBytesRead = bytesRead;
+
           this.op.complete();
           return;
         }
@@ -356,6 +357,7 @@ export default class StreamZip<T, S = T> extends events.EventEmitter {
     this.op.chunkSize *= 2;
     if (pos <= minPos)
       return this.emit('error', 'Bad archive');
+
     var expandLength = Math.min(this.op.chunkSize, pos - minPos);
     this.op.win.expandLeft(expandLength)
       .then(bytes => this.readUntilFoundCallback(null, bytes))
@@ -365,6 +367,7 @@ export default class StreamZip<T, S = T> extends events.EventEmitter {
   readCentralDirectoryComplete = () => {
     var buffer = this.op.win.buffer;
     var pos = this.op.lastBufferPosition;
+
     try {
       const centralDirectory = new CentralDirectoryHeader();
       centralDirectory.read(buffer.slice(pos, pos + consts.ENDHDR));
@@ -399,8 +402,10 @@ export default class StreamZip<T, S = T> extends events.EventEmitter {
       chunkSize: this.chunkSize,
       entriesLeft: this.centralDirectory.volumeEntries
     };
+
     return this.op.win.read(this.op.pos, Math.min(this.chunkSize, this.fileSize - this.op.pos))
       .then(bytes => this.readEntriesCallback(bytes))
+      .catch(err => this.emit('error', err))
   }
 
   protected readEntriesCallback(bytesRead: number) {
@@ -424,8 +429,10 @@ export default class StreamZip<T, S = T> extends events.EventEmitter {
         var entryHeaderSize = entry.fnameLen + entry.extraLen + entry.comLen;
         var advanceBytes = entryHeaderSize + (this.op.entriesLeft > 1 ? consts.CENHDR : 0);
         if (bufferLength - bufferPos < advanceBytes) {
-          this.op.win.moveRight(this.chunkSize, this.readEntriesCallback, bufferPos);
+          this.op.win.moveRight(this.chunkSize, bufferPos)
+            .then(bytesRead => this.readEntriesCallback(bytesRead));
           this.op.move = true;
+
           return;
         }
         entry.read(buffer, bufferPos);
@@ -980,7 +987,7 @@ class FileWindowBuffer<S> {
     return await this.fsOp.read();
   }
 
-  async moveRight(_: number, callback: Function, shift: number) {
+  async moveRight(_: number, shift: number) {
     this.checkOp();
     if (shift) {
         this.buffer.copy(this.buffer, 0, shift);
