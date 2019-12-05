@@ -140,8 +140,8 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
 
   protected dms: DMArchive;
 
-  protected dm_img_archive: Archive;
-  protected dm_img_group_archive: Archive;
+  protected dm_img_archive: BaseArchive<any>;
+  protected dm_img_group_archive: BaseArchive<any>;
 
   protected _is_gdpr = false;
 
@@ -150,11 +150,27 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   /**
    * Build a new instance of TwitterArchive.
    * 
-   * @param file Accept any source that `JSZip` library accepts.
+   * @param file Accept any source that `JSZip` library accepts, and string for filenames.
    * @param build_extended True if `.extended_gdpr` should be built (only if **file** is a GDPR archive.)
    * @param keep_loaded If possible, free the memory after load if set to false.
+   * @param load_images_in_zip In Twitter GDPR archives v2, tweet and dm images are in ZIP archives inside the ZIP.
+   * If `true`, TwitterArchive will extract its content in RAM to allow the usage of images.
+   * If `false`, DMs images will be unavailable.
+   * If `undefined`, Twitter will extract in RAM in browser mode, and leave the ZIP untouched in Node.js.
+   * 
+   * If you want to save memory, set this parameter to `false`, 
+   * and before using `.dmImage()` methods, check if you need to load DM images ZIP 
+   * with `.requiresDmImageZipLoad()`.
+   * 
+   * Then, if you need to, load the DM image ZIP present in the archive using `.loadCurrentDmImageZip()`. 
+   * **Please note that `keep_loaded` should be set to `true` to use this method !**
    */
-  constructor(file: AcceptedZipSources | Promise<AcceptedZipSources>, build_extended = true, keep_loaded = false) {
+  constructor(
+    file: AcceptedZipSources | Promise<AcceptedZipSources>, 
+    build_extended = true, 
+    keep_loaded = false,
+    protected load_images_in_zip: boolean = undefined,
+  ) {
     super();
 
     this.state = "reading";
@@ -315,7 +331,8 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       const query = folder.search(/\.zip$/);
       if (query.length) {
         // console.log("Creating archive from archive (single)");
-        this.dm_img_archive = await folder.fromFile(query[0]);
+        if (this.should_autoload_zip_img)
+          this.dm_img_archive = await folder.fromFile(query[0]);
       }
       else {
         // cannot unload
@@ -325,14 +342,14 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     if (this.archive.searchDir(new RegExp('direct_message_group_media')).length) {
       const folder = this.archive.dir('direct_message_group_media');
       const query = folder.search(/\.zip$/);
-      if (query.length) {
+      if (query.length && this.should_autoload_zip_img) {
         // console.log("Creating archive from archive (group)");
         this.dm_img_group_archive = await folder.fromFile(query[0]);
       }
     }
 
     this.state = "extended_read";
-    this.dispatchEvent({type: 'willreadextended'});
+    this.dispatchEvent({ type: 'willreadextended' });
 
     if (extended) {
       await this.initExtendedGDPR();
@@ -687,25 +704,31 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     return null;
   }
 
-  /** Give the media url in direct message, obtain the Blob-bed image. This does **not** work on Node.js ! */
-  dmImageFromUrl(url: string, is_group = false) {
+  /** 
+   * Give the media url in direct message, obtain the Blob-bed image. 
+   * For use in Node.js, you must set `as_array_buffer` to `true` ! 
+   */
+  dmImageFromUrl(url: string, is_group = false, as_array_buffer = false) {
     const [, , , , id, , image] = url.split('/');
 
     if (id && image) {
-      return this.dmImage(id + "-" + image, is_group)
+      return this.dmImage(id + "-" + image, is_group, as_array_buffer)
     }
-    return Promise.reject();
+    return Promise.reject("URL is invalid");
   }
 
-  /** Extract a direct message image from GDPR archive (exact filename required). This does **not** work on Node.js ! */
-  dmImage(name: string, is_group = false) : Promise<Blob> {
+  /** 
+   * Extract a direct message image from GDPR archive (exact filename required). 
+   * For use in Node.js, you must set `as_array_buffer` to `true` ! 
+   */
+  dmImage(name: string, is_group = false, as_array_buffer = false) : Promise<Blob | ArrayBuffer> {
     if (!this.is_gdpr) {
       return Promise.reject("Archive not supported");
     }
 
     if (this.dm_img_archive || this.dm_img_group_archive) {
       // Les dm sont dans un ZIP
-      let zip: Archive;
+      let zip: BaseArchive<any>;
       if (is_group) {
         zip = this.dm_img_group_archive;
       }
@@ -720,7 +743,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       const results = zip.search(new RegExp(name + "(\.?.*)$"));
   
       if (results.length) {
-        return zip.read(results[0], "blob");
+        return zip.read(results[0], as_array_buffer ? "arraybuffer" : "blob");
       }
       return Promise.reject("File not found");
     }
@@ -732,10 +755,81 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       const results = directory.search(new RegExp(name + "(\.?.*)$"));
   
       if (results.length) {
-        return this.archive.read(results[0], "blob");
+        return this.archive.read(results[0], as_array_buffer ? "arraybuffer" : "blob");
       }
       return Promise.reject("File not found");
     }
+  }
+
+  /**
+   * Return true if you need to load a DM image ZIP in order to use `.dmImage()`.
+   * 
+   * If you need to, see `.loadCurrentDmImageZip()`, or `importDmImageZip()`.
+   */
+  requiresDmImageZipLoad() {
+    if (!this.is_gdpr || !this.archive || this.dm_img_archive) {
+      return false;
+    }
+
+    if (this.archive.searchDir(new RegExp('direct_message_media')).length) {
+      const folder = this.archive.dir('direct_message_media');
+      const query = folder.search(/\.zip$/);
+      if (query.length) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Load/reload zip archives that contains DM images, 
+   * if `load_images_in_zip` parameter was set to false.
+   * 
+   * You need to have the archive loaded to accomplish this action 
+   * (constructor `keep_loaded` parameter should be set to `true`).
+   * 
+   * Note that if any zip is found in the archive, this method will just do nothing.
+   */
+  async loadCurrentDmImageZip() {
+    if (!this.archive || !this.is_gdpr) {
+      return;
+    }
+
+    if (this.archive.searchDir(new RegExp('direct_message_media')).length) {
+      const folder = this.archive.dir('direct_message_media');
+      const query = folder.search(/\.zip$/);
+      if (query.length) {
+        // Load the archive
+        this.dm_img_archive = await folder.fromFile(query[0]);
+        await this.dm_img_archive.ready();
+      }
+    }
+    if (this.archive.searchDir(new RegExp('direct_message_group_media')).length) {
+      const folder = this.archive.dir('direct_message_group_media');
+      const query = folder.search(/\.zip$/);
+      if (query.length) {
+        // Load the archive (group)
+        this.dm_img_group_archive = await folder.fromFile(query[0]);
+        await this.dm_img_group_archive.ready();
+      }
+    }
+  }
+
+  /**
+   * Import a custom ZIP file as DM single-conversation images file.
+   */
+  async importDmImageZip(file: AcceptedZipSources | Promise<AcceptedZipSources>) {
+    this.dm_img_archive = constructArchive(await file);
+    await this.dm_img_archive.ready();
+  }
+
+  /**
+   * Import a custom ZIP file as DM group-conversation images file.
+   */
+  async importDmGroupImageZip(file: AcceptedZipSources | Promise<AcceptedZipSources>) {
+    this.dm_img_group_archive = constructArchive(await file);
+    await this.dm_img_group_archive.ready();
   }
 
   /** All tweets registered in this archive. */
@@ -784,6 +878,19 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   /** Raw Archive object. Can be used to get specific files. */
   get raw() {
     return this.archive;
+  }
+
+  protected get should_autoload_zip_img() {
+    if (typeof this.load_images_in_zip !== 'undefined') {
+      return this.load_images_in_zip;
+    }
+
+    // test if node
+    if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+      // IsNode
+      return false;
+    }
+    return true;
   }
 
   /** Resolved when archive read is over. */

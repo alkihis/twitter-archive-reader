@@ -104,6 +104,48 @@ await archive.ready();
 // Archive is ready !
 ```
 
+### Options for TwitterArchive
+You can set options when you load the `TwitterArchive` instance.
+
+Available options are:
+```ts
+new TwitterArchive(
+  /** 
+   * Archive to load.
+   * Can be a string (filename), number[], Uint8Array,
+   * JSZip, Archive, ArrayBuffer and File objects.
+   */
+  file: AcceptedZipSources,
+  /** 
+   * If the file is a modern/GDPR archive, TwitterArchive
+   * will build the "extended" data. 
+   */
+  build_extended: boolean = true,
+  /** 
+   * After archive load, define if the dezipped archive 
+   * should stay in memory. 
+   * Setting this parameter to false could 
+   * reduce memory consumption.
+   * 
+   * In specific circonstances, the archive will 
+   * stay loaded even if this parameter is false.
+   */
+  keep_loaded: boolean = false,
+  /**
+   * In Twitter GDPR archives v2, tweet and dm images are in ZIP archives inside the ZIP.
+   * If `true`, TwitterArchive will extract its content in RAM to allow the usage of images.
+   * If `false`, DMs images will be unavailable.
+   * If `undefined`, Twitter will extract in RAM in browser mode, and leave the ZIP untouched in Node.js.
+   * 
+   * You still have the possibility to load these archive using `.importDmImageZip()` (custom ZIP).
+   * 
+   * If you want to load the DM image ZIP present in the archive when you want, use `.loadCurrentDmImageZip()`. 
+   * **Please note that `keep_loaded` should be set to `true` to use this method !**
+   */
+  load_images_in_zip: boolean? = undefined
+)
+```
+
 ### Tweet access
 
 Several methods exists for tweet access.
@@ -158,8 +200,8 @@ Some properties are restricted for the GDPR archive.
 - `.extended_gdpr`: Access to GDPR's extended data (favorites, blocks...)
 
 Specific methods:
-- `.dmImage(name: string, is_group: boolean)`: Extract direct message file from its name (returns a `Promise<Blob>`).
-- `.dmImageFromUrl(url: string, is_group: boolean)`: Extract direct message file from the Twitter media URL contained in `DirectMessage` object (returns a `Promise<Blob>`).
+- `.dmImage(name: string, is_group: boolean, as_array_buffer: boolean)`: Extract direct message file from its name (returns a `Promise<Blob | ArrayBuffer>`).
+- `.dmImageFromUrl(url: string, is_group: boolean, as_array_buffer: boolean)`: Extract direct message file from the Twitter media URL contained in `DirectMessage` object (returns a `Promise<Blob | ArrayBuffer>`).
 
 ### Search in tweets
 
@@ -303,6 +345,67 @@ First DM in the conversation.
 - `Conversation.last: LinkedDirectMessage`
 
 Last DM in the conversation.
+
+
+#### Explore images
+Media loading methods are available on the `TwitterArchive` instance.
+
+You can load with the image name (`'xi9309239xx-91.jpg'` for example), or directly from a URL 
+(present in the `mediaUrls` property of a DM).
+
+The two methods take the name or URL in first argument, 
+a boolean indicating if the image should be found in the group DM archive or not, 
+and a final argument (boolean) if the function should return an `ArrayBuffer` instead of a `Blob`.
+
+**Please note that, in Node.js, the third argument should be always set to `true`, due to the unavailability of the `Blob` in this platform**.
+
+- `.dmImage`: Get a image from a image name. 
+- `.dmImageFromUrl`: Get a image from a media URL.
+
+```ts
+/* Browser */
+// Get the image
+const blob = await archive.dmImage("991765544733937669-512rVee-.jpg") as Blob;
+
+// Create a URL and set it as img
+const url = URL.createObjectURL(blob);
+document.querySelector('img').src = url;
+
+/* Node.js */
+// Get the image
+const array_buffer = await archive.dmImage("991765544733937669-512rdee-.jpg", false, true) as ArrayBuffer;
+// Write the file to disk
+fs.writeFileSync('test_dir/my_img.jpg', Buffer.from(blob));
+```
+
+
+#### Extended data
+GDPR archives provide other data than tweets or direct messages.
+
+Extended data is available under the `.extended_gdpr` property on `TwitterArchive` instance.
+
+Please note that, during object construction, you should set the `build_extended` parameter to `true` (default), and the `.is_gdpr` property must be `true` in order to have this property set.
+
+Available properties on this object are:
+```ts
+interface ExtendedGDPRInfo {
+  followers: Set<string>;
+  followings: Set<string>;
+  favorites: Set<string>;
+  mutes: Set<string>;
+  blocks: Set<string>;
+  lists: {
+    created: string[];
+    member_of: string[];
+    subscribed: string[];
+  };
+  personalization: InnerGDPRPersonalization;
+  screen_name_history: GPDRScreenNameHistory[];
+  protected_history: GPDRProtectedHistory[];
+  age_info: InnerGDPRAgeInfo;
+  moments: GDPRMoment[];
+}
+```
 
 ## Events
 

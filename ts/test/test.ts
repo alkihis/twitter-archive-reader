@@ -1,6 +1,6 @@
 import commander from 'commander';
 import { TwitterArchive } from '../Archive';
-import { readFileSync, writeFileSync } from 'fs';
+import { writeFileSync, fstat } from 'fs';
 import { inspect } from 'util';
 import TweetSearcher from '../TweetSearcher';
 
@@ -13,19 +13,23 @@ const write = (name: string, data: any) => {
 };
 
 (async () => {
-  const archive = new TwitterArchive(commander.file);
+  const archive = new TwitterArchive(commander.file, true, true);
 
   console.log("Reading archive...");
   // You must wait for ZIP reading and archive object build
   await archive.ready();
 
+  await archive.loadCurrentDmImageZip();
+
   console.log("Archive ok");
 
   // Test dm
-  if (false && archive.is_gdpr) {
+  if (archive.is_gdpr) {
     // @ts-ignore
     console.log(archive.dm_img_archive);
-    const blob = await archive.dmImage("925270685353734148-ZOaODCV7.jpg");
+    const blob = await archive.dmImage("991765544733937669-512rVQq-.jpg", false, true) as ArrayBuffer;
+    writeFileSync('test_dir/mon_img.jpg', Buffer.from(blob));
+    return
   }
 
   //console.log(archive.messages.count);
