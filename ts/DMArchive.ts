@@ -42,6 +42,20 @@ export class DMArchive {
     return id in this.index;
   }
 
+  /**
+   * Get a message by ID
+   */
+  message(id: string) {
+    for (const conv of this.all) {
+      const msg = conv.single(id);
+      if (msg) {
+        return msg;
+      }
+    }
+
+    return undefined;
+  }
+
   /** Group conversations */
   get groups() {
     return this.all.filter(c => c.is_group_conversation);

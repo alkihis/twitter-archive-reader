@@ -762,6 +762,37 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   }
 
   /**
+   * Return all the images of a direct message, as blob or array buffer.
+   * 
+   * If the message does not exists or the DM archive is not loaded / available,
+   * return an empty array.
+   * 
+   * Otherwise, return a array of `Blob` / `ArrayBuffer`
+   * 
+   * @param direct_message_id DM id
+   * @param as_array_buffer Return an `ArrayBuffer` array, instead of a `Blob` array
+   */
+  async dmImagesOf(direct_message_id: string, as_array_buffer = false): Promise<(Blob | ArrayBuffer)[]> {
+    if (!this.is_gdpr || !this.messages) {
+      return [];
+    }
+
+    const msg = this.messages.message(direct_message_id);
+
+    if (!msg) {
+      // Message not found
+      return [];
+    }
+
+    const images: Promise<Blob | ArrayBuffer>[] = [];
+    for (const media of msg.mediaUrls) {
+      images.push(this.dmImageFromUrl(media, as_array_buffer));
+    }
+
+    return Promise.all(images);
+  }
+
+  /**
    * Return true if you need to load a DM image ZIP in order to use `.dmImage()`.
    * 
    * If you need to, see `.loadCurrentDmImageZip()`, or `importDmImageZip()`.
@@ -872,6 +903,8 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
 
   /** True if archive is a GDPR archive. */
   get is_gdpr() {
+    if (this._is_gdpr === undefined)
+      return this.isGDPRArchive();
     return this._is_gdpr;
   }
 

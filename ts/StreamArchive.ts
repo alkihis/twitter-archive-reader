@@ -83,6 +83,10 @@ class StreamArchive implements BaseArchive<ZipEntry> {
   dir(dir_name: string) {
     const copy = new StreamArchive(this);
 
+    if (dir_name.endsWith('/')) {
+      dir_name = dir_name.slice(0, dir_name.length - 1);
+    }
+
     const trimmed_entries: EntryDict = {};
     const name_regex = new RegExp('^' + dir_name + '/');
     const to_delete: string[] = [];
@@ -92,7 +96,7 @@ class StreamArchive implements BaseArchive<ZipEntry> {
         to_delete.push(name); 
       }
 
-      trimmed_entries[this.ltrim(name, dir_name)] = entry;
+      trimmed_entries[this.ltrim(name, dir_name + "/")] = entry;
     }
 
     copy.entries = trimmed_entries;
@@ -111,7 +115,7 @@ class StreamArchive implements BaseArchive<ZipEntry> {
 
   search(query: RegExp) {
     return Object.entries(this.files)
-      .filter(f => f[0].match(query))
+      .filter(f => !!f[0].match(query))
       .map(f => f[1]);
   }
 
