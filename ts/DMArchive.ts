@@ -1,5 +1,5 @@
 import { DMFile } from './TwitterTypes'
-import Conversation from "./Conversation";
+import Conversation, { GlobalConversation } from "./Conversation";
 
 /**
  * Hold all the direct messages contained in a Twitter GDPR archive.
@@ -8,6 +8,7 @@ export class DMArchive {
   protected index: {
     [convId: string]: Conversation
   } = {};
+  protected all_messages: GlobalConversation | undefined;
 
   constructor(protected me_id: string) { }
 
@@ -45,7 +46,11 @@ export class DMArchive {
   /**
    * Get a message by ID
    */
-  message(id: string) {
+  single(id: string) {
+    if (this.all_messages) {
+      return this.all_messages.single(id);
+    }
+
     for (const conv of this.all) {
       const msg = conv.single(id);
       if (msg) {
@@ -54,6 +59,23 @@ export class DMArchive {
     }
 
     return undefined;
+  }
+
+  /**
+   * Get a conversation who has all messages in it. 
+   * 
+   * Please note that this method is not recommanded (and time-consuming at initialization). 
+   * Use the real conversations instead.
+   * 
+   * Use cases: Search text in all messages, in every conversation / 
+   * Show messages in a timeline, without interest of who wrote it
+   */
+  get dms() {
+    if (this.all_messages) {
+      return this.all_messages;
+    }
+
+    return this.all_messages = new GlobalConversation(this.all);
   }
 
   /** Group conversations */
@@ -73,11 +95,7 @@ export class DMArchive {
 
   /** Message count. */
   get count() {
-    let c = 0;
-    for (const conv of this.all) {
-      c += conv.length;
-    }
-    return c;
+    return this.all.reduce((acc, cur) => cur.length + acc, 0);
   }
 
   /** Conversation count. */

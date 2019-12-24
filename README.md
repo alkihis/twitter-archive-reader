@@ -249,6 +249,12 @@ Number of messages in this archive.
 
 Number of conversations in this archive.
 
+- `DMArchive.dms: GlobalConversation`
+
+Get a conversation who contains **every** message. This "breaks" the per-conversation based system of the DMs.
+
+*Warning*: First access to this property cause the creation of the `GlobalConversation` instance, which need to index every message one by one, by ID and by date. This could be time-consuming **and** memory inefficient if the number of direct messages is very large, so please take care !
+
 #### Explore conversations
 
 Once you've get a conversation with `DMArchive`, you have access to its messages.

@@ -1,24 +1,47 @@
+import Conversation from "./Conversation";
+
 /*** INTERNAL: TwitterArchive */
+/**
+ * Info/index about loaded archive.
+ */
 export interface ArchiveIndex {
+  /** Contains informations about the user who created archive */
   info: TwitterUserDetails,
+  /**
+   * Index of tweets by years. 
+   * 
+   * Example, get index of tweets posted on 2019/01 : 
+   * **<index>.years[2019][1]**
+   */
   years: {
     [year: string]: {
       [month: string]: TweetIndex;
     }
   },
+  /** Archive informations: Creation date and tweet count. */
   archive: {
     created_at: string,
     tweets: number
   },
+  /**
+   * Index of tweets by ID.
+   */
   by_id: TweetIndex
 }
 
+/**
+ * Link a tweet identifier to a single tweet. Tweets IDs must be **string**.
+ */
 export interface TweetIndex {
   [id: string]: PartialTweet;
 }
 
 /** GDPR ARCHIVE */
+/**
+ * One media information of a tweet in a GDPR archive.
+ */
 export interface MediaGDPREntity {
+  /** Full URL of the media. */
   expanded_url: string;
   source_status_id: string;
   source_user_id_str: string;
@@ -48,6 +71,7 @@ export interface MediaGDPREntity {
   type: "photo" | "animated_gif" | "video";
 }
 
+/** A single tweet in a GPDR archive. */
 export interface PartialTweetGDPR {
   source: string;
   retweeted: boolean;
@@ -131,18 +155,38 @@ export interface GDPRConversation {
 }
 
 export interface DirectMessage {
+  /** Person who get the DM (Twitter user ID). */
   recipientId: string;
+  /** Content of the DM. */
   text: string;
+  /** 
+   * Array of URLs linked to this direct message. 
+   * Currently, a DM could only contain **one** media. 
+   * 
+   * To display images/medias linked in this property, use 
+   * **.dmImageFromUrl()** method in the `TwitterArchive` instance.
+   */
   mediaUrls: string[];
+  /** Person who send the DM (Twitter user ID). */
   senderId: string;
+  /** Message ID. */
   id: string;
+  /** Stringified date of message creation. 
+   * If the DM is a `LinkedDirectMessage`, 
+   * please use **.createdAtDate** property to get the date,
+   * it's already correctly parsed. 
+   */
   createdAt: string;
 }
 
 export interface LinkedDirectMessage extends DirectMessage {
+  /** Previous message in its conversation. `null` if this message is the first. */
   previous: LinkedDirectMessage | null;
+  /** Next message in its conversation. `null` if this message is the last. */
   next: LinkedDirectMessage | null;
   createdAtDate: Date;
+  /** Conversation linked to the message. This property is set if the message is in a `GlobalConversation` object. */
+  conversation?: Conversation;
 }
 
 export type GDPRFollowings = {
@@ -324,20 +368,37 @@ interface MomentImageContent {
 }
 
 /** CLASSIC ARCHIVE */
+/** Tweet contained in a Twitter archive. */
 export interface PartialTweet {
+  /** ID of the tweet. */
   id_str: string;
+  /** Content of the tweet. */
   text: string;
+  /** Application who created the tweet. */
   source: string;
+  /** If the tweet is a reply, this is user ID of the tweet owner that this tweet replies to.  */
   in_reply_to_user_id_str?: string;
+  /** If the tweet is a reply, this is user @ of the tweet owner that this tweet replies to.  */
   in_reply_to_screen_name?: string;
+  /** Contain the retweeted tweet, if this tweet is a retweet. */
   retweeted_status?: PartialTweet;
+  /** If the tweet is a reply, this is the tweet ID that this tweet replies to.  */
   in_reply_to_status_id_str?: string;
+  /** 
+   * Tweet creation date. To get the parsed date, 
+   * use `dateFromTweet()` function with the tweet in parameter. 
+   */
   created_at: string;
   created_at_d?: Date;
+  /** User informations of the tweet. */
   user: PartialTweetUser;
+  /** Medias/URLs/Mentions of this tweet. */
   entities: PartialTweetEntity;
+  /** Number of retweets. */
   retweet_count?: number;
+  /** Number of favorites. */
   favorite_count?: number;
+  /** Entities, but with support of multiple pictures, videos and GIF. */
   extended_entities?: {
     media?: MediaGDPREntity[];
   }
@@ -380,10 +441,15 @@ export interface PartialTweetEntity {
 }
 
 export interface PartialTweetUser {
+  /** User ID. */
   id_str: string;
+  /** User TN. */
   name: string;
+  /** User @. */
   screen_name: string;
+  /** Boolean indicating if the user is protected. */
   protected: boolean;
+  /** Link to its profile picture. */
   profile_image_url_https: string;
   verified?: boolean;
 }

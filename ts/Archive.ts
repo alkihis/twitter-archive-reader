@@ -1,5 +1,5 @@
 import { AcceptedZipSources, Archive, BaseArchive, constructArchive } from './StreamArchive';
-import { ArchiveIndex, PartialTweetGDPR, PartialTweet, AccountGDPR, ProfileGDPR, ClassicTweetIndex, ClassicPayloadDetails, TwitterUserDetails, DMFile, PartialTweetUser, GDPRFollowings, GDPRFollowers, GDPRFavorites, GDPRMutes, InnerGDPRPersonalization, GPDRScreenNameHistory, GPDRProtectedHistory, GDPRBlocks, GDPRAgeInfo, InnerGDPRAgeInfo, GDPRMoment, GDPRMomentFile } from './TwitterTypes';
+import { ArchiveIndex, PartialTweetGDPR, PartialTweet, AccountGDPR, ProfileGDPR, ClassicTweetIndex, ClassicPayloadDetails, TwitterUserDetails, DMFile, PartialTweetUser, GDPRFollowings, GDPRFollowers, GDPRFavorites, GDPRMutes, InnerGDPRPersonalization, GPDRScreenNameHistory, GPDRProtectedHistory, GDPRBlocks, GDPRAgeInfo, InnerGDPRAgeInfo, GDPRMoment, GDPRMomentFile, DirectMessage } from './TwitterTypes';
 import DMArchive from './DMArchive';
 import { EventTarget, defineEventAttribute } from 'event-target-shim';
 import bigInt from 'big-integer';
@@ -506,8 +506,8 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
 
     if (rt_data && rt_data.length && !("retweeted_status" in tweet)) {
       const [, arobase, text] = rt_data;
-      const rt = Object.assign({}, tweet) as unknown as PartialTweet;
-      rt.user = Object.assign({}, rt.user);
+      const rt = { ...tweet } as unknown as PartialTweet;
+      rt.user = { ...rt.user };
 
       rt.text = text;
       rt.user.screen_name = arobase;
@@ -769,23 +769,25 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
    * 
    * Otherwise, return a array of `Blob` / `ArrayBuffer`
    * 
-   * @param direct_message_id DM id
+   * @param direct_message Direct Message id | Direct message
    * @param as_array_buffer Return an `ArrayBuffer` array, instead of a `Blob` array
    */
-  async dmImagesOf(direct_message_id: string, as_array_buffer = false): Promise<(Blob | ArrayBuffer)[]> {
+  async dmImagesOf(direct_message: string | DirectMessage, as_array_buffer = false): Promise<(Blob | ArrayBuffer)[]> {
     if (!this.is_gdpr || !this.messages) {
       return [];
     }
 
-    const msg = this.messages.message(direct_message_id);
+    if (typeof direct_message === 'string') {
+      direct_message = this.messages.single(direct_message);
+    }
 
-    if (!msg) {
+    if (!direct_message) {
       // Message not found
       return [];
     }
 
     const images: Promise<Blob | ArrayBuffer>[] = [];
-    for (const media of msg.mediaUrls) {
+    for (const media of direct_message.mediaUrls) {
       images.push(this.dmImageFromUrl(media, as_array_buffer));
     }
 

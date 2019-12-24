@@ -475,14 +475,14 @@ export default class StreamZip<T, S = T> extends events.EventEmitter {
       return this.readZip64CentralDirectoryLocatorComplete();
     } else {
       this.op = {
-          win: this.op.win,
-          totalReadLength: length,
-          minPos: this.op.win.position - length,
-          lastPos: this.op.win.position,
-          chunkSize: this.op.chunkSize,
-          firstByte: consts.ENDL64SIGFIRST,
-          sig: consts.ENDL64SIG,
-          complete: this.readZip64CentralDirectoryLocatorComplete
+        win: this.op.win,
+        totalReadLength: length,
+        minPos: this.op.win.position - length,
+        lastPos: this.op.win.position,
+        chunkSize: this.op.chunkSize,
+        firstByte: consts.ENDL64SIGFIRST,
+        sig: consts.ENDL64SIG,
+        complete: this.readZip64CentralDirectoryLocatorComplete
       };
       return this.op.win.read(this.op.lastPos - this.op.chunkSize, this.op.chunkSize)
         .then(bytes => this.readUntilFoundCallback(null, bytes))
@@ -496,14 +496,14 @@ export default class StreamZip<T, S = T> extends events.EventEmitter {
     locHeader.read(buffer.slice(this.op.lastBufferPosition, this.op.lastBufferPosition + consts.ENDL64HDR));
     var readLength = this.fileSize - locHeader.headerOffset;
     this.op = {
-        win: this.op.win,
-        totalReadLength: readLength,
-        minPos: locHeader.headerOffset,
-        lastPos: this.op.lastPos,
-        chunkSize: this.op.chunkSize,
-        firstByte: consts.END64SIGFIRST,
-        sig: consts.END64SIG,
-        complete: this.readZip64CentralDirectoryComplete
+      win: this.op.win,
+      totalReadLength: readLength,
+      minPos: locHeader.headerOffset,
+      lastPos: this.op.lastPos,
+      chunkSize: this.op.chunkSize,
+      firstByte: consts.END64SIGFIRST,
+      sig: consts.END64SIG,
+      complete: this.readZip64CentralDirectoryComplete
     };
     return this.op.win.read(this.fileSize - this.op.chunkSize, this.op.chunkSize)
       .then(bytes => this.readUntilFoundCallback(null, bytes))
@@ -580,7 +580,7 @@ export default class StreamZip<T, S = T> extends events.EventEmitter {
         readEx = 'Entry encrypted';
       }
     } catch (ex) {
-       readEx = ex;
+      readEx = ex;
     }
 
     return [readEx, entry] as [any, ZipEntry];
@@ -782,8 +782,8 @@ export class ZipEntry {
     this.isDirectory = (lastChar === 47) || (lastChar === 92);
 
     if (this.extraLen) {
-        this.readExtra(data, offset);
-        offset += this.extraLen;
+      this.readExtra(data, offset);
+      offset += this.extraLen;
     }
     this.comment = this.comLen ? data.slice(offset, offset + this.comLen).toString() : null;
   }
@@ -837,66 +837,27 @@ export class ZipEntry {
 }
 
 function toBits(dec: number, size: number) {
-    var b = (dec >>> 0).toString(2);
-    while (b.length < size)
-        b = '0' + b;
-    return b.split('');
+  let b = (dec >>> 0).toString(2);
+  while (b.length < size)
+    b = '0' + b;
+  return b.split('');
 }
 
 function parseZipTime(timebytes: number, datebytes: number) {
-    var timebits = toBits(timebytes, 16);
-    var datebits = toBits(datebytes, 16);
+    const timebits = toBits(timebytes, 16);
+    const datebits = toBits(datebytes, 16);
 
-    var mt = {
-        h: parseInt(timebits.slice(0,5).join(''), 2),
-        m: parseInt(timebits.slice(5,11).join(''), 2),
-        s: parseInt(timebits.slice(11,16).join(''), 2) * 2,
-        Y: parseInt(datebits.slice(0,7).join(''), 2) + 1980,
-        M: parseInt(datebits.slice(7,11).join(''), 2),
-        D: parseInt(datebits.slice(11,16).join(''), 2),
+    const mt = {
+      h: parseInt(timebits.slice(0,5).join(''), 2),
+      m: parseInt(timebits.slice(5,11).join(''), 2),
+      s: parseInt(timebits.slice(11,16).join(''), 2) * 2,
+      Y: parseInt(datebits.slice(0,7).join(''), 2) + 1980,
+      M: parseInt(datebits.slice(7,11).join(''), 2),
+      D: parseInt(datebits.slice(11,16).join(''), 2),
     };
-    var dt_str = [mt.Y, mt.M, mt.D].join('-') + ' ' + [mt.h, mt.m, mt.s].join(':') + ' GMT+0';
+    const dt_str = [mt.Y, mt.M, mt.D].join('-') + ' ' + [mt.h, mt.m, mt.s].join(':') + ' GMT+0';
     return new Date(dt_str).getTime();
 }
-
-// async function readFromFile(file: Blob | number, buffer: Buffer, offset_in_buffer: number, length: number, position_in_file: number) {
-//   if (typeof file === 'number') {
-//     const bytesRead = await new Promise((resolve, reject) => {
-//       fs.read(
-//         file, 
-//         buffer, 
-//         offset_in_buffer, 
-//         length, 
-//         position_in_file, 
-//         (err, bytesRead) => {
-//           if (err) {
-//             reject(err);
-//             return;
-//           }
-
-//           resolve(bytesRead);
-//         }
-//       );
-//     }) as number;
-
-//     return bytesRead;
-//   }
-
-//   const sliced = file.slice(position_in_file, position_in_file + length);
-
-//   const array_buffer = await new Promise((resolve, reject) => {
-//     const fr = new FileReader();
-
-//     fr.onload = () => { resolve(fr.result as ArrayBuffer) };
-//     fr.onerror = reject;
-
-//     fr.readAsArrayBuffer(sliced);
-//   }) as ArrayBuffer;
-
-//   buffer.set(new Uint8Array(array_buffer, 0, array_buffer.byteLength), offset_in_buffer);
-
-//   return array_buffer.byteLength;
-// }
 
 class FsRead<S> {
   bytesRead = 0;
@@ -1121,7 +1082,7 @@ class CrcVerify {
 }
 
 const Util = {
-    readUInt64LE: function(buffer: Buffer, offset: number) {
-        return (buffer.readUInt32LE(offset + 4) * 0x0000000100000000) + buffer.readUInt32LE(offset);
-    }
+  readUInt64LE: function(buffer: Buffer, offset: number) {
+    return (buffer.readUInt32LE(offset + 4) * 0x0000000100000000) + buffer.readUInt32LE(offset);
+  }
 };

@@ -57,7 +57,6 @@ abstract class ConversationBase {
 
     if (!msg.createdAtDate) {
       msg.createdAtDate = parseTwitterDate(msg.createdAt);
-      
     }
 
     const [day, month, year] = [
@@ -488,6 +487,42 @@ export class Conversation extends ConversationBase {
     const all = this.all;
 
     return all[all.length - 1];
+  }
+}
+
+/**
+ * A big conversation that contains every message.
+ * 
+ * Every message will be linked to its original conversation through the `.conversation` property.
+ */
+export class GlobalConversation extends ConversationBase {
+  constructor(convs: Conversation[]) {
+    super();
+
+    const participants = new Set<string>();
+    let me = "";
+    if (convs.length) {
+      me = convs[0].infos.me;
+    }
+
+    for (const conversation of convs) {
+      for (const msg of conversation) {
+        // Enregistrement participants
+        if (msg.recipientId !== "0")
+          participants.add(msg.recipientId);
+  
+        participants.add(msg.senderId);
+  
+        // Enregistrement dans l'index
+        msg.conversation = conversation;
+        this.register(msg);
+      }
+    }
+
+    this.info = {
+      participants,
+      me
+    };
   }
 }
 
