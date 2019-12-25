@@ -6,13 +6,15 @@ import TweetSearcher from '../TweetSearcher';
 
 commander
   .option('-f, --file <zipFile>', "Archive ZIP to load")
+  .option('-1, --test-one', "Test 1")
+  .option('-2, --test-two', "Test 2")
 .parse(process.argv);
 
 const write = (name: string, data: any) => {
   writeFileSync('test_dir/' + name, typeof data === 'string' ? data : inspect(data, false, Infinity));
 };
 
-(async () => {
+const test_1 = async () => {
   const archive = new TwitterArchive(commander.file, true, true);
 
   console.log("Reading archive...");
@@ -21,17 +23,16 @@ const write = (name: string, data: any) => {
   console.log(await archive.ready().catch(console.error));
 
   await archive.loadCurrentDmImageZip();
-
-
   console.log("Archive ok");
 
   // Test dm
   if (archive.is_gdpr) {
     // @ts-ignore
     console.log(archive.dm_img_archive);
-    const blob = await archive.dmImage("991765544733937669-512rVQq-.jpg", false, true) as ArrayBuffer;
-    writeFileSync('test_dir/mon_img.jpg', Buffer.from(blob));
-    return
+    try {
+      const blob = await archive.dmImage("991765544733937669-512rVQq-.jpg", false, true) as ArrayBuffer;
+      writeFileSync('test_dir/mon_img.jpg', Buffer.from(blob));
+    } catch {}
   }
 
   //console.log(archive.messages.count);
@@ -47,8 +48,6 @@ const write = (name: string, data: any) => {
 
   // Get all the tweets sent in one month
   write('2018_01', archive.month("1", "2018").length);
-
-  return
 
   // Get the number of tweets stored in the archive
   console.log(archive.length, "tweets in archive");
@@ -109,5 +108,34 @@ const write = (name: string, data: any) => {
       .between(new Date("2019-01-01"), new Date("2019-02-01"))
       .recipient(["MY_USER_1", "MY_USER_2"]); */
   }
-})();
+};
 
+const test_2 = async () => {
+  const archive = new TwitterArchive(commander.file);
+
+  console.log("Reading archive...");
+
+  // Attendre que l'archive soit lue
+  await archive.ready().catch(console.error);
+
+  console.log("Archive ok");
+
+  console.log(archive.length, "tweets");
+  console.log(archive.messages.length, "conversations, with", archive.messages.count, "messages");
+  console.log(
+    archive.messages.groups.length, "group conversations with total of", 
+    archive.messages.groups.reduce((acc, val) => acc + val.length, 0), "messages"
+  );
+  console.log(
+    archive.messages.directs.length, "direct conversations with total of", 
+    archive.messages.directs.reduce((acc, val) => acc + val.length, 0), "messages"
+  );
+
+};
+
+if (commander.testOne) {
+  test_1();
+}
+if (commander.testTwo) {
+  test_2();
+}

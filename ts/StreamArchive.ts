@@ -70,7 +70,7 @@ class StreamArchive implements BaseArchive<ZipEntry> {
         this.s_zip.on('ready', () => {
           const s = this.s_zip;
 
-          console.log('Entries read: ' + s.entriesCount);
+          // console.log('Entries read: ' + s.entriesCount);
           this.entries = s.entries;
 
           resolve();

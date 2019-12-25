@@ -474,4 +474,5 @@ export interface TwitterUserDetails {
   bio: string;
   id: string;
   created_at: string;
+  profile_image_url_https?: string;
 }

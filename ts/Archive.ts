@@ -150,7 +150,8 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   /**
    * Build a new instance of TwitterArchive.
    * 
-   * @param file Accept any source that `JSZip` library accepts, and string for filenames.
+   * @param file Accept any source that `JSZip` library accepts, and string for filenames. 
+   * If this parameter is `null`, then you'll need to load each part one by one !
    * @param build_extended True if `.extended_gdpr` should be built (only if **file** is a GDPR archive.)
    * @param keep_loaded If possible, free the memory after load if set to false.
    * @param load_images_in_zip In Twitter GDPR archives v2, tweet and dm images are in ZIP archives inside the ZIP.
@@ -166,98 +167,63 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
    * **Please note that `keep_loaded` should be set to `true` to use this method !**
    */
   constructor(
-    file: AcceptedZipSources | Promise<AcceptedZipSources>, 
+    file: AcceptedZipSources | Promise<AcceptedZipSources> | null, 
     build_extended = true, 
     keep_loaded = false,
     protected load_images_in_zip: boolean = undefined,
   ) {
     super();
 
-    this.state = "reading";
-
-    this._ready = 
-      (file instanceof Promise ? 
-        file.then(f => (this.archive = constructArchive(f)).ready())
-        : (this.archive = constructArchive(file)).ready()
-      )
-      .then(() => {
-        this.dispatchEvent({type:'zipready'});
-
-        // Check si l'archive est dans un dossier à l'intérieur de l'archive
-        while (true) {
-          const files = this.archive.ls();
-
-          // Search for profile.js or tweets.csv (markers of archives)
-          if ('profile.js' in files || 'tweets.csv' in files) {
-            break;
-          }
-
-          // Now, search for directories
-          let folder = "";
-          for (const [name, f] of Object.entries(files)) {
-            if (f.dir) {
-              folder = name;
-              break;
-            }
-          }
-
-          if (folder) {
-            this.archive = this.archive.dir(folder);
+    if (file === null) {
+      this.state = "ready";
+    }
+    else {
+      this.state = "reading";
+  
+      this._ready = 
+        (file instanceof Promise ? 
+          file.then(f => (this.archive = constructArchive(f)).ready())
+          : (this.archive = constructArchive(file)).ready()
+        )
+        .then(() => {
+          this.dispatchEvent({ type: 'zipready' });
+  
+          // Initialisation de l'archive Twitter
+          if (this.isGDPRArchive()) {
+            return this.initGDPR(build_extended, keep_loaded);
           }
           else {
-            break;
+            return this.initClassic().then(() => {
+              if (!keep_loaded) {
+                this.archive = undefined;
+              }
+            });
           }
-        }
-
-        // Initialisation de l'archive Twitter
-        if (this.isGDPRArchive()) {
-          return this.initGDPR(build_extended, keep_loaded);
-        }
-        else {
-          return this.initClassic().then(() => {
-            if (!keep_loaded) {
-              this.archive = undefined;
-            }
-          });
-        }
-      })
-      .then(() => {
-        this.dispatchEvent({ type: 'ready' });
-      })
-      .catch(e => {
-        this.dispatchEvent({ type: 'error', detail: e });
-        return Promise.reject(e);
-      });
+        })
+        .then(() => {
+          this.dispatchEvent({ type: 'ready' });
+        })
+        .catch(e => {
+          this.dispatchEvent({ type: 'error', detail: e });
+          return Promise.reject(e);
+        });
+    }
   }
 
   protected async initGDPR(extended: boolean, keep_loaded: boolean) {
-    this.state = "user_read";
-
     try {
       // Delete the tweet media folder (big & useless)
       if (this.archive instanceof Archive) {
         this.archive.raw.remove('tweet_media');
       }
     } catch (e) { }
-
-    // Init informations
-    const account_arr: AccountGDPR = await this.archive.get('account.js');
-    const profile_arr: ProfileGDPR = await this.archive.get('profile.js');
-
-    const account = account_arr[0].account, profile = profile_arr[0].profile;
-
-    this.index.info = {
-      screen_name: account.username,
-      full_name: account.accountDisplayName,
-      location: profile.description.location,
-      bio: profile.description.bio,
-      id: account.accountId,
-      created_at: account.createdAt
-    };
-
-    this.dispatchEvent({type: 'userinfosready'});
-
+  
     this.state = "tweet_read";
+
+
+    // ------------------------
+    // TWEETS AND PROFILE INFOS
+    // ------------------------
 
     // Init tweet indexes
     const tweets: PartialTweetGDPR[] = await this.archive.get('tweet.js');
@@ -266,61 +232,46 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     while (this.archive.has(`tweet-part${i}.js`)) {
       // Add every tweet in other files 
       // inside a "new" array in the initial array
-      tweets.push(...(await this.archive.get(`tweet-part${i}.js`)));
+      tweets.push(...await this.archive.get(`tweet-part${i}.js`));
       i++;
     }
 
-    this.dispatchEvent({type: 'tweetsread'});
+    this.loadArchivePart({
+      account: await this.archive.get('account.js'),
+      profile: await this.archive.get('profile.js'),
+      tweets
+    });
 
-    this.state = "indexing";
-
-    // Build index
-    for (let i = 0; i < tweets.length; i++) {
-      const date = parseTwitterDate(tweets[i].created_at);
-
-      const month = String(date.getMonth() + 1);
-      const year = String(date.getFullYear());
-
-      // Creating month/year if not presents
-      if (!(year in this.index.years)) {
-        this.index.years[year] = {};
-      }
-
-      if (!(month in this.index.years[year])) {
-        this.index.years[year][month] = {};
-      }
-
-      // Save tweet in index
-      const converted = this.convertToPartial(tweets[i], profile.avatarMediaUrl);
-      this.index.years[year][month][tweets[i].id_str] = converted;
-      this.index.by_id[tweets[i].id_str] = converted;
-    }
-
-    this.dispatchEvent({type: 'indexready'});
+    // User info, tweet and index occurs at the same time.
+    this.dispatchEvent({ type: 'userinfosready' });
+    this.dispatchEvent({ type: 'tweetsread' });
+    // Indexing occuring at tweet read, for GDPR
+    this.dispatchEvent({ type: 'indexready' });
     
-    // Register info
-    this._index.archive.tweets = tweets.length;
+
+    // ---------------
+    // DIRECT MESSAGES
+    // ---------------
+
+    this.state = "dm_read";
+    this.dispatchEvent({ type: 'willreaddm' });
     
     // Init DMs
-    this.dms = new DMArchive(this.owner);
-    
-    this.state = "dm_read";
-    this.dispatchEvent({type: 'willreaddm'});
-    
-    const conversations: DMFile = await this.archive.get('direct-message.js');
-    this.dms.add(conversations);
+    const conv_files = ['direct-message.js', 'direct-message-group.js'];
 
     i = 1;
     while (this.archive.has(`direct-message-part${i}.js`)) {
-      // Add every tweet in other files 
-      // inside a "new" array in the initial array
-      this.dms.add(await this.archive.get(`direct-message-part${i}.js`) as DMFile);
+      conv_files.push(`direct-message-part${i}.js`);
       i++;
     }
 
-    if (this.archive.has('direct-message-group.js')) {
-      this.dms.add(await this.archive.get('direct-message-group.js') as DMFile);
-    }
+    this.loadArchivePart({
+      dms: await Promise.all(
+        conv_files
+          .filter(name => this.archive.has(name))
+          .map(file => this.archive.get(file))
+      ),
+    });
     // DMs should be ok
 
     // Test if archive contain DM images as zip
@@ -535,67 +486,35 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     const js_dir = this.archive.dir('data').dir('js');
 
     const index: ClassicTweetIndex = await js_dir.get('tweet_index.js');
-    const payload: ClassicPayloadDetails = await js_dir.get('payload_details.js');
-    const user: TwitterUserDetails = await js_dir.get('user_details.js');
 
-    this.index.info = user;
-    this.index.archive = payload;
+    this.loadClassicArchivePart({
+      payload: await js_dir.get('payload_details.js'), 
+      user: await js_dir.get('user_details.js'),
+    });
 
-    this.dispatchEvent({type: 'userinfosready'});
+    this.dispatchEvent({ type: 'userinfosready' });
 
     const files_to_read = index.map(e => e.file_name);
 
-    let tweets: PartialTweet[] = [];
-
     this.state = "tweet_read";
-    const tweet_file_promises: Promise<void>[] = [];
+    const tweet_file_promises: Promise<PartialTweet[]>[] = [];
 
     for (const file of files_to_read) {
-      tweet_file_promises.push(
-        this.archive.get(file).then((t: PartialTweet[]) => {
-          tweets.push(...t);
-        })
-      );
+      tweet_file_promises.push(this.archive.get(file));
     }
     
-    await Promise.all(tweet_file_promises);
+    let tweets: PartialTweet[] = [].concat(...await Promise.all(tweet_file_promises));
 
     // Tri les tweets par ID (le plus récent, plus grand en premier)
-    if (supportsBigInt()) {
-      tweets = tweets.sort((a, b) => Number(BigInt(b.id_str) - BigInt(a.id_str)));
-    }
-    else {
-      tweets = tweets.sort((a, b) => (bigInt(b.id_str).minus(bigInt(a.id_str))).toJSNumber());
-    }
+    tweets = this.sortTweets(tweets);
 
-    this.dispatchEvent({type: 'tweetsread'});
+    this.dispatchEvent({ type: 'tweetsread' });
 
     this.state = "indexing";
     // Build index (read tweets)
-    for (let i = 0; i < tweets.length; i++) {
-      const date = parseTwitterDate(tweets[i].created_at);
+    this.readTweets(tweets);
 
-      const month = String(date.getMonth() + 1);
-      const year = String(date.getFullYear());
-
-      // Creating month/year if not presents
-      if (!(year in this.index.years)) {
-        this.index.years[year] = {};
-      }
-
-      if (!(month in this.index.years[year])) {
-        this.index.years[year][month] = {};
-      }
-
-      // Save tweet in index
-      this.index.years[year][month][tweets[i].id_str] = tweets[i];
-      this.index.by_id[tweets[i].id_str] = tweets[i];
-    }
-
-    // Setting right tweet number
-    this.index.archive.tweets = Object.keys(this.index.by_id).length;
-
-    this.dispatchEvent({type: 'indexready'});
+    this.dispatchEvent({ type: 'indexready' });
     this.state = "ready";
   }
 
@@ -931,6 +850,148 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   /** Resolved when archive read is over. */
   ready() {
     return this._ready;
+  }
+
+
+  /** -------------------- */
+  /** SIDELOADING MANUALLY */
+  /** -------------------- */
+  
+  /**
+   * Load a part of a GDPR archive.
+   * 
+   * Set current archive as GDPR archive.
+   */
+  loadArchivePart(parts: {
+    tweets?: PartialTweetGDPR[],
+    account?: AccountGDPR,
+    profile?: ProfileGDPR,
+    dms?: DMFile[],
+  } = {}) {
+    this._is_gdpr = true;
+
+    if (parts.account) {
+      // Init informations
+      const account = parts.account[0].account;
+      
+      this._index.info.screen_name = account.username;
+      this._index.info.full_name = account.accountDisplayName;
+      this._index.info.id = account.accountId;
+      this._index.info.created_at = account.createdAt;
+    }
+    if (parts.profile) {
+      const profile = parts.profile[0].profile;
+
+      this._index.info.location = profile.description.location;
+      this._index.info.bio = profile.description.bio;
+      this._index.info.profile_image_url_https = profile.avatarMediaUrl;
+    }
+    if (parts.tweets) {
+      this.readGDPRTweets(parts.tweets, this.index.info.profile_image_url_https);
+    }
+    if (parts.dms) {
+      if (!this.dms) {
+        this.dms = new DMArchive(this.owner);
+      }
+      
+      for (const file of parts.dms) {
+        this.dms.add(file);
+      }
+    }
+  }
+
+  /**
+   * Load a part of a classic archive.
+   * 
+   * Set current archive as non-gdpr archive.
+   */
+  loadClassicArchivePart(parts: {
+    tweets?: PartialTweet[],
+    payload?: ClassicPayloadDetails,
+    user?: TwitterUserDetails,
+  } = {}) {
+    this._is_gdpr = false;
+
+    if (parts.tweets) {
+      this.readTweets(this.sortTweets(parts.tweets));
+    }
+    if (parts.user) {
+      this.index.info = parts.user;
+    }
+    if (parts.payload) {
+      this.index.archive = parts.payload;
+    }
+  }
+
+  /**
+   * Convert GDPR tweets into classic tweets, then register them into the index.
+   */
+  protected readGDPRTweets(tweets: PartialTweetGDPR[], profile_img_https: string) {
+    // Build index
+    for (let i = 0; i < tweets.length; i++) {
+      const date = parseTwitterDate(tweets[i].created_at);
+
+      const month = String(date.getMonth() + 1);
+      const year = String(date.getFullYear());
+
+      // Creating month/year if not presents
+      if (!(year in this.index.years)) {
+        this.index.years[year] = {};
+      }
+
+      if (!(month in this.index.years[year])) {
+        this.index.years[year][month] = {};
+      }
+
+      // Save tweet in index
+      const converted = this.convertToPartial(tweets[i], profile_img_https);
+      this.index.years[year][month][tweets[i].id_str] = converted;
+      this.index.by_id[tweets[i].id_str] = converted;
+    }
+
+    // Setting right tweet number
+    this.index.archive.tweets = Object.keys(this.index.by_id).length;
+  }
+
+  /**
+   * Register tweets into the index.
+   */
+  protected readTweets(tweets: PartialTweet[]) {
+    // Build index (read tweets)
+    for (let i = 0; i < tweets.length; i++) {
+      const date = dateFromTweet(tweets[i]);
+
+      const month = String(date.getMonth() + 1);
+      const year = String(date.getFullYear());
+
+      // Creating month/year if not presents
+      if (!(year in this.index.years)) {
+        this.index.years[year] = {};
+      }
+
+      if (!(month in this.index.years[year])) {
+        this.index.years[year][month] = {};
+      }
+
+      // Save tweet in index
+      this.index.years[year][month][tweets[i].id_str] = tweets[i];
+      this.index.by_id[tweets[i].id_str] = tweets[i];
+    }
+
+    // Setting right tweet number
+    this.index.archive.tweets = Object.keys(this.index.by_id).length;
+  }
+
+  /**
+   * Sort tweets by ID.
+   */
+  protected sortTweets(tweets: PartialTweet[]) {
+    if (supportsBigInt()) {
+      return tweets.sort((a, b) => Number(BigInt(b.id_str) - BigInt(a.id_str)));
+    }
+    else {
+      return tweets.sort((a, b) => (bigInt(b.id_str).minus(bigInt(a.id_str))).toJSNumber());
+    }
   }
 }
 
