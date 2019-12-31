@@ -182,7 +182,7 @@ export const TweetSearcher = new class TweetSearcher {
    * @throws `Validator {name} does not exists` when a invalid static validator is used.
    */
   search(
-    tweets: PartialTweet[], 
+    tweets: Iterable<PartialTweet>, 
     query: string, 
     is_regex: boolean | string = false, 
     static_validators: string[] = [],

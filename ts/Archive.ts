@@ -217,6 +217,9 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
         this.archive.raw.remove('tweet_media');
       }
     } catch (e) { }
+
+    // This is not accurate, but this is for compatibility reasons
+    this.dispatchEvent({ type: 'userinfosready' });
   
     this.state = "tweet_read";
 
@@ -236,18 +239,16 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       i++;
     }
 
+    this.dispatchEvent({ type: 'tweetsread' });
+
     this.loadArchivePart({
       account: await this.archive.get('account.js'),
       profile: await this.archive.get('profile.js'),
       tweets
     });
 
-    // User info, tweet and index occurs at the same time.
-    this.dispatchEvent({ type: 'userinfosready' });
-    this.dispatchEvent({ type: 'tweetsread' });
-    // Indexing occuring at tweet read, for GDPR
     this.dispatchEvent({ type: 'indexready' });
-    
+
 
     // ---------------
     // DIRECT MESSAGES
@@ -277,7 +278,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     // Test if archive contain DM images as zip
     let can_unload_archive = !keep_loaded;
 
-    if (this.archive.searchDir(new RegExp('direct_message_media')).length) {
+    if (this.archive.searchDir(/direct_message_media/).length) {
       const folder = this.archive.dir('direct_message_media');
       const query = folder.search(/\.zip$/);
       if (query.length) {
@@ -290,7 +291,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
         can_unload_archive = false;
       }
     }
-    if (this.archive.searchDir(new RegExp('direct_message_group_media')).length) {
+    if (this.archive.searchDir(/direct_message_group_media/).length) {
       const folder = this.archive.dir('direct_message_group_media');
       const query = folder.search(/\.zip$/);
       if (query.length && this.should_autoload_zip_img) {
@@ -527,14 +528,11 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
    * 
    * Tweets getted by available getters are NOT GDPR tweets, they've been converted !
    */
-  isGDPRTweet(tweet: PartialTweetGDPR): true;
-  isGDPRTweet(tweet: PartialTweet): false;
-
-  isGDPRTweet(tweet: PartialTweetGDPR | PartialTweet) : boolean {
+  isGDPRTweet(tweet: PartialTweetGDPR | PartialTweet) : tweet is PartialTweetGDPR {
     return 'retweet_count' in tweet;
   }
 
-  /** Extract tweets from a specifc month. */
+  /** Extract tweets from a specific month. */
   month(month: string, year: string) : PartialTweet[] {
     if (year in this.index.years) {
       if (month in this.index.years[year]) {

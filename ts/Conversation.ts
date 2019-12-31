@@ -370,6 +370,18 @@ abstract class ConversationBase {
   get infos() {
     return this.info;
   }
+
+  /** First DM in this conversation. Access to next messages with LinkedDirectMessage.next */
+  get first() {
+    return this.all[0];
+  }
+
+  /** Last DM in this conversation. Access to previous messages with LinkedDirectMessage.previous */
+  get last() {
+    const all = this.all;
+
+    return all[all.length - 1];
+  }
 }
 
 /**
@@ -475,18 +487,6 @@ export class Conversation extends ConversationBase {
   /** Conversation ID */
   get id() : string {
     return this.info.id;
-  }
-
-  /** First DM in this conversation. Access to next messages with LinkedDirectMessage.next */
-  get first() {
-    return this.all[0];
-  }
-
-  /** Last DM in this conversation. Access to previous messages with LinkedDirectMessage.previous */
-  get last() {
-    const all = this.all;
-
-    return all[all.length - 1];
   }
 }
 
