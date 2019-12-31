@@ -31,3 +31,5 @@ This package is usable inside a browser or in Node.js.
 ### Getting ready
 
 Full documentation is available on [GitHub Wiki](https://github.com/alkihis/twitter-archive-reader/wiki). Take a look !
+
+If you don't like, you can still access the good ol' full unique README.md file in [this commit](https://github.com/alkihis/twitter-archive-reader/blob/779b058bb26c837fbafb71e447c503f53ed4152c/README.md). Note that some thing may be outdated.
