@@ -999,15 +999,8 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   /** ARCHIVE EXPORT / LOAD */
   /** --------------------- */
   async exportSave() : Promise<ArchiveSave> {
-    const info: ArchiveSaveInfo = {
-      index: { ...this._index },
-      is_gdpr: this.is_gdpr,
-      version: "1.0.0",
-      last_tweet_date: "",
-      hash: "",
-      tweet_count: 0,
-      dm_count: 0,
-    };
+    const info = this.archive_save_info;
+    info.hash = this.hash(info);
 
     function convertConversationToGDPRConversation(conversation: Conversation) : GDPRConversation {
       return {
@@ -1035,19 +1028,9 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     delete info.index.by_id;
 
     const tweets = this.all;
-    let last_date = 0;
     for (const tweet of tweets) {
-      const cur_date = dateFromTweet(tweet).getTime();
-      if (cur_date > last_date) {
-        last_date = cur_date;
-      }
-
       delete tweet.created_at_d;
     }
-
-    info.last_tweet_date = new Date(last_date ? last_date : Date.now()).toString();
-    info.tweet_count = this.length;
-    info.dm_count = this.messages ? this.messages.count : 0;
 
     const tweet_zip = await new JSZip().file("tweet.json", JSON.stringify(tweets)).generateAsync({
       type: "arraybuffer",
@@ -1084,7 +1067,44 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
         });
     }
 
-    info.hash = md5(JSON.stringify({
+    return {
+      tweets: tweet_zip,
+      dms,
+      info,
+      mutes,
+      blocks,
+      screen_name_history: this.extended_gdpr ? this.extended_gdpr.screen_name_history : []
+    };
+  }
+
+  get archive_save_info() {
+    const info: ArchiveSaveInfo = {
+      index: { ...this._index },
+      is_gdpr: this.is_gdpr,
+      version: "1.0.0",
+      last_tweet_date: "",
+      hash: "",
+      tweet_count: this.length,
+      dm_count: this.messages ? this.messages.count : 0,
+    };
+
+    let last_date = 0;
+    for (const tweet of this.all) {
+      const cur_date = dateFromTweet(tweet).getTime();
+      if (cur_date > last_date) {
+        last_date = cur_date;
+      }
+    }
+
+    info.last_tweet_date = new Date(last_date ? last_date : Date.now()).toString();
+
+    return info;
+  }
+
+  hash(from?: ArchiveSaveInfo) {
+    const info = from ? from : this.archive_save_info;
+
+    return md5(JSON.stringify({
       screen_name: info.index.info.screen_name,
       bio: info.index.info.bio,
       name: info.index.info.full_name,
@@ -1096,15 +1116,6 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       id: info.index.info.id,
       location: info.index.info.location,
     }));
-
-    return {
-      tweets: tweet_zip,
-      dms,
-      info,
-      mutes,
-      blocks,
-      screen_name_history: this.extended_gdpr ? this.extended_gdpr.screen_name_history : []
-    };
   }
 
   protected static readonly SUPPORTED_SAVE_VERSIONS = ["1.0.0"];
