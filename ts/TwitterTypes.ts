@@ -26,6 +26,8 @@ export interface ArchiveSaveInfo {
   version: string;
   last_tweet_date: string;
   hash: string; /** ONLY AT INFORMATIVE GOAL. MAYBE HAVE COLLISIONS ! */
+  tweet_count: number;
+  dm_count: number;
 }
 
 /**

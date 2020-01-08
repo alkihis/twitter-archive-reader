@@ -1005,6 +1005,8 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       version: "1.0.0",
       last_tweet_date: "",
       hash: "",
+      tweet_count: 0,
+      dm_count: 0,
     };
 
     function convertConversationToGDPRConversation(conversation: Conversation) : GDPRConversation {
@@ -1044,6 +1046,8 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     }
 
     info.last_tweet_date = new Date(last_date ? last_date : Date.now()).toString();
+    info.tweet_count = this.length;
+    info.dm_count = this.messages ? this.messages.count : 0;
 
     const tweet_zip = await new JSZip().file("tweet.json", JSON.stringify(tweets)).generateAsync({
       type: "arraybuffer",
@@ -1086,7 +1090,8 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       name: info.index.info.full_name,
       profile_image_url_https: info.index.info.profile_image_url_https,
       created_at: info.index.info.created_at,
-      tweets: info.index.archive.tweets,
+      tweets: info.tweet_count,
+      dms: info.dm_count,
       last_tweet_date: info.last_tweet_date,
       id: info.index.info.id,
       location: info.index.info.location,
