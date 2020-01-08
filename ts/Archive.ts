@@ -668,6 +668,10 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       return Promise.reject("File not found");
     }
     else {
+      if (!this.archive) {
+        return Promise.reject("Archive is not available/loaded: DM images are not fetchables");
+      }
+
       const directory = this.archive.dir(
         is_group ? "direct_message_group_media" : "direct_message_media"
       );
