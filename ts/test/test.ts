@@ -3,11 +3,13 @@ import { TwitterArchive } from '../Archive';
 import { writeFileSync, fstat } from 'fs';
 import { inspect } from 'util';
 import TweetSearcher from '../TweetSearcher';
+import Timer from 'timerize';
 
 commander
   .option('-f, --file <zipFile>', "Archive ZIP to load")
   .option('-1, --test-one', "Test 1")
   .option('-2, --test-two', "Test 2")
+  .option('-3, --test-three', "Test 3")
 .parse(process.argv);
 
 const write = (name: string, data: any) => {
@@ -130,7 +132,41 @@ const test_2 = async () => {
     archive.messages.directs.length, "direct conversations with total of", 
     archive.messages.directs.reduce((acc, val) => acc + val.length, 0), "messages"
   );
+};
 
+const test_3 = async () => {
+  // Test archive import/export
+  const test_archive = new TwitterArchive(commander.file);
+
+  // Attendre que l'archive soit lue
+  await test_archive.ready().catch(console.error);
+
+  console.log("Archive ok");
+
+  Timer.default_format = "s";
+  const timer = new Timer;
+  const exported = await test_archive.exportSave();
+
+  console.log("Archive exported in", timer.elapsed, "seconds");
+
+  timer.reset();
+
+  console.log("Creation archive from export");
+
+  const archive = await TwitterArchive.importSave(exported);
+
+  console.log("Archive imported in", timer.elapsed, "seconds");
+
+  console.log(archive.length, "tweets");
+  console.log(archive.messages.length, "conversations, with", archive.messages.count, "messages");
+  console.log(
+    archive.messages.groups.length, "group conversations with total of", 
+    archive.messages.groups.reduce((acc, val) => acc + val.length, 0), "messages"
+  );
+  console.log(
+    archive.messages.directs.length, "direct conversations with total of", 
+    archive.messages.directs.reduce((acc, val) => acc + val.length, 0), "messages"
+  );
 };
 
 if (commander.testOne) {
@@ -138,4 +174,7 @@ if (commander.testOne) {
 }
 if (commander.testTwo) {
   test_2();
+}
+if (commander.testThree) {
+  test_3();
 }

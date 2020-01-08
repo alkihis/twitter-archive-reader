@@ -19,6 +19,7 @@
   },
   "devDependencies": {
     "@types/jszip": "^3.1.6",
-    "commander": "^3.0.1"
+    "commander": "^3.0.1",
+    "timerize": "^1.0.3"
   }
 }

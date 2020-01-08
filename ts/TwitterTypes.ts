@@ -1,12 +1,36 @@
 import Conversation from "./Conversation";
 
 /*** INTERNAL: TwitterArchive */
+export interface BasicArchiveIndex {
+  /** Contains informations about the user who created archive */
+  info: TwitterUserDetails,
+  /** Archive informations: Creation date and tweet count. */
+  archive: {
+    created_at: string,
+    tweets: number
+  },
+}
+
+export interface ArchiveSave {
+  tweets: ArrayBuffer;
+  dms: ArrayBuffer;
+  info: ArchiveSaveInfo;
+  mutes: string[];
+  blocks: string[];
+  screen_name_history: GPDRScreenNameHistory[];
+}
+
+export interface ArchiveSaveInfo {
+  index: BasicArchiveIndex,
+  is_gdpr: boolean;
+  version: string;
+  last_tweet_date: string;
+}
+
 /**
  * Info/index about loaded archive.
  */
-export interface ArchiveIndex {
-  /** Contains informations about the user who created archive */
-  info: TwitterUserDetails,
+export interface ArchiveIndex extends BasicArchiveIndex {
   /**
    * Index of tweets by years. 
    * 
@@ -17,11 +41,6 @@ export interface ArchiveIndex {
     [year: string]: {
       [month: string]: TweetIndex;
     }
-  },
-  /** Archive informations: Creation date and tweet count. */
-  archive: {
-    created_at: string,
-    tweets: number
   },
   /**
    * Index of tweets by ID.

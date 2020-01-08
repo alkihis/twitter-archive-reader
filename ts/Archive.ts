@@ -1,9 +1,11 @@
 import { AcceptedZipSources, Archive, BaseArchive, constructArchive } from './StreamArchive';
-import { ArchiveIndex, PartialTweetGDPR, PartialTweet, AccountGDPR, ProfileGDPR, ClassicTweetIndex, ClassicPayloadDetails, TwitterUserDetails, DMFile, PartialTweetUser, GDPRFollowings, GDPRFollowers, GDPRFavorites, GDPRMutes, InnerGDPRPersonalization, GPDRScreenNameHistory, GPDRProtectedHistory, GDPRBlocks, GDPRAgeInfo, InnerGDPRAgeInfo, GDPRMoment, GDPRMomentFile, DirectMessage } from './TwitterTypes';
+import { ArchiveIndex, PartialTweetGDPR, PartialTweet, AccountGDPR, ProfileGDPR, ClassicTweetIndex, ClassicPayloadDetails, TwitterUserDetails, DMFile, PartialTweetUser, GDPRFollowings, GDPRFollowers, GDPRFavorites, GDPRMutes, InnerGDPRPersonalization, GPDRScreenNameHistory, GPDRProtectedHistory, GDPRBlocks, GDPRAgeInfo, InnerGDPRAgeInfo, GDPRMoment, GDPRMomentFile, DirectMessage, BasicArchiveIndex, LinkedDirectMessage, GDPRConversation, ArchiveSave, ArchiveSaveInfo } from './TwitterTypes';
 import DMArchive from './DMArchive';
 import { EventTarget, defineEventAttribute } from 'event-target-shim';
 import bigInt from 'big-integer';
 import { supportsBigInt } from './helpers';
+import JSZip from 'jszip';
+import Conversation from './Conversation';
 
 export type ArchiveReadState = "idle" | "reading" | "indexing" | "tweet_read" | "user_read" | "dm_read" | "extended_read" | "ready";
 
@@ -990,6 +992,153 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     else {
       return tweets.sort((a, b) => (bigInt(b.id_str).minus(bigInt(a.id_str))).toJSNumber());
     }
+  }
+
+  /** --------------------- */
+  /** ARCHIVE EXPORT / LOAD */
+  /** --------------------- */
+  async exportSave() : Promise<ArchiveSave> {
+    const info: ArchiveSaveInfo = {
+      index: { ...this._index },
+      is_gdpr: this.is_gdpr,
+      version: "1.0.0",
+      last_tweet_date: "",
+    };
+
+    function convertConversationToGDPRConversation(conversation: Conversation) : GDPRConversation {
+      return {
+        dmConversation: {
+          conversationId: conversation.id,
+          messages: conversation.all
+            .map(message => ({
+              messageCreate: {
+                recipientId: message.recipientId,
+                createdAt: message.createdAt,
+                mediaUrls: message.mediaUrls,
+                text: message.text,
+                senderId: message.senderId,
+                id: message.id
+              }
+            }))
+        }
+      };
+    }
+
+    // Remove the real archive index
+    // @ts-ignore
+    delete info.index.years;
+    // @ts-ignore
+    delete info.index.by_id;
+
+    const tweets = this.all;
+    let last_date = 0;
+    for (const tweet of tweets) {
+      const cur_date = dateFromTweet(tweet).getTime();
+      if (cur_date > last_date) {
+        last_date = cur_date;
+      }
+
+      delete tweet.created_at_d;
+    }
+
+    info.last_tweet_date = new Date(last_date ? last_date : Date.now()).toString();
+
+    const tweet_zip = await new JSZip().file("tweet.json", JSON.stringify(tweets)).generateAsync({
+      type: "arraybuffer",
+      compression: "DEFLATE",
+      compressionOptions: {
+        level: 6 // Not too much, if we want a good generation time
+      }
+    });
+
+    const mutes = this.extended_gdpr ? [...this.extended_gdpr.mutes] : [];
+    const blocks = this.extended_gdpr ? [...this.extended_gdpr.blocks] : [];
+
+    let dms: ArrayBuffer = null;
+    if (this.is_gdpr && this.messages) {
+      // Swallow copy all the dms, save them to a JSZip instance
+      /* 
+        dm.json => [
+          GDPRConversation,
+          ...
+        ]
+      */
+
+      dms = await new JSZip()
+        .file(
+          "dm.json", 
+          JSON.stringify(this.messages.all.map(convertConversationToGDPRConversation))
+        )
+        .generateAsync({
+          type: "arraybuffer",
+          compression: "DEFLATE",
+          compressionOptions: {
+            level: 6 // Not too much, if we want a good generation time
+          }
+        });
+    }
+
+    return {
+      tweets: tweet_zip,
+      dms,
+      info,
+      mutes,
+      blocks,
+      screen_name_history: this.extended_gdpr ? this.extended_gdpr.screen_name_history : []
+    };
+  }
+
+  protected static readonly SUPPORTED_SAVE_VERSIONS = ["1.0.0"];
+
+  static async importSave(save: ArchiveSave | Promise<ArchiveSave>) {
+    save = await save;
+
+    if (!this.SUPPORTED_SAVE_VERSIONS.includes(save.info.version)) {
+      throw new Error("Save version is not supported.");
+    }
+
+    const archive = new TwitterArchive(null);
+
+    archive._index.archive = save.info.index.archive;
+    archive._index.info = save.info.index.info;
+
+    const tweet_archive = await JSZip.loadAsync(save.tweets);
+    let current_load_object = JSON.parse(await tweet_archive.file("tweet.json").async("text"));
+
+    archive.readTweets(current_load_object);
+
+    current_load_object = undefined;
+    archive._is_gdpr = save.info.is_gdpr;
+
+    if (save.dms) {
+      const dm_archive = await JSZip.loadAsync(save.dms);
+      current_load_object = JSON.parse(await dm_archive.file("dm.json").async("text")) as DMFile;
+
+      archive.loadArchivePart({
+        dms: [current_load_object]
+      });
+    }
+    if (archive.is_gdpr) {
+      archive.extended_gdpr = {
+        followers: new Set,
+        followings: new Set,
+        mutes: new Set(save.mutes),
+        blocks: new Set(save.blocks),
+        personalization: undefined,
+        favorites: new Set,
+        lists: {
+          created: [],
+          member_of: [],
+          subscribed: []
+        },
+        screen_name_history: save.screen_name_history,
+        protected_history: [],
+        age_info: undefined,
+        moments: []
+      };
+    }
+
+    return archive;
   }
 }
 
