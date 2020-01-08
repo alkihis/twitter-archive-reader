@@ -14,10 +14,12 @@
     "big-integer": "^1.6.44",
     "event-target-shim": "^5.0.1",
     "events": "^3.0.0",
+    "js-md5": "^0.7.3",
     "jszip": "^3.2.2",
     "twitter-d": "^0.4.0"
   },
   "devDependencies": {
+    "@types/js-md5": "^0.4.2",
     "@types/jszip": "^3.1.6",
     "commander": "^3.0.1",
     "timerize": "^1.0.3"

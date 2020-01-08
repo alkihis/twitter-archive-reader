@@ -6,6 +6,7 @@ import bigInt from 'big-integer';
 import { supportsBigInt } from './helpers';
 import JSZip from 'jszip';
 import Conversation from './Conversation';
+import md5 from 'js-md5';
 
 export type ArchiveReadState = "idle" | "reading" | "indexing" | "tweet_read" | "user_read" | "dm_read" | "extended_read" | "ready";
 
@@ -1003,6 +1004,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       is_gdpr: this.is_gdpr,
       version: "1.0.0",
       last_tweet_date: "",
+      hash: "",
     };
 
     function convertConversationToGDPRConversation(conversation: Conversation) : GDPRConversation {
@@ -1077,6 +1079,18 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
           }
         });
     }
+
+    info.hash = md5(JSON.stringify({
+      screen_name: info.index.info.screen_name,
+      bio: info.index.info.bio,
+      name: info.index.info.full_name,
+      profile_image_url_https: info.index.info.profile_image_url_https,
+      created_at: info.index.info.created_at,
+      tweets: info.index.archive.tweets,
+      last_tweet_date: info.last_tweet_date,
+      id: info.index.info.id,
+      location: info.index.info.location,
+    }));
 
     return {
       tweets: tweet_zip,

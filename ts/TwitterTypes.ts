@@ -25,6 +25,7 @@ export interface ArchiveSaveInfo {
   is_gdpr: boolean;
   version: string;
   last_tweet_date: string;
+  hash: string; /** ONLY AT INFORMATIVE GOAL. MAYBE HAVE COLLISIONS ! */
 }
 
 /**
