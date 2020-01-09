@@ -35,7 +35,7 @@ export interface ExtendedGDPRInfo {
 
 /** Return the `Date` object affiliated to **tweet**. */
 export function dateFromTweet(tweet: PartialTweet) : Date {
-  if (tweet.created_at_d) {
+  if (tweet.created_at_d && tweet.created_at_d instanceof Date) {
     return tweet.created_at_d;
   }
   return tweet.created_at_d = parseTwitterDate(tweet.created_at);
