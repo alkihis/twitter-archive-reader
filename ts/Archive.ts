@@ -1025,12 +1025,6 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       };
     }
 
-    // Remove the real archive index
-    // @ts-ignore
-    delete info.index.years;
-    // @ts-ignore
-    delete info.index.by_id;
-
     const tweets = this.all;
     for (const tweet of tweets) {
       delete tweet.created_at_d;
@@ -1092,8 +1086,19 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       dm_count: this.messages ? this.messages.count : 0,
     };
 
+    // Remove the real archive index
+    // @ts-ignore
+    delete info.index.years;
+    // @ts-ignore
+    delete info.index.by_id;
+
+    // Take the last available year
+    const last_year = Object.keys(this._index.years).sort((a, b) => Number(b) - Number(a))[0];
+    const last_month = Object.keys(this._index.years[last_year]).sort((a, b) => Number(b) - Number(a))[0];
+    const tweets = this._index.years[last_year][last_month];
+
     let last_date = 0;
-    for (const tweet of this.all) {
+    for (const tweet of Object.values(tweets)) {
       const cur_date = dateFromTweet(tweet).getTime();
       if (cur_date > last_date) {
         last_date = cur_date;

@@ -10,6 +10,7 @@ commander
   .option('-1, --test-one', "Test 1")
   .option('-2, --test-two', "Test 2")
   .option('-3, --test-three', "Test 3")
+  .option('-4, --test-four', "Test 4")
 .parse(process.argv);
 
 const write = (name: string, data: any) => {
@@ -169,6 +170,18 @@ const test_3 = async () => {
   );
 };
 
+const test_4 = async () => {
+  // Test archive import/export
+  const test_archive = new TwitterArchive(commander.file);
+
+  // Attendre que l'archive soit lue
+  await test_archive.ready().catch(console.error);
+
+  console.log("Archive ok");
+
+  console.log(test_archive.archive_save_info);
+};
+
 if (commander.testOne) {
   test_1();
 }
@@ -177,4 +190,7 @@ if (commander.testTwo) {
 }
 if (commander.testThree) {
   test_3();
+}
+if (commander.testFour) {
+  test_4();
 }
