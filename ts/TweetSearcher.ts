@@ -1,5 +1,5 @@
 import { PartialTweet } from "./TwitterTypes";
-import { dateFromTweet, isWithMedia, isWithVideo } from "./Archive";
+import TweetArchive from "./TweetArchive";
 
 const INITIAL_VALIDATORS: TweetSearchValidator[] = [
   /** since: validator */
@@ -19,7 +19,7 @@ const INITIAL_VALIDATORS: TweetSearchValidator[] = [
         }
 
         if (!isNaN(d.getTime())) {
-          return tweet => dateFromTweet(tweet).getTime() >= d.getTime();
+          return tweet => TweetArchive.dateFromTweet(tweet).getTime() >= d.getTime();
         }
       }
     }
@@ -43,7 +43,7 @@ const INITIAL_VALIDATORS: TweetSearchValidator[] = [
         if (!isNaN(d.getTime())) {
           d.setDate(d.getDate() + 1);
 
-          return tweet => dateFromTweet(tweet).getTime() < d.getTime();
+          return tweet => TweetArchive.dateFromTweet(tweet).getTime() < d.getTime();
         }
       }
     }
@@ -101,8 +101,8 @@ const INITIAL_VALIDATORS: TweetSearchValidator[] = [
 const INITIAL_STATIC: { [staticName: string]: TweetSearchStaticValidator } = {
   retweets_only: tweet => !!tweet.retweeted_status,
   no_retweets: tweet => !tweet.retweeted_status,
-  medias_only: isWithMedia,
-  videos_only: isWithVideo,
+  medias_only: TweetArchive.isWithMedia,
+  videos_only: TweetArchive.isWithVideo,
 };
 
 export const TweetSearcher = new class TweetSearcher {
