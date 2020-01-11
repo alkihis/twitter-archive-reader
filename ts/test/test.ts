@@ -4,6 +4,7 @@ import { writeFileSync, fstat } from 'fs';
 import { inspect } from 'util';
 import TweetSearcher from '../TweetSearcher';
 import Timer from 'timerize';
+import createSaveFrom, { createFromSave } from '../ArchiveSaver';
 
 commander
   .option('-f, --file <zipFile>', "Archive ZIP to load")
@@ -25,7 +26,7 @@ const test_1 = async () => {
   //await archive.ready();
   console.log(await archive.ready().catch(console.error));
 
-  await archive.loadCurrentDmImageZip();
+  await archive.loadArchivePart({ current_dm_images: true });
   console.log("Archive ok");
 
   // Test dm
@@ -146,7 +147,7 @@ const test_3 = async () => {
 
   Timer.default_format = "s";
   const timer = new Timer;
-  const exported = await test_archive.exportSave();
+  const exported = await createSaveFrom(test_archive);
 
   console.log("Archive exported in", timer.elapsed, "seconds");
 
@@ -154,7 +155,7 @@ const test_3 = async () => {
 
   console.log("Creation archive from export");
 
-  const archive = await TwitterArchive.importSave(exported);
+  const archive = await createFromSave(exported);
 
   console.log("Archive imported in", timer.elapsed, "seconds");
 
@@ -179,7 +180,7 @@ const test_4 = async () => {
 
   console.log("Archive ok");
 
-  console.log(test_archive.archive_save_info);
+  console.log(test_archive.synthetic_info);
 };
 
 if (commander.testOne) {
