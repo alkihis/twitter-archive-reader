@@ -26,7 +26,8 @@ const test_1 = async () => {
   //await archive.ready();
   console.log(await archive.ready().catch(console.error));
 
-  await archive.loadArchivePart({ current_dm_images: true });
+  archive.loadArchivePart({ current_dm_images: true });
+  await Promise.all(archive.raw.map(a => a ? a.ready() : undefined)); 
   console.log("Archive ok");
 
   // Test dm
@@ -37,6 +38,7 @@ const test_1 = async () => {
       const blob = await archive.dmImage("991765544733937669-512rVQq-.jpg", false, true) as ArrayBuffer;
       writeFileSync('test_dir/mon_img.jpg', Buffer.from(blob));
     } catch {}
+    return;
   }
 
   //console.log(archive.messages.count);

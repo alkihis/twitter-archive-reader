@@ -71,9 +71,9 @@ export default class TweetArchive {
 
   /** Extract tweets from a specific month. */
   month(month: string, year: string) : PartialTweet[] {
-    if (year in this.index.years) {
-      if (month in this.index.years[year]) {
-        return Object.values(this.index.years[year][month]);
+    if (year in this.years) {
+      if (month in this.years[year]) {
+        return Object.values(this.years[year][month]);
       }
     }
 
@@ -151,7 +151,7 @@ export default class TweetArchive {
 
   /** Get a single tweet by ID. Returns `null` if tweet does not exists. */
   single(id_str: string) : PartialTweet | null {
-    if (id_str in this.index.by_id) {
+    if (id_str in this.by_id) {
       return this.by_id[id_str];
     }
 

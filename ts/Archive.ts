@@ -192,7 +192,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     this.dispatchEvent({ type: 'tweetsread' });
 
     // this._info is initialized here
-    this.loadArchivePart({
+    await this.loadArchivePart({
       account: await this.archive.get('account.js'),
       profile: await this.archive.get('profile.js'),
       tweets
@@ -217,7 +217,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       i++;
     }
 
-    this.loadArchivePart({
+    await this.loadArchivePart({
       dms: await Promise.all(
         conv_files
           .filter(name => this.archive.has(name))
@@ -600,18 +600,14 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
    * If you need to, use the `.loadArchivePart()` method:
    * - Loading the current DM image ZIP (if you've the constructor to not do so)
    * ```ts
-   * archive.loadArchivePart({ current_dm_images: true });
-   * // Wait for archives inits
-   * await Promise.all(archive.raw.map(a => a ? a.ready() : undefined));
+   * await archive.loadArchivePart({ current_dm_images: true });
    * ```
    * 
    * ---
    * 
    * - Loading a custom DM ZIP (from external file)
    * ```ts
-   * archive.loadArchivePart({ dm_image_file: '<filepath.zip>' });
-   * // Wait for archives inits
-   * await Promise.all(archive.raw.map(a => a ? a.ready() : undefined));
+   * await archive.loadArchivePart({ dm_image_file: '<filepath.zip>' });
    * ```
    */
   get requires_dm_image_load() {
@@ -711,14 +707,8 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
    * 
    * **Warning**: The DMs image parameters causes the read of a new archive.
    * Archive read is asynchronous, you **must** wait read end before trying to get images.
-   * You can access DM archives with the `.raw` accessor.
-   * 
-   * ```ts
-   * // Wait every archive to finish read process
-   * await Promise.all(archive.raw.map(a => a ? a.ready() : undefined));
-   * ```
    */
-  loadArchivePart(parts: {
+  async loadArchivePart(parts: {
     tweets?: PartialTweetGDPR[],
     account?: AccountGDPR,
     profile?: ProfileGDPR,
@@ -774,13 +764,13 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       }
     }
     if (parts.dm_image_file) {
-      this.importDmImageZip(parts.dm_image_file);
+      await this.importDmImageZip(parts.dm_image_file);
     }
     if (parts.dm_image_group_file) {
-      this.importDmGroupImageZip(parts.dm_image_group_file);
+      await this.importDmGroupImageZip(parts.dm_image_group_file);
     }
     if (parts.current_dm_images) {
-      this.loadCurrentDmImageZip();
+      await this.loadCurrentDmImageZip();
     }
   }
 
@@ -885,8 +875,11 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
    * Résumé of this archive.
    * 
    * Contains the 'archive index' (without the tweets),
-   * if the archive is GDPR, last tweet date, the archive hash,
+   * if the archive is GDPR, last tweet date,
    * tweet count and dm count.
+   * 
+   * **Even if the object has emplacement for, this does NOT contains archive hash.**
+   * To know current archive hash, use `archive.hash`.
    */
   get synthetic_info() {
     const info: ArchiveSyntheticInfo = {

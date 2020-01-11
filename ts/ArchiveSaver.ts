@@ -87,8 +87,8 @@ export async function createFromSave(save: ArchiveSave | Promise<ArchiveSave>) 
 
   const archive = new TwitterArchive(null);
 
-  archive.index.archive = save.info.index.archive;
-  archive.index.info = save.info.index.info;
+  archive.info.archive = save.info.info.archive;
+  archive.info.user = save.info.info.user;
 
   const tweet_archive = await JSZip.loadAsync(save.tweets);
   let current_load_object = JSON.parse(await tweet_archive.file("tweet.json").async("text"));
@@ -99,14 +99,14 @@ export async function createFromSave(save: ArchiveSave | Promise<ArchiveSave>) 
 
   if (save.info.is_gdpr) {
     // Side effect of this method is to define archive to GDPR format
-    archive.loadArchivePart();
+    await archive.loadArchivePart();
   }
 
   if (save.dms) {
     const dm_archive = await JSZip.loadAsync(save.dms);
     current_load_object = JSON.parse(await dm_archive.file("dm.json").async("text")) as DMFile;
 
-    archive.loadArchivePart({
+    await archive.loadArchivePart({
       dms: [current_load_object]
     });
   }
