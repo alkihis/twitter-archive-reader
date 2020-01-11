@@ -117,7 +117,7 @@ export class DMArchive {
     return this.all.length;
   }
 
-  /** Iterates all over the conversation. */
+  /** Iterates all over conversations. */
   *[Symbol.iterator]() {
     yield* this.all;
   }
