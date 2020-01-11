@@ -1,6 +1,6 @@
 import commander from 'commander';
 import { TwitterArchive } from '../Archive';
-import { writeFileSync, fstat } from 'fs';
+import { writeFileSync } from 'fs';
 import { inspect } from 'util';
 import TweetSearcher from '../TweetSearcher';
 import Timer from 'timerize';
@@ -26,8 +26,7 @@ const test_1 = async () => {
   //await archive.ready();
   console.log(await archive.ready().catch(console.error));
 
-  archive.loadArchivePart({ current_dm_images: true });
-  await Promise.all(archive.raw.map(a => a ? a.ready() : undefined)); 
+  await archive.loadArchivePart({ current_dm_images: true });
   console.log("Archive ok");
 
   // Test dm
@@ -35,10 +34,9 @@ const test_1 = async () => {
     // @ts-ignore
     console.log(archive.dm_img_archive);
     try {
-      const blob = await archive.dmImage("991765544733937669-512rVQq-.jpg", false, true) as ArrayBuffer;
+      const blob = await archive.dmImage("818102592802848773-BrcGVlp3.jpg", false, true) as ArrayBuffer;
       writeFileSync('test_dir/mon_img.jpg', Buffer.from(blob));
     } catch {}
-    return;
   }
 
   //console.log(archive.messages.count);
@@ -50,27 +48,27 @@ const test_1 = async () => {
   write('30_first', archive.all.slice(0, 5));
 
   // Get all the tweets sent between two dates
-  write('between_tweets', archive.between(new Date("2018-01-31"), new Date("2018-02-02")).length);
+  write('between_tweets', archive.tweets.between(new Date("2018-01-31"), new Date("2018-02-02")).length);
 
   // Get all the tweets sent in one month
-  write('2018_01', archive.month("1", "2018").length);
+  write('2018_01', archive.tweets.month("1", "2018").length);
 
   // Get the number of tweets stored in the archive
-  console.log(archive.length, "tweets in archive");
+  console.log(archive.tweets.length, "tweets in archive");
 
   console.log("Search test: trying to find 'hello', case insensitive");
-  const res = archive.all.filter(e => /hello/i.test(e.text));
+  const res = archive.tweets.all.filter(e => /hello/i.test(e.text));
   console.log(res.length, "results");
   write('search', res);
 
   // Advanced search
   console.log("Search test: trying to find retweets containing 'lgbt' since 2016/01/01 and until 2019/02/01, case insensitive");
-  const res2 = TweetSearcher.search(archive.all, "since:2016-01-01 until:2019-02-01 lgbt", "i", ["retweets_only"]);
+  const res2 = TweetSearcher.search(archive.tweets, "since:2016-01-01 until:2019-02-01 lgbt", "i", ["retweets_only"]);
   console.log(res2.length, "results");
   write('adv_search', res2);
 
   console.log("Search test: trying to find tweets (only) containing 'bonjour' at the beginning of the tweet, before 2018/03/25, case insensitive");
-  const res3 = TweetSearcher.search(archive.all, "until:2018-03-25 ^bonjour", "i", ["no_retweets"]);
+  const res3 = TweetSearcher.search(archive.tweets, "until:2018-03-25 ^bonjour", "i", ["no_retweets"]);
   console.log(res3.length, "results");
   write('adv_search2', res3);
 
@@ -126,7 +124,7 @@ const test_2 = async () => {
 
   console.log("Archive ok");
 
-  console.log(archive.length, "tweets");
+  console.log(archive.tweets.length, "tweets");
   console.log(archive.messages.length, "conversations, with", archive.messages.count, "messages");
   console.log(
     archive.messages.groups.length, "group conversations with total of", 
@@ -161,7 +159,7 @@ const test_3 = async () => {
 
   console.log("Archive imported in", timer.elapsed, "seconds");
 
-  console.log(archive.length, "tweets");
+  console.log(archive.tweets.length, "tweets");
   console.log(archive.messages.length, "conversations, with", archive.messages.count, "messages");
   console.log(
     archive.messages.groups.length, "group conversations with total of", 

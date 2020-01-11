@@ -7,28 +7,6 @@ import TweetArchive from './TweetArchive';
 
 export type ArchiveReadState = "idle" | "reading" | "indexing" | "tweet_read" | "user_read" | "dm_read" | "extended_read" | "ready";
 
-/** 
- * @deprecated
- * Please use `TweetArchive.dateFromTweet`.
- */
-export const dateFromTweet = TweetArchive.dateFromTweet;
-/** 
- * @deprecated
- * Please use `TweetArchive.parseTwitterDate`.
- */
-export const parseTwitterDate = TweetArchive.parseTwitterDate;
-/** 
- * @deprecated
- * Please use `TweetArchive.isWithMedia`.
- */
-export const isWithMedia = TweetArchive.isWithMedia;
-/** 
- * @deprecated
- * Please use `TweetArchive.isWithVideo`.
- */
-export const isWithVideo = TweetArchive.isWithVideo;
-
-
 type TwitterArchiveEvents = {
   zipready: CustomEvent<void>;
   userinfosready: CustomEvent<void>;
@@ -574,7 +552,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
    * @deprecated Will be removed. Tweet index is moved to `.tweets.index` and
    * archive info to `.info`.
    */
-  get ___index() {
+  get index() {
     return {
       info: this._info.user,
       archive: this._info.archive,
@@ -651,7 +629,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
 
   /** Archive creation date. Not accurate in GDPR archive (will be the current date). */
   get generation_date() {
-    return parseTwitterDate(this._info.archive.created_at);
+    return TweetArchive.parseTwitterDate(this._info.archive.created_at);
   }
 
   /** Archive information. */
@@ -899,7 +877,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
 
     let last_date = 0;
     for (const tweet of Object.values(tweets)) {
-      const cur_date = dateFromTweet(tweet).getTime();
+      const cur_date = TweetArchive.dateFromTweet(tweet).getTime();
       if (cur_date > last_date) {
         last_date = cur_date;
       }

@@ -1,7 +1,7 @@
 import { GDPRConversation, DirectMessage, LinkedDirectMessage } from "./TwitterTypes";
 import { supportsBigInt } from "./helpers";
 import bigInt from 'big-integer';
-import { parseTwitterDate } from "./Archive";
+import TweetArchive from "./TweetArchive";
 
 /** Register the number of messages in each year, month and day, and let you access those messages. */
 interface ConversationIndex {
@@ -56,7 +56,7 @@ abstract class ConversationBase {
     this._index[msg.id] = msg;
 
     if (!msg.createdAtDate) {
-      msg.createdAtDate = parseTwitterDate(msg.createdAt);
+      msg.createdAtDate = TweetArchive.parseTwitterDate(msg.createdAt);
     }
 
     const [day, month, year] = [
