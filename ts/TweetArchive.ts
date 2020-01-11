@@ -2,7 +2,7 @@ import { PartialTweet, TweetIndex, PartialTweetGDPR, PartialTweetUser } from "./
 import bigInt from 'big-integer';
 import { supportsBigInt } from './helpers';
 
-export default class TweetArchive {
+export class TweetArchive {
   protected by_id: TweetIndex = {};
   protected years: { [year: string]: { [month: string]: TweetIndex } } = {};
 
@@ -356,3 +356,5 @@ export default class TweetArchive {
     }
   }
 }
+
+export default TweetArchive;
