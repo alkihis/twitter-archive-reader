@@ -1,84 +1,33 @@
 import { AcceptedZipSources, Archive, BaseArchive, constructArchive } from './StreamArchive';
-import { ArchiveIndex, PartialTweetGDPR, PartialTweet, AccountGDPR, ProfileGDPR, ClassicTweetIndex, ClassicPayloadDetails, TwitterUserDetails, DMFile, PartialTweetUser, GDPRFollowings, GDPRFollowers, GDPRFavorites, GDPRMutes, InnerGDPRPersonalization, GPDRScreenNameHistory, GPDRProtectedHistory, GDPRBlocks, GDPRAgeInfo, InnerGDPRAgeInfo, GDPRMoment, GDPRMomentFile, DirectMessage, BasicArchiveIndex, LinkedDirectMessage, GDPRConversation, ArchiveSave, ArchiveSaveInfo } from './TwitterTypes';
+import { BasicArchiveInfo, PartialTweetGDPR, PartialTweet, AccountGDPR, ProfileGDPR, ClassicTweetIndex, ClassicPayloadDetails, TwitterUserDetails, DMFile, PartialTweetUser, GDPRFollowings, GDPRFollowers, GDPRFavorites, GDPRMutes, InnerGDPRPersonalization, GPDRScreenNameHistory, GPDRProtectedHistory, GDPRBlocks, GDPRAgeInfo, InnerGDPRAgeInfo, GDPRMoment, GDPRMomentFile, DirectMessage, ArchiveSyntheticInfo, ExtendedGDPRInfo } from './TwitterTypes';
 import DMArchive from './DMArchive';
 import { EventTarget, defineEventAttribute } from 'event-target-shim';
-import bigInt from 'big-integer';
-import { supportsBigInt } from './helpers';
-import JSZip from 'jszip';
-import Conversation from './Conversation';
 import md5 from 'js-md5';
+import TweetArchive from './TweetArchive';
 
 export type ArchiveReadState = "idle" | "reading" | "indexing" | "tweet_read" | "user_read" | "dm_read" | "extended_read" | "ready";
 
-/** Raw informations stored in GDPR, extracted for a simpler use.
- * 
- * This includes list of followers, followings, favorites, mutes, blocks,
- * registered and subscribed lists, history of screen names, and Twitter moments.
- */
-export interface ExtendedGDPRInfo {
-  followers: Set<string>;
-  followings: Set<string>;
-  favorites: Set<string>;
-  mutes: Set<string>;
-  blocks: Set<string>;
-  lists: {
-    created: string[];
-    member_of: string[];
-    subscribed: string[];
-  };
-  personalization: InnerGDPRPersonalization;
-  screen_name_history: GPDRScreenNameHistory[];
-  protected_history: GPDRProtectedHistory[];
-  age_info: InnerGDPRAgeInfo;
-  moments: GDPRMoment[];
-}
-
-/** Return the `Date` object affiliated to **tweet**. */
-export function dateFromTweet(tweet: PartialTweet) : Date {
-  if (tweet.created_at_d && tweet.created_at_d instanceof Date) {
-    return tweet.created_at_d;
-  }
-  return tweet.created_at_d = parseTwitterDate(tweet.created_at);
-}
-
-export function parseTwitterDate(date: string) : Date {
-  try {
-    const d = new Date(date);
-
-    if (isNaN(d.getTime())) {
-      throw "";
-    }
-    else {
-      return d;
-    }
-  } catch (e) {
-    return new Date(date.replace(/\s(.+)\s.+/, 'T$1.000Z'));
-  }
-}
-
 /** 
- * Return true if **tweet** contains media(s).
- * 
- * This includes photos, videos or animated GIF.
+ * @deprecated
+ * Please use `TweetArchive.dateFromTweet`.
  */
-export function isWithMedia(tweet: PartialTweet) {
-  return tweet.entities.media.length > 0;
-}
-
-/**
- * Return true if **tweet** contains a video or one animated GIF.
- * 
- * Twitter's GIF are mp4 encoded.
+export const dateFromTweet = TweetArchive.dateFromTweet;
+/** 
+ * @deprecated
+ * Please use `TweetArchive.parseTwitterDate`.
  */
-export function isWithVideo(tweet: PartialTweet) {
-  if (tweet.extended_entities) {
-    if (tweet.extended_entities.media) {
-      return tweet.extended_entities.media.some(m => m.type !== "photo");
-    }
-  }
+export const parseTwitterDate = TweetArchive.parseTwitterDate;
+/** 
+ * @deprecated
+ * Please use `TweetArchive.isWithMedia`.
+ */
+export const isWithMedia = TweetArchive.isWithMedia;
+/** 
+ * @deprecated
+ * Please use `TweetArchive.isWithVideo`.
+ */
+export const isWithVideo = TweetArchive.isWithVideo;
 
-  return false;
-}
 
 type TwitterArchiveEvents = {
   zipready: CustomEvent<void>;
@@ -105,7 +54,8 @@ type TwitterArchiveOnEvents = {
 /**
  * Represents a full TwitterArchive. Support GDPR and classic archive.
  * 
- * Remember that tweets, in searchs in particular are **NOT** sorted.
+ * Tweets are available in `.tweets`.
+ * Remember that, in searchs in particular, tweets are **NOT** sorted.
  * 
  * Direct messages, parsed if archive is a GDPR archive, stored in `.messages`, 
  * are returned and sorted from the most older to the more recent.
@@ -124,8 +74,8 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
    * */
   extended_gdpr: ExtendedGDPRInfo;
 
-  protected _index: ArchiveIndex = {
-    info: {
+  protected _info: BasicArchiveInfo = {
+    user: {
       screen_name: "",
       full_name: "",
       location: "fr",
@@ -136,19 +86,16 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     archive: {
       created_at: (new Date).toISOString(),
       tweets: 0
-    },
-    years: {},
-    by_id: {}
+    }
   };
 
+  protected statuses = new TweetArchive;
   protected dms: DMArchive;
 
   protected dm_img_archive: BaseArchive<any>;
   protected dm_img_group_archive: BaseArchive<any>;
 
   protected _is_gdpr = false;
-
-  protected user_cache: PartialTweetUser;
 
   /**
    * Build a new instance of TwitterArchive.
@@ -244,6 +191,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
 
     this.dispatchEvent({ type: 'tweetsread' });
 
+    // this._info is initialized here
     this.loadArchivePart({
       account: await this.archive.get('account.js'),
       profile: await this.archive.get('profile.js'),
@@ -437,54 +385,6 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     };
   }
 
-  protected convertToPartial(tweet: PartialTweetGDPR, pic_prof: string) : PartialTweet {
-    if (!this.user_cache) {
-      this.user_cache = {
-        protected: false,
-        id_str: this._index.info.id,
-        name: this._index.info.full_name,
-        screen_name: this._index.info.screen_name,
-        profile_image_url_https: pic_prof
-      };
-    }
-
-    (tweet as unknown as PartialTweet).user = this.user_cache;
-    (tweet as unknown as PartialTweet).text = tweet.full_text;
-
-    // @ts-ignore
-    tweet.retweet_count = Number(tweet.retweet_count);
-    // @ts-ignore
-    tweet.favorite_count = Number(tweet.favorite_count);
-
-    // Gérer le cas des retweets
-    const rt_data = /^RT @(.+?): (.+)/.exec(tweet.full_text);
-
-    if (rt_data && rt_data.length && !("retweeted_status" in tweet)) {
-      const [, arobase, text] = rt_data;
-      const rt = { ...tweet } as unknown as PartialTweet;
-      rt.user = { ...rt.user };
-
-      rt.text = text;
-      rt.user.screen_name = arobase;
-      rt.user.name = arobase;
-      // @ts-ignore
-      rt.retweeted = true;
-      rt.retweet_count = Number(rt.retweet_count);
-      rt.favorite_count = Number(rt.favorite_count);
-
-      // Recherche si un ID est disponible par exemple dans les medias (sinon tant pis)
-      if (rt.extended_entities && rt.extended_entities.media) {
-        if (rt.extended_entities.media.length) {
-          rt.user.id_str = rt.extended_entities.media[0].source_user_id_str;
-        }
-      }
-
-      (tweet as unknown as PartialTweet).retweeted_status = rt;
-    }
-
-    return tweet as unknown as PartialTweet;
-  }
-
   protected async initClassic() {
     this.state = "user_read";
     const js_dir = this.archive.dir('data').dir('js');
@@ -510,7 +410,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     let tweets: PartialTweet[] = [].concat(...await Promise.all(tweet_file_promises));
 
     // Tri les tweets par ID (le plus récent, plus grand en premier)
-    tweets = this.sortTweets(tweets);
+    tweets = TweetArchive.sortTweets(tweets);
 
     this.dispatchEvent({ type: 'tweetsread' });
 
@@ -526,103 +426,9 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     return this._is_gdpr = this.archive.search(/^tweets\.csv$/).length === 0;
   }
 
-  /**
-   * True if given tweet is coming from a GDPR archive.
-   * 
-   * Tweets getted by available getters are NOT GDPR tweets, they've been converted !
-   */
-  isGDPRTweet(tweet: PartialTweetGDPR | PartialTweet) : tweet is PartialTweetGDPR {
-    return 'retweet_count' in tweet;
-  }
-
-  /** Extract tweets from a specific month. */
-  month(month: string, year: string) : PartialTweet[] {
-    if (year in this.index.years) {
-      if (month in this.index.years[year]) {
-        return Object.values(this.index.years[year][month]);
-      }
-    }
-
-    return [];
-  }
-
-  /** Find tweets made on the same day (= month, = day), but in all years. */
-  fromThatDay() : PartialTweet[] {
-    const now = new Date;
-    const now_m = now.getMonth();
-    const now_d = now.getDate();
-
-    // TODO optimize
-    return this.all.filter(t => {
-      const d = dateFromTweet(t);
-      return d.getMonth() === now_m && d.getDate() === now_d;
-    });
-  }
-
-  /** Get tweets in a specific time interval. */
-  between(since: Date, until: Date) {
-    if (since.getTime() > until.getTime()) {
-      throw new Error("Since can't be superior to until");
-    }
-
-    const firsts: [string, string] = [String(since.getMonth() + 1), String(since.getFullYear())];
-    const ends: [string, string] = [String(until.getMonth() + 1), String(until.getFullYear())];
-
-    const remaining_months: [string, string][] = [];
-
-    remaining_months.push(firsts);
-
-    let tmp_date = new Date(since.getFullYear(), since.getMonth());
-    tmp_date.setMonth(tmp_date.getMonth() + 1);
-
-    remaining_months.push(ends);
-
-    // Calculating months that are between the two dates
-    while (true) {
-      if (tmp_date.getFullYear() > until.getFullYear()) {
-        break;
-      }
-      if (tmp_date.getFullYear() === until.getFullYear()) {
-        if (tmp_date.getMonth() >= until.getMonth()) {
-          break;
-        }
-      }
-
-      remaining_months.push([String(tmp_date.getMonth() + 1), String(tmp_date.getFullYear())]);
-
-      tmp_date.setMonth(tmp_date.getMonth() + 1);
-    }
-
-    const tweets: PartialTweet[] = [];
-
-    const [end_day, end_month, end_year] = [until.getDate(), until.getMonth(), until.getFullYear()];
-    
-    // Finding tweets that are same or after since date or before until date
-    for (const [month, year] of remaining_months) {
-      const m = this.month(month, year);
-
-      for (const t of m) {
-        const d = dateFromTweet(t);
-
-        if (d.getTime() >= since.getTime()) {
-          if (d.getFullYear() < end_year || d.getMonth() < end_month || d.getDate() <= end_day) {
-            tweets.push(t);
-          }
-        }
-      }
-    }
-
-    return tweets;
-  }
-
-  /** Get a single tweet by ID. Returns `null` if tweet does not exists. */
-  id(id_str: string) : PartialTweet | null {
-    if (id_str in this.index.by_id) {
-      return this.index.by_id[id_str];
-    }
-
-    return null;
-  }
+  /** --------------- */
+  /** DM IMAGES STUFF */
+  /** --------------- */
 
   /** 
    * Give the media url in direct message, obtain the Blob-bed image. 
@@ -718,12 +524,97 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     return Promise.all(images);
   }
 
+  /** ------------------------------------ */
+  /** TWEET RELATED STUFF THAT SHOULD MOVE */
+  /** ------------------------------------ */
+
   /**
-   * Return true if you need to load a DM image ZIP in order to use `.dmImage()`.
-   * 
-   * If you need to, see `.loadCurrentDmImageZip()`, or `importDmImageZip()`.
+   * @deprecated Use `TweetArchive.isGDPRTweet()` instead.
    */
-  requiresDmImageZipLoad() {
+  isGDPRTweet(tweet: PartialTweetGDPR | PartialTweet) : tweet is PartialTweetGDPR {
+    return TweetArchive.isGDPRTweet(tweet);
+  }
+
+  /**
+   * @deprecated Use `.tweets.month()` instead.
+   */
+  month(month: string, year: string) {
+    return this.statuses.month(month, year);
+  }
+
+  /**
+   * @deprecated Use `.tweets.fromThatDay()` instead.
+   */
+  fromThatDay() {
+    return this.statuses.fromThatDay();
+  }
+
+  /**
+   * @deprecated Use `.tweets.between()` instead.
+   */
+  between(since: Date, until: Date) {
+    return this.statuses.between(since, until);
+  }
+  
+  /**
+   * @deprecated Please use `.tweets.single()` instead.
+   */
+  id(id_str: string) : PartialTweet | null {
+    return this.statuses.single(id_str);
+  }
+
+  /**
+   * @deprecated Please use `.tweets.all` instead.
+   */
+  get all() : PartialTweet[] {
+    return this.tweets.all;
+  }
+
+  /** 
+   * @deprecated Will be removed. Tweet index is moved to `.tweets.index` and
+   * archive info to `.info`.
+   */
+  get ___index() {
+    return {
+      info: this._info.user,
+      archive: this._info.archive,
+      by_id: this.tweets.id_index,
+      years: this.tweets.index
+    };
+  }
+
+  /**
+   * @deprecated Please use `.tweets.length` instead.
+   */
+  get length() {
+    return this.statuses.length;
+  }
+
+  /** ----------------- */
+  /** ARCHIVE ACCESSORS */
+  /** ----------------- */
+
+  /**
+   * `true` if you need to load a DM image ZIP in order to use `.dmImage()`.
+   * 
+   * If you need to, use the `.loadArchivePart()` method:
+   * - Loading the current DM image ZIP (if you've the constructor to not do so)
+   * ```ts
+   * archive.loadArchivePart({ current_dm_images: true });
+   * // Wait for archives inits
+   * await Promise.all(archive.raw.map(a => a ? a.ready() : undefined));
+   * ```
+   * 
+   * ---
+   * 
+   * - Loading a custom DM ZIP (from external file)
+   * ```ts
+   * archive.loadArchivePart({ dm_image_file: '<filepath.zip>' });
+   * // Wait for archives inits
+   * await Promise.all(archive.raw.map(a => a ? a.ready() : undefined));
+   * ```
+   */
+  get requires_dm_image_load() {
     if (!this.is_gdpr || !this.archive || this.dm_img_archive) {
       return false;
     }
@@ -739,69 +630,19 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     return false;
   }
 
-  /**
-   * Load/reload zip archives that contains DM images, 
-   * if `load_images_in_zip` parameter was set to false.
-   * 
-   * You need to have the archive loaded to accomplish this action 
-   * (constructor `keep_loaded` parameter should be set to `true`).
-   * 
-   * Note that if any zip is found in the archive, this method will just do nothing.
-   */
-  async loadCurrentDmImageZip() {
-    if (!this.archive || !this.is_gdpr) {
-      return;
-    }
-
-    if (this.archive.searchDir(new RegExp('direct_message_media')).length) {
-      const folder = this.archive.dir('direct_message_media');
-      const query = folder.search(/\.zip$/);
-      if (query.length) {
-        // Load the archive
-        this.dm_img_archive = await folder.fromFile(query[0]);
-        await this.dm_img_archive.ready();
-      }
-    }
-    if (this.archive.searchDir(new RegExp('direct_message_group_media')).length) {
-      const folder = this.archive.dir('direct_message_group_media');
-      const query = folder.search(/\.zip$/);
-      if (query.length) {
-        // Load the archive (group)
-        this.dm_img_group_archive = await folder.fromFile(query[0]);
-        await this.dm_img_group_archive.ready();
-      }
-    }
-  }
-
-  /**
-   * Import a custom ZIP file as DM single-conversation images file.
-   */
-  async importDmImageZip(file: AcceptedZipSources | Promise<AcceptedZipSources>) {
-    this.dm_img_archive = constructArchive(await file);
-    await this.dm_img_archive.ready();
-  }
-
-  /**
-   * Import a custom ZIP file as DM group-conversation images file.
-   */
-  async importDmGroupImageZip(file: AcceptedZipSources | Promise<AcceptedZipSources>) {
-    this.dm_img_group_archive = constructArchive(await file);
-    await this.dm_img_group_archive.ready();
-  }
-
-  /** All tweets registered in this archive. */
-  get all() : PartialTweet[] {
-    return Object.values(this.index.by_id);
-  }
-
-  /** Access to the DMArchive object. Will be undefined if `.is_gdpr === false`. */
+  /** Access to the `DMArchive` object. Will be undefined if `.is_gdpr === false`. */
   get messages() {
     return this.dms;
   }
 
   /** ID of the user who created this archive. */
   get owner() {
-    return this._index.info.id;
+    return this._info.user.id;
+  }
+
+  /** Access to the `TweetArchive` object. Contains all the tweets of this archive. */
+  get tweets() {
+    return this.statuses;
   }
 
   /** 
@@ -809,22 +650,17 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
    * May be obsolete (user can change screen_name over time).
    */
   get owner_screen_name() {
-    return this._index.info.screen_name;
+    return this._info.user.screen_name;
   }
 
   /** Archive creation date. Not accurate in GDPR archive (will be the current date). */
   get generation_date() {
-    return parseTwitterDate(this._index.archive.created_at);
+    return parseTwitterDate(this._info.archive.created_at);
   }
 
-  /** Archive information and tweet index. */
-  get index() {
-    return this._index;
-  }
-
-  /** Number of tweets in this archive. */
-  get length() {
-    return this.index.archive.tweets;
+  /** Archive information. */
+  get info() {
+    return this._info;
   }
 
   /** True if archive is a GDPR archive. */
@@ -834,9 +670,13 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     return this._is_gdpr;
   }
 
-  /** Raw Archive object. Can be used to get specific files. */
-  get raw() {
-    return this.archive;
+  /** 
+   * Raw archive object. Can be used to get specific files.
+   * 
+   * Returns `[twitter_archive, dm_image_archive, dm_group_image_archive]`.
+   */
+  get raw() : [BaseArchive<any>, BaseArchive<any> | undefined, BaseArchive<any> | undefined] {
+    return [this.archive, this.dm_img_archive, this.dm_img_group_archive];
   }
 
   protected get should_autoload_zip_img() {
@@ -866,12 +706,26 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
    * Load a part of a GDPR archive.
    * 
    * Set current archive as GDPR archive.
+   * 
+   * ---
+   * 
+   * **Warning**: The DMs image parameters causes the read of a new archive.
+   * Archive read is asynchronous, you **must** wait read end before trying to get images.
+   * You can access DM archives with the `.raw` accessor.
+   * 
+   * ```ts
+   * // Wait every archive to finish read process
+   * await Promise.all(archive.raw.map(a => a ? a.ready() : undefined));
+   * ```
    */
   loadArchivePart(parts: {
     tweets?: PartialTweetGDPR[],
     account?: AccountGDPR,
     profile?: ProfileGDPR,
     dms?: DMFile[],
+    dm_image_file?: AcceptedZipSources | Promise<AcceptedZipSources>,
+    dm_image_group_file?: AcceptedZipSources | Promise<AcceptedZipSources>,
+    current_dm_images?: boolean,
   } = {}) {
     this._is_gdpr = true;
 
@@ -879,20 +733,36 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       // Init informations
       const account = parts.account[0].account;
       
-      this._index.info.screen_name = account.username;
-      this._index.info.full_name = account.accountDisplayName;
-      this._index.info.id = account.accountId;
-      this._index.info.created_at = account.createdAt;
+      this._info.user.screen_name = account.username;
+      this._info.user.full_name = account.accountDisplayName;
+      this._info.user.id = account.accountId;
+      this._info.user.created_at = account.createdAt;
+
+      // (re)init the tweet archive user cache
+      this.statuses.__initUserCache({
+        id_str: this._info.user.id,
+        screen_name: this._info.user.screen_name,
+        name: this._info.user.full_name,
+        profile_image_url_https: this._info.user.profile_image_url_https
+      });
     }
     if (parts.profile) {
       const profile = parts.profile[0].profile;
 
-      this._index.info.location = profile.description.location;
-      this._index.info.bio = profile.description.bio;
-      this._index.info.profile_image_url_https = profile.avatarMediaUrl;
+      this._info.user.location = profile.description.location;
+      this._info.user.bio = profile.description.bio;
+      this._info.user.profile_image_url_https = profile.avatarMediaUrl;
+
+      // (re)init the tweet archive user cache
+      this.statuses.__initUserCache({
+        id_str: this._info.user.id,
+        screen_name: this._info.user.screen_name,
+        name: this._info.user.full_name,
+        profile_image_url_https: this._info.user.profile_image_url_https
+      });
     }
     if (parts.tweets) {
-      this.readGDPRTweets(parts.tweets, this.index.info.profile_image_url_https);
+      this.readGDPRTweets(parts.tweets);
     }
     if (parts.dms) {
       if (!this.dms) {
@@ -902,6 +772,15 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       for (const file of parts.dms) {
         this.dms.add(file);
       }
+    }
+    if (parts.dm_image_file) {
+      this.importDmImageZip(parts.dm_image_file);
+    }
+    if (parts.dm_image_group_file) {
+      this.importDmGroupImageZip(parts.dm_image_group_file);
+    }
+    if (parts.current_dm_images) {
+      this.loadCurrentDmImageZip();
     }
   }
 
@@ -918,166 +797,100 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     this._is_gdpr = false;
 
     if (parts.tweets) {
-      this.readTweets(this.sortTweets(parts.tweets));
+      this.readTweets(TweetArchive.sortTweets(parts.tweets));
     }
     if (parts.user) {
-      this.index.info = parts.user;
+      this._info.user = parts.user;
     }
     if (parts.payload) {
-      this.index.archive = parts.payload;
+      this._info.archive = parts.payload;
     }
   }
 
   /**
    * Convert GDPR tweets into classic tweets, then register them into the index.
    */
-  protected readGDPRTweets(tweets: PartialTweetGDPR[], profile_img_https: string) {
-    // Build index
-    for (let i = 0; i < tweets.length; i++) {
-      const date = parseTwitterDate(tweets[i].created_at);
+  protected readGDPRTweets(tweets: PartialTweetGDPR[]) {
+    this.statuses.addGDPR(tweets);
 
-      const month = String(date.getMonth() + 1);
-      const year = String(date.getFullYear());
-
-      // Creating month/year if not presents
-      if (!(year in this.index.years)) {
-        this.index.years[year] = {};
-      }
-
-      if (!(month in this.index.years[year])) {
-        this.index.years[year][month] = {};
-      }
-
-      // Save tweet in index
-      const converted = this.convertToPartial(tweets[i], profile_img_https);
-      this.index.years[year][month][tweets[i].id_str] = converted;
-      this.index.by_id[tweets[i].id_str] = converted;
-    }
-
-    // Setting right tweet number
-    this.index.archive.tweets = Object.keys(this.index.by_id).length;
+    // Set right tweet number
+    this._info.archive.tweets = this.statuses.length;
   }
 
   /**
    * Register tweets into the index.
    */
   protected readTweets(tweets: PartialTweet[]) {
-    // Build index (read tweets)
-    for (let i = 0; i < tweets.length; i++) {
-      const date = dateFromTweet(tweets[i]);
+    this.statuses.add(tweets);
 
-      const month = String(date.getMonth() + 1);
-      const year = String(date.getFullYear());
+    // Set right tweet number
+    this._info.archive.tweets = this.statuses.length;
+  }
 
-      // Creating month/year if not presents
-      if (!(year in this.index.years)) {
-        this.index.years[year] = {};
-      }
-
-      if (!(month in this.index.years[year])) {
-        this.index.years[year][month] = {};
-      }
-
-      // Save tweet in index
-      this.index.years[year][month][tweets[i].id_str] = tweets[i];
-      this.index.by_id[tweets[i].id_str] = tweets[i];
-    }
-
-    // Setting right tweet number
-    this.index.archive.tweets = Object.keys(this.index.by_id).length;
+   /**
+   * Import a custom ZIP file as DM single-conversation images file.
+   */
+  protected async importDmImageZip(file: AcceptedZipSources | Promise<AcceptedZipSources>) {
+    this.dm_img_archive = constructArchive(await file);
+    await this.dm_img_archive.ready();
   }
 
   /**
-   * Sort tweets by ID.
+   * Import a custom ZIP file as DM group-conversation images file.
    */
-  protected sortTweets(tweets: PartialTweet[]) {
-    if (supportsBigInt()) {
-      return tweets.sort((a, b) => Number(BigInt(b.id_str) - BigInt(a.id_str)));
-    }
-    else {
-      return tweets.sort((a, b) => (bigInt(b.id_str).minus(bigInt(a.id_str))).toJSNumber());
-    }
+  protected async importDmGroupImageZip(file: AcceptedZipSources | Promise<AcceptedZipSources>) {
+    this.dm_img_group_archive = constructArchive(await file);
+    await this.dm_img_group_archive.ready();
   }
 
-  /** --------------------- */
-  /** ARCHIVE EXPORT / LOAD */
-  /** --------------------- */
-  async exportSave() : Promise<ArchiveSave> {
-    const info = this.archive_save_info;
-    info.hash = this.hash(info);
-
-    function convertConversationToGDPRConversation(conversation: Conversation) : GDPRConversation {
-      return {
-        dmConversation: {
-          conversationId: conversation.id,
-          messages: conversation.all
-            .map(message => ({
-              messageCreate: {
-                recipientId: message.recipientId,
-                createdAt: message.createdAt,
-                mediaUrls: message.mediaUrls,
-                text: message.text,
-                senderId: message.senderId,
-                id: message.id
-              }
-            }))
-        }
-      };
+  /**
+   * Load/reload zip archives that contains DM images, 
+   * if `load_images_in_zip` parameter was set to false.
+   * 
+   * You need to have the archive loaded to accomplish this action 
+   * (constructor `keep_loaded` parameter should be set to `true`).
+   * 
+   * Note that if any zip is found in the archive, this method will just do nothing.
+   */
+  protected async loadCurrentDmImageZip() {
+    if (!this.archive || !this.is_gdpr) {
+      return;
     }
 
-    const tweets = this.all;
-    for (const tweet of tweets) {
-      delete tweet.created_at_d;
-    }
-
-    const tweet_zip = await new JSZip().file("tweet.json", JSON.stringify(tweets)).generateAsync({
-      type: "arraybuffer",
-      compression: "DEFLATE",
-      compressionOptions: {
-        level: 6 // Not too much, if we want a good generation time
+    if (this.archive.searchDir(new RegExp('direct_message_media')).length) {
+      const folder = this.archive.dir('direct_message_media');
+      const query = folder.search(/\.zip$/);
+      if (query.length) {
+        // Load the archive
+        this.dm_img_archive = await folder.fromFile(query[0]);
+        await this.dm_img_archive.ready();
       }
-    });
-
-    const mutes = this.extended_gdpr ? [...this.extended_gdpr.mutes] : [];
-    const blocks = this.extended_gdpr ? [...this.extended_gdpr.blocks] : [];
-
-    let dms: ArrayBuffer = null;
-    if (this.is_gdpr && this.messages) {
-      // Swallow copy all the dms, save them to a JSZip instance
-      /* 
-        dm.json => [
-          GDPRConversation,
-          ...
-        ]
-      */
-
-      dms = await new JSZip()
-        .file(
-          "dm.json", 
-          JSON.stringify(this.messages.all.map(convertConversationToGDPRConversation))
-        )
-        .generateAsync({
-          type: "arraybuffer",
-          compression: "DEFLATE",
-          compressionOptions: {
-            level: 6 // Not too much, if we want a good generation time
-          }
-        });
     }
-
-    return {
-      tweets: tweet_zip,
-      dms,
-      info,
-      mutes,
-      blocks,
-      screen_name_history: this.extended_gdpr ? this.extended_gdpr.screen_name_history : []
-    };
+    if (this.archive.searchDir(new RegExp('direct_message_group_media')).length) {
+      const folder = this.archive.dir('direct_message_group_media');
+      const query = folder.search(/\.zip$/);
+      if (query.length) {
+        // Load the archive (group)
+        this.dm_img_group_archive = await folder.fromFile(query[0]);
+        await this.dm_img_group_archive.ready();
+      }
+    }
   }
 
-  get archive_save_info() {
-    const info: ArchiveSaveInfo = {
-      index: { ...this._index },
+  /** --------------------------------------- */
+  /** ARCHIVE FINGERPRINTING AND INFORMATIONS */
+  /** --------------------------------------- */
+
+  /**
+   * Résumé of this archive.
+   * 
+   * Contains the 'archive index' (without the tweets),
+   * if the archive is GDPR, last tweet date, the archive hash,
+   * tweet count and dm count.
+   */
+  get synthetic_info() {
+    const info: ArchiveSyntheticInfo = {
+      info: { ...this._info },
       is_gdpr: this.is_gdpr,
       version: "1.0.0",
       last_tweet_date: "",
@@ -1086,16 +899,10 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       dm_count: this.messages ? this.messages.count : 0,
     };
 
-    // Remove the real archive index
-    // @ts-ignore
-    delete info.index.years;
-    // @ts-ignore
-    delete info.index.by_id;
-
     // Take the last available year
-    const last_year = Object.keys(this._index.years).sort((a, b) => Number(b) - Number(a))[0];
-    const last_month = Object.keys(this._index.years[last_year]).sort((a, b) => Number(b) - Number(a))[0];
-    const tweets = this._index.years[last_year][last_month];
+    const last_year = Object.keys(this.statuses.index).sort((a, b) => Number(b) - Number(a))[0];
+    const last_month = Object.keys(this.statuses.index[last_year]).sort((a, b) => Number(b) - Number(a))[0];
+    const tweets = this.statuses.index[last_year][last_month];
 
     let last_date = 0;
     for (const tweet of Object.values(tweets)) {
@@ -1110,74 +917,33 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     return info;
   }
 
-  hash(from?: ArchiveSaveInfo) {
-    const info = from ? from : this.archive_save_info;
+  /**
+   * Create a pseudo-unique hash from a archive information (number of tweets, owner, last tweet date...),
+   * in order to have a fingerprint of one archive.
+   */
+  static hash(from: ArchiveSyntheticInfo | TwitterArchive) {
+    const info = from instanceof TwitterArchive ? from.synthetic_info : from;
 
     return md5(JSON.stringify({
-      screen_name: info.index.info.screen_name,
-      bio: info.index.info.bio,
-      name: info.index.info.full_name,
-      profile_image_url_https: info.index.info.profile_image_url_https,
-      created_at: info.index.info.created_at,
+      screen_name: info.info.user.screen_name,
+      bio: info.info.user.bio,
+      name: info.info.user.full_name,
+      profile_image_url_https: info.info.user.profile_image_url_https,
+      created_at: info.info.user.created_at,
       tweets: info.tweet_count,
       dms: info.dm_count,
       last_tweet_date: info.last_tweet_date,
-      id: info.index.info.id,
-      location: info.index.info.location,
+      id: info.info.user.id,
+      location: info.info.user.location,
     }));
   }
 
-  protected static readonly SUPPORTED_SAVE_VERSIONS = ["1.0.0"];
-
-  static async importSave(save: ArchiveSave | Promise<ArchiveSave>) {
-    save = await save;
-
-    if (!this.SUPPORTED_SAVE_VERSIONS.includes(save.info.version)) {
-      throw new Error("Save version is not supported.");
-    }
-
-    const archive = new TwitterArchive(null);
-
-    archive._index.archive = save.info.index.archive;
-    archive._index.info = save.info.index.info;
-
-    const tweet_archive = await JSZip.loadAsync(save.tweets);
-    let current_load_object = JSON.parse(await tweet_archive.file("tweet.json").async("text"));
-
-    archive.readTweets(current_load_object);
-
-    current_load_object = undefined;
-    archive._is_gdpr = save.info.is_gdpr;
-
-    if (save.dms) {
-      const dm_archive = await JSZip.loadAsync(save.dms);
-      current_load_object = JSON.parse(await dm_archive.file("dm.json").async("text")) as DMFile;
-
-      archive.loadArchivePart({
-        dms: [current_load_object]
-      });
-    }
-    if (archive.is_gdpr) {
-      archive.extended_gdpr = {
-        followers: new Set,
-        followings: new Set,
-        mutes: new Set(save.mutes),
-        blocks: new Set(save.blocks),
-        personalization: undefined,
-        favorites: new Set,
-        lists: {
-          created: [],
-          member_of: [],
-          subscribed: []
-        },
-        screen_name_history: save.screen_name_history,
-        protected_history: [],
-        age_info: undefined,
-        moments: []
-      };
-    }
-
-    return archive;
+  /**
+   * Pseudo-unique hash from the archive information (number of tweets, owner, last tweet date...),
+   * in order to have a fingerprint of this archive.
+   */
+  get hash() {
+    return TwitterArchive.hash(this);
   }
 }
 

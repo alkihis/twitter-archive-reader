@@ -62,6 +62,20 @@ export class DMArchive {
   }
 
   /**
+   * Get all conversations that have {user_id} in their participants.
+   * 
+   * @param user_id Specifing an array of user ids find conversations 
+   * where **all** those users are participating.
+   */
+  with(user_id: string | string[]) {
+    if (typeof user_id === 'string') {
+      user_id = [user_id];
+    }
+
+    return this.all.filter(conv => (user_id as string[]).every(user => conv.participants.has(user)));
+  }
+
+  /**
    * Get a conversation who has all messages in it. 
    * 
    * Please note that this method is not recommanded (and time-consuming at initialization). 
@@ -101,6 +115,11 @@ export class DMArchive {
   /** Conversation count. */
   get length() {
     return this.all.length;
+  }
+
+  /** Iterates all over the conversation. */
+  *[Symbol.iterator]() {
+    yield* this.all;
   }
 }
 

@@ -1,9 +1,9 @@
 import Conversation from "./Conversation";
 
 /*** INTERNAL: TwitterArchive */
-export interface BasicArchiveIndex {
+export interface BasicArchiveInfo {
   /** Contains informations about the user who created archive */
-  info: TwitterUserDetails,
+  user: TwitterUserDetails,
   /** Archive informations: Creation date and tweet count. */
   archive: {
     created_at: string,
@@ -14,14 +14,14 @@ export interface BasicArchiveIndex {
 export interface ArchiveSave {
   tweets: ArrayBuffer;
   dms: ArrayBuffer;
-  info: ArchiveSaveInfo;
+  info: ArchiveSyntheticInfo;
   mutes: string[];
   blocks: string[];
   screen_name_history: GPDRScreenNameHistory[];
 }
 
-export interface ArchiveSaveInfo {
-  index: BasicArchiveIndex,
+export interface ArchiveSyntheticInfo {
+  info: BasicArchiveInfo,
   is_gdpr: boolean;
   version: string;
   last_tweet_date: string;
@@ -30,25 +30,27 @@ export interface ArchiveSaveInfo {
   dm_count: number;
 }
 
-/**
- * Info/index about loaded archive.
+/** Raw informations stored in GDPR, extracted for a simpler use.
+ * 
+ * This includes list of followers, followings, favorites, mutes, blocks,
+ * registered and subscribed lists, history of screen names, and Twitter moments.
  */
-export interface ArchiveIndex extends BasicArchiveIndex {
-  /**
-   * Index of tweets by years. 
-   * 
-   * Example, get index of tweets posted on 2019/01 : 
-   * **<index>.years[2019][1]**
-   */
-  years: {
-    [year: string]: {
-      [month: string]: TweetIndex;
-    }
-  },
-  /**
-   * Index of tweets by ID.
-   */
-  by_id: TweetIndex
+export interface ExtendedGDPRInfo {
+  followers: Set<string>;
+  followings: Set<string>;
+  favorites: Set<string>;
+  mutes: Set<string>;
+  blocks: Set<string>;
+  lists: {
+    created: string[];
+    member_of: string[];
+    subscribed: string[];
+  };
+  personalization: InnerGDPRPersonalization;
+  screen_name_history: GPDRScreenNameHistory[];
+  protected_history: GPDRProtectedHistory[];
+  age_info: InnerGDPRAgeInfo;
+  moments: GDPRMoment[];
 }
 
 /**
