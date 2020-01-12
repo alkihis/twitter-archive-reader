@@ -313,54 +313,95 @@ export class CollectedUserData {
   /** ACCESSORS */
   /** --------- */
 
+  /** History of screen names used, and when it has changed. */
   get screen_name_history() {
     return this._sn_history;
   }
 
+  /** History of changed made to protection on account (lock). */
   get protected_history() {
     return this._lock_history;
   }
 
+  /** History of e-mail addresses used on the account. */
   get email_address_history() {
     return this._email_addresses;
   }
 
+  /** "Guessed" things by Twitter about archive owner.
+   * 
+   * ```ts
+   * const p13n = archive.collected.personalization;
+   * // "Speaked" languages (this is VERY approximative)
+   * p13n.demographics.languages // => string[]
+   * // Archive owner assigned gender
+   * p13n.demographics.gender // => string
+   * // Subjects of interest
+   * p13n.interests.names // => string[]
+   * // Shows that owner might watched
+   * p13n.interests.shows // => string[]
+   * ```
+   */
   get personalization() {
     return this._p13n;
   }
 
+  /** Age information from Twitter.
+   * If Twitter has tried to guess your age, it is in `age.inferred`.
+   * 
+   * Age information can be number or a tuple of 2 numbers,
+   * Twitter can sometimes guess a interval of your age (like 13-54).
+   */
   get age() {
     return this._age;
   }
 
+  /** Owner IP address when he created his account. */
   get account_creation_ip() {
     return this._creation_ip;
   }
 
+  /** Timezone, but in a strange format. 
+   * If your timezone is `Europe/Paris`, here, you will find `Paris`.
+   */
   get timezone() {
     return this._timezone;
   }
 
+  /** A list of accepted OAuth application on owner's account.
+   * 
+   * This might be incomplete compared to reality, Twitter doesn't seem to include every application.
+   */
   get authorized_applications() {
     return this._apps;
   }
 
+  /** Contains IP dumps of your last activity on Twitter (using mobile or desktop devices).
+   *  
+   * Seems limited up to 7 days from archive creation.
+   */
   get last_logins() {
     return this._login_ips;
   }
 
+  /** Registred mobile devices that get push notifications, or registred to Twitter's 2FA. */
   get devices() {
     return this._registred_devices;
   }
 
+  /** `true` if archive owner is verified on Twitter. */
   get verified() {
     return this._verified;
   }
 
+  /** Archive owner phone number (if he registred one), `undefined` otherwise.
+   * Begin by `+<countryCode>`
+   */
   get phone_number() {
     return this._phone_nb;
   }
 
+  /** Current owner email address. */
   get email_address() {
     let last_address: string = undefined;
     let max_date: Date = undefined;

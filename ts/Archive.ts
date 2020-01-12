@@ -88,13 +88,13 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   /**
    * Twitter Archive constructor.
    * 
-   * @deprecated Please use `TwitterArchive.read()` static method, it will be more maintanable in the future.
+   * @deprecated Please use `TwitterArchive.read()` static method, it will be more maintanable in the future. 
+   * Constructeur will become protected in ***4.0.0***.
    * 
    * If you use the constructor, don't forget to await the archive ready-ness with `.ready()` method !
    */
   constructor(
     file: AcceptedZipSources | Promise<AcceptedZipSources> | null, 
-    __future__ = true,
     keep_loaded = false,
     protected load_images_in_zip: boolean = undefined,
   ) {
@@ -166,7 +166,6 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   ) {
     const archive = new TwitterArchive(
       file, 
-      undefined,
       options.keep_loaded === true, 
       options.load_images_in_zip
     );
