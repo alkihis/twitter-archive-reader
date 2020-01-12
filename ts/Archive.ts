@@ -75,24 +75,14 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
 
   protected _is_gdpr = false;
 
+  
   /**
-   * Build a new instance of TwitterArchive.
+   * Twitter Archive constructor.
    * 
-   * @param file Accept any source that `JSZip` library accepts, and string for filenames. 
-   * If this parameter is `null`, then you'll need to load each part one by one !
-   * @param build_extended True if `.extended_gdpr` should be built (only if **file** is a GDPR archive.)
-   * @param keep_loaded If possible, free the memory after load if set to false.
-   * @param load_images_in_zip In Twitter GDPR archives v2, tweet and dm images are in ZIP archives inside the ZIP.
-   * If `true`, TwitterArchive will extract its content in RAM to allow the usage of images.
-   * If `false`, DMs images will be unavailable.
-   * If `undefined`, Twitter will extract in RAM in browser mode, and leave the ZIP untouched in Node.js.
+   * @deprecated Please use `TwitterArchive.read()` static method, it will be more maintanable in the future. 
+   * Constructeur will become protected in ***4.0.0***.
    * 
-   * If you want to save memory, set this parameter to `false`, 
-   * and before using `.dmImage()` methods, check if you need to load DM images ZIP 
-   * with `.requiresDmImageZipLoad()`.
-   * 
-   * Then, if you need to, load the DM image ZIP present in the archive using `.loadCurrentDmImageZip()`. 
-   * **Please note that `keep_loaded` should be set to `true` to use this method !**
+   * If you use the constructor, don't forget to await the archive ready-ness with `.ready()` method !
    */
   constructor(
     file: AcceptedZipSources | Promise<AcceptedZipSources> | null, 
@@ -136,6 +126,44 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
           return Promise.reject(e);
         });
     }
+  }
+
+  /**
+   * Build a new instance of TwitterArchive, then wait for archive ready-ness (you don't need to call `.ready()` !).
+   * 
+   * @param file Accept any source that `JSZip` library accepts, and string for filenames. 
+   * If this parameter is `null`, then you'll need to load each part one by one !
+   * 
+   * @param options.keep_loaded If possible, free the memory after load if set to false.
+   * @param options.load_images_in_zip In Twitter GDPR archives v2, tweet and dm images are in ZIP archives inside the ZIP.
+   * If `true`, TwitterArchive will extract its content in RAM to allow the usage of images.
+   * If `false`, DMs images will be unavailable.
+   * If `undefined`, Twitter will extract in RAM in browser mode, and leave the ZIP untouched in Node.js.
+   * 
+   * If you want to save memory, set this parameter to `false`, 
+   * and before using `.dmImage()` methods, check if you need to load DM images ZIP 
+   * with `.requiresDmImageZipLoad()`.
+   * 
+   * Then, if you need to, load the DM image ZIP present in the archive using `.loadCurrentDmImageZip()`. 
+   * **Please note that `keep_loaded` should be set to `true` to use this method !**
+   */
+  static async read(
+    file: AcceptedZipSources | Promise<AcceptedZipSources> | null, 
+    options: {
+      keep_loaded?: boolean,
+      load_images_in_zip?: boolean,
+    } = { keep_loaded: false }
+  ) {
+    const archive = new TwitterArchive(
+      file, 
+      undefined, 
+      options.keep_loaded === true, 
+      options.load_images_in_zip
+    );
+
+    await archive.ready();
+
+    return archive;
   }
 
   protected async initGDPR(extended: boolean, keep_loaded: boolean) {
