@@ -18,16 +18,6 @@ export interface TwitterArchiveLoadOptions {
   load_images_in_zip?: boolean,
 }
 
-export interface ArchiveSave {
-  tweets: ArrayBuffer;
-  dms: ArrayBuffer;
-  info: ArchiveSyntheticInfo;
-  mutes: string[];
-  blocks: string[];
-  screen_name_history: ScreenNameChange[] | GPDRScreenNameHistory[];
-  favorites?: PartialFavorite[];
-}
-
 export interface ArchiveSyntheticInfo {
   info: BasicArchiveInfo,
   is_gdpr: boolean;

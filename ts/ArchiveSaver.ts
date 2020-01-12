@@ -1,7 +1,17 @@
 import TwitterArchive from "./index";
-import { ArchiveSave, GDPRConversation, DMFile, ScreenNameChange, GPDRScreenNameHistory } from "./TwitterTypes";
+import { GDPRConversation, DMFile, ScreenNameChange, GPDRScreenNameHistory, ArchiveSyntheticInfo, PartialFavorite } from "./TwitterTypes";
 import Conversation from "./Conversation";
 import JSZip from 'jszip';
+
+export interface ArchiveSave {
+  tweets: ArrayBuffer;
+  dms: ArrayBuffer;
+  info: ArchiveSyntheticInfo;
+  mutes: string[];
+  blocks: string[];
+  screen_name_history: ScreenNameChange[] | GPDRScreenNameHistory[];
+  favorites?: PartialFavorite[];
+}
 
 export const SUPPORTED_SAVE_VERSIONS = ["1.0.0", "1.1.0"];
 export const CURRENT_EXPORT_VERSION = "1.1.0";
@@ -88,7 +98,7 @@ export async function createFromSave(save: ArchiveSave | Promise<ArchiveSave>) 
     throw new Error("Save version is not supported.");
   }
 
-  const archive = new TwitterArchive(null);
+  const archive = await TwitterArchive.read(null);
 
   archive.info.archive = save.info.info.archive;
   archive.info.user = save.info.info.user;
