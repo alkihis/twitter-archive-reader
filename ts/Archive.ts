@@ -1,9 +1,23 @@
 import { AcceptedZipSources, Archive, BaseArchive, constructArchive } from './StreamArchive';
-import { BasicArchiveInfo, PartialTweetGDPR, PartialTweet, AccountGDPR, ProfileGDPR, ClassicTweetIndex, ClassicPayloadDetails, TwitterUserDetails, DMFile, PartialTweetUser, GDPRFollowings, GDPRFollowers, GDPRFavorites, GDPRMutes, InnerGDPRPersonalization, GPDRScreenNameHistory, GPDRProtectedHistory, GDPRBlocks, GDPRAgeInfo, InnerGDPRAgeInfo, GDPRMoment, GDPRMomentFile, DirectMessage, ArchiveSyntheticInfo, ExtendedGDPRInfo } from './TwitterTypes';
+import { BasicArchiveInfo, PartialTweetGDPR, PartialTweet, AccountGDPR, ProfileGDPR, ClassicTweetIndex, ClassicPayloadDetails, TwitterUserDetails, DMFile, GDPRFollowings, GDPRFollowers, GDPRFavorites, GDPRMutes, GDPRBlocks, GDPRMoment, GDPRMomentFile, DirectMessage, ArchiveSyntheticInfo, PartialFavorite, ExtendedInfoContainer, TwitterArchiveLoadOptions } from './TwitterTypes';
 import DMArchive from './DMArchive';
 import { EventTarget, defineEventAttribute } from 'event-target-shim';
 import md5 from 'js-md5';
 import TweetArchive from './TweetArchive';
+import { FavoriteArchive } from './FavoriteArchive';
+import CollectedUserData from './CollectedUserData';
+
+/// TODO: do advertiser parse data (v5.0.0)
+
+
+/**
+ * Parse a raw Twitter date, like from a `dm.createdAt`.
+ * 
+ * For a tweet, please use `TweetArchive.dateFromTweet(tweet)` instead, it's optimized !
+ * 
+ * For a `LinkedDirectMessage`, use property `.createdAtDate` !
+ */
+export const parseTwitterDate = TweetArchive.parseTwitterDate;
 
 export type ArchiveReadState = "idle" | "reading" | "indexing" | "tweet_read" | "user_read" | "dm_read" | "extended_read" | "ready";
 
@@ -45,13 +59,6 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   /** Current archive load state. */
   public state: ArchiveReadState = "idle";
 
-  /** 
-   * Access to extended infos. See `ExtendedGDPRInfo` interface. 
-   * 
-   * Defined only if `.is_gdpr === true`.
-   * */
-  extended_gdpr: ExtendedGDPRInfo;
-
   protected _info: BasicArchiveInfo = {
     user: {
       screen_name: "",
@@ -69,6 +76,9 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
 
   protected statuses = new TweetArchive;
   protected dms: DMArchive;
+  protected favs = new FavoriteArchive;
+  protected extended_info_container: ExtendedInfoContainer;
+  protected deep_info: CollectedUserData;
 
   protected dm_img_archive: BaseArchive<any>;
   protected dm_img_group_archive: BaseArchive<any>;
@@ -76,31 +86,20 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   protected _is_gdpr = false;
 
   /**
-   * Build a new instance of TwitterArchive.
+   * Twitter Archive constructor.
    * 
-   * @param file Accept any source that `JSZip` library accepts, and string for filenames. 
-   * If this parameter is `null`, then you'll need to load each part one by one !
-   * @param build_extended True if `.extended_gdpr` should be built (only if **file** is a GDPR archive.)
-   * @param keep_loaded If possible, free the memory after load if set to false.
-   * @param load_images_in_zip In Twitter GDPR archives v2, tweet and dm images are in ZIP archives inside the ZIP.
-   * If `true`, TwitterArchive will extract its content in RAM to allow the usage of images.
-   * If `false`, DMs images will be unavailable.
-   * If `undefined`, Twitter will extract in RAM in browser mode, and leave the ZIP untouched in Node.js.
+   * @deprecated Please use `TwitterArchive.read()` static method, it will be more maintanable in the future.
    * 
-   * If you want to save memory, set this parameter to `false`, 
-   * and before using `.dmImage()` methods, check if you need to load DM images ZIP 
-   * with `.requiresDmImageZipLoad()`.
-   * 
-   * Then, if you need to, load the DM image ZIP present in the archive using `.loadCurrentDmImageZip()`. 
-   * **Please note that `keep_loaded` should be set to `true` to use this method !**
+   * If you use the constructor, don't forget to await the archive ready-ness with `.ready()` method !
    */
   constructor(
     file: AcceptedZipSources | Promise<AcceptedZipSources> | null, 
-    build_extended = true, 
+    __future__ = true,
     keep_loaded = false,
     protected load_images_in_zip: boolean = undefined,
   ) {
     super();
+    this.initEmptyExtendedContainer();
 
     if (file === null) {
       this.state = "ready";
@@ -118,7 +117,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   
           // Initialisation de l'archive Twitter
           if (this.isGDPRArchive()) {
-            return this.initGDPR(build_extended, keep_loaded);
+            return this.initGDPR(keep_loaded);
           }
           else {
             return this.initClassic().then(() => {
@@ -138,7 +137,46 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     }
   }
 
-  protected async initGDPR(extended: boolean, keep_loaded: boolean) {
+  /**
+   * Build a new instance of TwitterArchive, and wait for its ready-ness.
+   * 
+   * @param file Accept any source that `JSZip` library accepts, and string for filenames. 
+   * If this parameter is `null`, then you'll need to load each part one by one !
+
+   * To keep future's default parameter, set it to `undefined`.
+   * @param options.keep_loaded If possible, free the memory after load if set to false.
+   * @param options.load_images_in_zip 
+   * In Twitter GDPR archives v2, tweet and dm images are in ZIP archives inside the ZIP.
+   * If `true`, TwitterArchive will extract its content in RAM to allow the usage of images.
+   * If `false`, DMs images will be unavailable.
+   * If `undefined`, Twitter will extract in RAM in browser mode, and leave the ZIP untouched in Node.js.
+   * 
+   * If you want to save memory, set this parameter to `false`, 
+   * and before using `.dmImage()` methods, check if you need to load DM images ZIP 
+   * with `.requiresDmImageZipLoad()`.
+   * 
+   * Then, if you need to, load the DM image ZIP present in the archive using `.loadCurrentDmImageZip()`. 
+   * **Please note that `keep_loaded` should be set to `true` to use this method !**
+   */
+  static async read(
+    file: AcceptedZipSources | Promise<AcceptedZipSources> | null, 
+    options: TwitterArchiveLoadOptions = { 
+      keep_loaded: false 
+    }
+  ) {
+    const archive = new TwitterArchive(
+      file, 
+      undefined,
+      options.keep_loaded === true, 
+      options.load_images_in_zip
+    );
+
+    await archive.ready();
+
+    return archive;
+  }
+
+  protected async initGDPR(keep_loaded: boolean) {
     try {
       // Delete the tweet media folder (big & useless)
       if (this.archive instanceof Archive) {
@@ -232,9 +270,8 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     this.state = "extended_read";
     this.dispatchEvent({ type: 'willreadextended' });
 
-    if (extended) {
-      await this.initExtendedGDPR();
-    }
+    await this.initExtendedGDPR();
+
     this.state = "ready";
 
     if (can_unload_archive) {
@@ -264,13 +301,9 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     } catch (e) { }
 
     // Favorites
-    const favorites = new Set<string>();
-    
     try {
       const f_fav: GDPRFavorites = await this.archive.get('like.js');
-      for (const f of f_fav) {
-        favorites.add(f.like.tweetId);
-      }
+      this.favs.add(f_fav);
     } catch (e) { }
 
     // Mutes
@@ -310,57 +343,21 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       lists.subscribed = (await this.archive.get('lists-subscribed.js'))[0].userListInfo.urls;
     } catch (e) { }
 
-    // Personalization
-    let personalization: InnerGDPRPersonalization = { 
-      demographics: undefined, 
-      locationHistory: [],  
-      interests: undefined 
-    };
-    try {
-      personalization = (await this.archive.get('personalization.js'))[0].p13nData;
-    } catch (e) { }
-
-    let age_info: InnerGDPRAgeInfo;
-    try {
-      age_info = (await this.archive.get('ageinfo.js') as GDPRAgeInfo)[0].ageMeta;
-    } catch (e) { }
-
-    // SN history
-    const screen_name_history: GPDRScreenNameHistory[] = [];
-    
-    try {
-      const f_history = await this.archive.get('screen-name-change.js') as { screenNameChange: GPDRScreenNameHistory }[];
-      for (const e of f_history) {
-        screen_name_history.push(e.screenNameChange);
-      }
-    } catch (e) { }
-
-    // Protected history
-    const protected_history: GPDRProtectedHistory[] = [];
-
-    try {
-      const f_phistory = await this.archive.get('protected-history.js') as { protectedHistory: GPDRProtectedHistory }[];
-      for (const e of f_phistory) {
-        protected_history.push(e.protectedHistory);
-      }
-    } catch (e) { }
-
     // Moments
     const moments: GDPRMoment[] = (await this.archive.get('moment.js') as GDPRMomentFile).map(e => e.moment);
 
-    this.extended_gdpr = {
+    this.extended_info_container = {
       moments,
-      protected_history,
-      screen_name_history,
-      age_info,
-      personalization,
       lists,
-      favorites,
       followers,
       followings,
       mutes,
       blocks
     };
+
+    // Init deep user info
+    this.deep_info = new CollectedUserData;
+    await this.deep_info.init(this.archive);
   }
 
   protected async initClassic() {
@@ -568,9 +565,38 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     return this.statuses.length;
   }
 
+  /**
+   * @deprecated Please use appropriate getters for those kind of infos instead.
+   * 
+   * **Warning**: `.screen_name_history`, `.personalization`, `.protected_history`, `.age_info` properties
+   * are removed.
+   * 
+   * For screen name history, see `.collected.screen_name_history`.
+   * For personalization data, see `.collected.personalization`.
+   * For protected history, see `.collected.protected_history`.
+   * For age info, see `.collected.age`.
+   * 
+   * ---
+   * 
+   * Replacements for other properties, except favorites, are directly exposed on `TwitterArchive` instance.
+   * 
+   * Favorites are available in a new object, `FavoriteArchive`, 
+   * in the `.favorites` property of the current `TwitterArchive` instance.
+   */
+  get extended_gdpr() {
+    return { 
+      ...this.extended_info_container,
+      favorites: this.favorites.registred,
+    };
+  }
+
   /** ----------------- */
   /** ARCHIVE ACCESSORS */
   /** ----------------- */
+
+
+  /* Pure properties */
+  /* --------------- */
 
   /**
    * `true` if you need to load a DM image ZIP in order to use `.dmImage()`.
@@ -604,11 +630,6 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     return false;
   }
 
-  /** Access to the `DMArchive` object. Will be undefined if `.is_gdpr === false`. */
-  get messages() {
-    return this.dms;
-  }
-
   /** 
    * ID of the user who created this archive. 
    * 
@@ -618,12 +639,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     return this._info.user.id;
   }
 
-  /** Access to the `TweetArchive` object. Contains all the tweets of this archive. */
-  get tweets() {
-    return this.statuses;
-  }
-
-  /** 
+   /** 
    * Screen name (@) of the user who created this archive.
    * May be obsolete (user can change screen_name over time).
    * 
@@ -655,7 +671,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     return this._is_gdpr;
   }
 
-  /** 
+    /** 
    * Raw archive object. Can be used to get specific files.
    * 
    * Returns `[twitter_archive, dm_image_archive, dm_group_image_archive]`.
@@ -683,6 +699,110 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   }
 
 
+  /* Access to inner containers */
+  /* -------------------------- */
+
+  /** Access to the `DMArchive` object. Will be undefined if `.is_gdpr === false`. */
+  get messages() {
+    return this.dms;
+  }
+
+  /** Access to the `TweetArchive` object. Contains all the tweets of this archive. */
+  get tweets() {
+    return this.statuses;
+  }
+
+  /** 
+   * Access to the `FavoriteArchive` object. Contains all the favorited tweets of the archive. 
+   * 
+   * If `.is_gdpr === false`, this container will be empty.
+   */
+  get favorites() {
+    return this.favs;
+  }
+
+  /** 
+   * Access to a set of followers IDs.
+   * 
+   * If `.is_gdpr === false`, this container will be empty.
+   */
+  get followers() {
+    if (this.extended_info_container)
+      return this.extended_info_container.followers;
+    return new Set<string>();
+  }
+
+  /** 
+   * Access to a set of followings user IDs.
+   * 
+   * If `.is_gdpr === false`, this container will be empty.
+   */
+  get followings() {
+    if (this.extended_info_container)
+      return this.extended_info_container.followings;
+    return new Set<string>();
+  }
+
+  /** 
+   * Access to a set of blocked user IDs.
+   * 
+   * If `.is_gdpr === false`, this container will be empty.
+   */
+  get blocks() {
+    if (this.extended_info_container)
+      return this.extended_info_container.blocks;
+    return new Set<string>();
+  }
+
+  /** 
+   * Access to a set of muted user IDs.
+   * 
+   * If `.is_gdpr === false`, this container will be empty.
+   */
+  get mutes() {
+    if (this.extended_info_container)
+      return this.extended_info_container.mutes;
+    return new Set<string>();
+  }
+
+  /** 
+   * Access to archive Twitter moments.
+   * 
+   * If `.is_gdpr === false`, this array will be empty.
+   */
+  get moments() {
+    if (this.extended_info_container)
+      return this.extended_info_container.moments;
+    return [];
+  }
+
+  /** 
+   * Access to your subscribed and created lists, and the lists you were added into. 
+   * 
+   * If `.is_gdpr === false`, this container will be contain empty arrays.
+   */
+  get lists() {
+    if (this.extended_info_container)
+      return this.extended_info_container.lists;
+    return {
+      created: [],
+      subscribed: [],
+      member_of: []
+    };
+  }
+
+  /** 
+   * Access to the `CollectedUserData` instance.
+   * 
+   * Contains data collected by Twitter about archive owner: age information, 
+   * phone number, personnalization infos, IP addresses, email addresses, ...
+   * 
+   * If `.is_gdpr === false`, this is `undefined`.
+   */
+  get collected() {
+    return this.deep_info;
+  }
+
   /** -------------------- */
   /** SIDELOADING MANUALLY */
   /** -------------------- */
@@ -705,6 +825,12 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     dm_image_file?: AcceptedZipSources | Promise<AcceptedZipSources>,
     dm_image_group_file?: AcceptedZipSources | Promise<AcceptedZipSources>,
     current_dm_images?: boolean,
+    favorites?: PartialFavorite[],
+    blocks?: string[],
+    mutes?: string[],
+    followers?: string[],
+    followings?: string[],
+    moments?: GDPRMoment[],
   } = {}) {
     this._is_gdpr = true;
 
@@ -760,6 +886,35 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     }
     if (parts.current_dm_images) {
       await this.loadCurrentDmImageZip();
+    }
+    if (parts.favorites) {
+      if (!this.favs) {
+        this.favs = new FavoriteArchive;
+      }
+      this.favs.add(parts.favorites);
+    }
+    if (parts.blocks) {
+      for (const block of parts.blocks) {
+        this.extended_info_container.blocks.add(block);
+      }
+    }
+    if (parts.mutes) {
+      for (const mute of parts.mutes) {
+        this.extended_info_container.mutes.add(mute);
+      }
+    }
+    if (parts.followers) {
+      for (const follower of parts.followers) {
+        this.extended_info_container.followers.add(follower);
+      }
+    }
+    if (parts.followings) {
+      for (const following of parts.followings) {
+        this.extended_info_container.followings.add(following);
+      }
+    }
+    if (parts.moments) {
+      this.extended_info_container.moments.push(...parts.moments);
     }
   }
 
@@ -856,6 +1011,21 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     }
   }
 
+  protected initEmptyExtendedContainer() {
+    this.extended_info_container = {
+      followers: new Set,
+      followings: new Set,
+      moments: [],
+      lists: {
+        created: [],
+        member_of: [],
+        subscribed: [],
+      },
+      mutes: new Set,
+      blocks: new Set,
+    };
+  }
+
   /** --------------------------------------- */
   /** ARCHIVE FINGERPRINTING AND INFORMATIONS */
   /** --------------------------------------- */
@@ -890,7 +1060,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
 
     // Take the last available year
     const last_year = Object.keys(this.statuses.index).sort((a, b) => Number(b) - Number(a))[0];
-    const last_month = Object.keys(this.statuses.index[last_year]).sort((a, b) => Number(b) - Number(a))[0];
+    const last_month = last_year ? Object.keys(this.statuses.index[last_year]).sort((a, b) => Number(b) - Number(a))[0] : undefined;
 
     if (last_year && last_month) {
       const tweets = this.statuses.index[last_year][last_month];

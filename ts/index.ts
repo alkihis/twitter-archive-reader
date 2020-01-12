@@ -7,6 +7,7 @@ export * from './TwitterTypes';
 export * from './DMArchive';
 export * from './TweetArchive';
 export * from './ArchiveSaver';
-export * from './TweetSearcher';
+export * from './FavoriteArchive';
+export * from './CollectedUserData';
 
 export default TwitterArchive;

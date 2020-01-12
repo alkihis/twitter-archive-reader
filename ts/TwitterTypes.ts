@@ -1,4 +1,5 @@
 import Conversation from "./Conversation";
+import { FavoriteArchive } from "./FavoriteArchive";
 
 /*** INTERNAL: TwitterArchive */
 export interface BasicArchiveInfo {
@@ -12,13 +13,19 @@ export interface BasicArchiveInfo {
   },
 }
 
+export interface TwitterArchiveLoadOptions {
+  keep_loaded?: boolean,
+  load_images_in_zip?: boolean,
+}
+
 export interface ArchiveSave {
   tweets: ArrayBuffer;
   dms: ArrayBuffer;
   info: ArchiveSyntheticInfo;
   mutes: string[];
   blocks: string[];
-  screen_name_history: GPDRScreenNameHistory[];
+  screen_name_history: ScreenNameChange[] | GPDRScreenNameHistory[];
+  favorites?: PartialFavorite[];
 }
 
 export interface ArchiveSyntheticInfo {
@@ -32,15 +39,15 @@ export interface ArchiveSyntheticInfo {
   dm_count: number;
 }
 
-/** Raw informations stored in GDPR, extracted for a simpler use.
+/** 
+ * Raw informations stored in GDPR, extracted for a simpler use.
  * 
- * This includes list of followers, followings, favorites, mutes, blocks,
- * registered and subscribed lists, history of screen names, and Twitter moments.
+ * This includes list of followers, followings, mutes, blocks,
+ * registered and subscribed lists, and Twitter moments.
  */
-export interface ExtendedGDPRInfo {
+export interface ExtendedInfoContainer {
   followers: Set<string>;
   followings: Set<string>;
-  favorites: Set<string>;
   mutes: Set<string>;
   blocks: Set<string>;
   lists: {
@@ -48,10 +55,6 @@ export interface ExtendedGDPRInfo {
     member_of: string[];
     subscribed: string[];
   };
-  personalization: InnerGDPRPersonalization;
-  screen_name_history: GPDRScreenNameHistory[];
-  protected_history: GPDRProtectedHistory[];
-  age_info: InnerGDPRAgeInfo;
   moments: GDPRMoment[];
 }
 
@@ -228,10 +231,16 @@ export type GDPRFollowers = {
 }[];
 
 export type GDPRFavorites = {
-  like: {
-    tweetId: string;
-  }
+  like: PartialFavorite
 }[];
+
+export interface PartialFavorite {
+  tweetId: string;
+  /** Text of the favorited tweet. Defined only if archive creation > around June 2019. */
+  fullText?: string;
+  /** URL to the tweet. Defined only if archive creation > around June 2019. */
+  expandedUrl?: string;
+}
 
 export type GDPRMutes = {
   muting: {
@@ -254,15 +263,91 @@ export interface InnerGDPRAgeInfo {
     age: string[];
     birthDate: string;
   },
-  inferredAgeInfo: {
+  inferredAgeInfo?: {
     age: string[];
     birthDate: string;
   }
 }
 
+export interface UserAgeInfo {
+  /** Can be a single age or a interval of age */
+  age: number | [number, number];
+  birthDate: string;
+}
+
+export interface UserFullAgeInfo extends UserAgeInfo {
+  inferred?: UserAgeInfo;
+}
+
+export interface ConnectedApplication {
+  organization: {
+    /** App organization name */
+    name: string;
+    /** App organization URL */
+    url?: string;
+    /** App organization privacy policy URL */
+    privacyPolicyUrl?: string;
+  }
+  /** App name */
+  name: string;
+  /** App description */
+  description: string;
+  /** Date of application access approval */
+  approvedAt: Date;
+  /** OAuth permissions */
+  permissions: ("read" | "write")[];
+  /** Application ID */
+  id: string;
+  /** ?? Don't know what this thing refers to. Maybe the user who created the app (not sure at all). */
+  userId?: string;
+}
+
+export interface UserEmailAddressChange {
+  changedAt: Date;
+  changedTo: string;
+  changedFrom?: string;
+}
+
+export interface IpAudit {
+  createdAt: Date;
+  loginIp: string;
+}
+
+export interface PushDevice {
+  deviceVersion: string;
+  deviceType: string;
+  token?: string;
+  /** WARNING: For now (2020-01-01), this date format is "YYYY.MM.DD". This can be changed... */
+  updatedDate: string;
+  /** WARNING: For now (2020-01-01), this date format is "YYYY.MM.DD". This can be changed... */
+  createdDate: string;
+}
+
+export interface MessagingDevice {
+  deviceType: string;
+  carrier: string;
+  /** Phone number, prefix by +<country number> */
+  phoneNumber: string;
+  /** WARNING: For now (2020-01-01), this date format is "YYYY.MM.DD". This can be changed... */
+  createdDate: string;
+}
+
 export type GDPRPersonalizaion = {
   p13nData: InnerGDPRPersonalization;
 }[];
+
+export interface UserPersonalization {
+  demographics: {
+    languages: string[];
+    gender: string;
+  };
+  interests: {
+    names: string[];
+    partnerInterests: unknown[];
+    advertisers: string[];
+    shows: string[];
+  }
+}
 
 export interface InnerGDPRPersonalization {
   demographics: {
@@ -282,20 +367,26 @@ export interface InnerGDPRPersonalization {
     partnerInterests: unknown[];
     audienceAndAdvertisers: {
       numAudiences: string;
-      advertisers: unknown[];
+      advertisers: string[];
     };
     shows: string[];
   };
   locationHistory: unknown[];
+  inferredAgeInfo?: {
+    age: string[];
+    birthDate: string;
+  };
 }
 
 export interface GPDRScreenNameHistory {
   accountId: string;
-  screenNameChange: {
-    changedAt: string;
-    changedFrom: string;
-    changedTo: string;
-  }
+  screenNameChange: ScreenNameChange;
+}
+
+export interface ScreenNameChange {
+  changedAt: string;
+  changedFrom: string;
+  changedTo: string;
 }
 
 export interface GPDRProtectedHistory {

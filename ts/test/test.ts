@@ -2,9 +2,9 @@ import commander from 'commander';
 import { TwitterArchive } from '../Archive';
 import { writeFileSync } from 'fs';
 import { inspect } from 'util';
-import TweetSearcher from '../TweetSearcher';
 import Timer from 'timerize';
 import createSaveFrom, { createFromSave } from '../ArchiveSaver';
+import { TweetSearcher } from '../TweetArchive';
 
 commander
   .option('-f, --file <zipFile>', "Archive ZIP to load")
@@ -12,6 +12,7 @@ commander
   .option('-2, --test-two', "Test 2")
   .option('-3, --test-three', "Test 3")
   .option('-4, --test-four', "Test 4")
+  .option('-5, --test-five', "Test 5")
 .parse(process.argv);
 
 const write = (name: string, data: any) => {
@@ -19,12 +20,8 @@ const write = (name: string, data: any) => {
 };
 
 const test_1 = async () => {
-  const archive = new TwitterArchive(commander.file, true, true);
-
   console.log("Reading archive...");
-  // You must wait for ZIP reading and archive object build
-  //await archive.ready();
-  console.log(await archive.ready().catch(console.error));
+  const archive = await TwitterArchive.read(commander.file, { keep_loaded: true });
 
   await archive.loadArchivePart({ current_dm_images: true });
   console.log("Archive ok");
@@ -115,12 +112,8 @@ const test_1 = async () => {
 };
 
 const test_2 = async () => {
-  const archive = new TwitterArchive(commander.file);
-
   console.log("Reading archive...");
-
-  // Attendre que l'archive soit lue
-  await archive.ready().catch(console.error);
+  const archive = await TwitterArchive.read(commander.file);
 
   console.log("Archive ok");
 
@@ -138,10 +131,7 @@ const test_2 = async () => {
 
 const test_3 = async () => {
   // Test archive import/export
-  const test_archive = new TwitterArchive(commander.file);
-
-  // Attendre que l'archive soit lue
-  await test_archive.ready().catch(console.error);
+  const test_archive = await TwitterArchive.read(commander.file);
 
   console.log("Archive ok");
 
@@ -173,14 +163,40 @@ const test_3 = async () => {
 
 const test_4 = async () => {
   // Test archive import/export
-  const test_archive = new TwitterArchive(commander.file);
-
-  // Attendre que l'archive soit lue
-  await test_archive.ready().catch(console.error);
+  const test_archive = await TwitterArchive.read(commander.file);
 
   console.log("Archive ok");
 
   console.log(test_archive.synthetic_info);
+};
+
+const test_5 = async () => {
+  // Test archive collected data
+  const archive = await TwitterArchive.read(commander.file);
+
+  if (!archive.is_gdpr) {
+    console.error("Archive loaded is not GDPR compatible. Exiting...");
+    return;
+  }
+
+  console.log("Archive ok");
+
+  const collected = archive.collected;
+
+  write('collected-2.json', JSON.stringify({
+    screen_name_history: collected.screen_name_history,
+    account_creation_ip: collected.account_creation_ip,
+    age: collected.age,
+    email_addresses: collected.email_address_history,
+    email_address: collected.email_address,
+    timezone: collected.timezone,
+    applications: collected.authorized_applications,
+    devices: collected.devices,
+    verified: collected.verified,
+    phone_number: collected.phone_number,
+    protected_history: collected.protected_history,
+    personalization: collected.personalization,
+  }, null, 2));
 };
 
 if (commander.testOne) {
@@ -194,4 +210,7 @@ if (commander.testThree) {
 }
 if (commander.testFour) {
   test_4();
+}
+if (commander.testFive) {
+  test_5();
 }

@@ -1,11 +1,12 @@
 import TwitterArchive from "./index";
-import { ArchiveSave, GDPRConversation, DMFile } from "./TwitterTypes";
+import { ArchiveSave, GDPRConversation, DMFile, ScreenNameChange, GPDRScreenNameHistory } from "./TwitterTypes";
 import Conversation from "./Conversation";
 import JSZip from 'jszip';
 
-export const SUPPORTED_SAVE_VERSIONS = ["1.0.0"];
+export const SUPPORTED_SAVE_VERSIONS = ["1.0.0", "1.1.0"];
+export const CURRENT_EXPORT_VERSION = "1.1.0";
 
-export default async function createSaveFrom(archive: TwitterArchive) {
+export default async function createSaveFrom(archive: TwitterArchive) : Promise<ArchiveSave> {
   const info = archive.synthetic_info;
 
   function convertConversationToGDPRConversation(conversation: Conversation) : GDPRConversation {
@@ -67,13 +68,16 @@ export default async function createSaveFrom(archive: TwitterArchive) {
       });
   }
 
+  info.version = CURRENT_EXPORT_VERSION;
+
   return {
     tweets: tweet_zip,
     dms,
     info,
     mutes,
     blocks,
-    screen_name_history: archive.extended_gdpr ? archive.extended_gdpr.screen_name_history : []
+    screen_name_history: archive.collected ? archive.collected.screen_name_history : [],
+    favorites: archive.favorites.all
   };
 }
 
@@ -110,24 +114,35 @@ export async function createFromSave(save: ArchiveSave | Promise<ArchiveSave>) 
     });
   }
   if (archive.is_gdpr) {
-    archive.extended_gdpr = {
-      followers: new Set,
-      followings: new Set,
-      mutes: new Set(save.mutes),
-      blocks: new Set(save.blocks),
-      personalization: undefined,
-      favorites: new Set,
-      lists: {
-        created: [],
-        member_of: [],
-        subscribed: []
-      },
-      screen_name_history: save.screen_name_history,
-      protected_history: [],
-      age_info: undefined,
-      moments: []
-    };
+    await archive.loadArchivePart({
+      mutes: save.mutes,
+      blocks: save.blocks
+    });
+
+    if (save.favorites) {
+      archive.favorites.add(save.favorites);
+    }
+
+    // Sideload screen name history
+    const sn_h = save.screen_name_history;
+    if (isGdprSNHArray(sn_h)) {
+      archive.collected.loadPart({
+        screen_name_history: sn_h.map(e => e.screenNameChange)
+      });
+    }
+    else {
+      archive.collected.loadPart({
+        screen_name_history: sn_h
+      });
+    }
   }
 
   return archive;
+}
+
+function isGdprSNHArray(array: ScreenNameChange[] | GPDRScreenNameHistory[]) : array is GPDRScreenNameHistory[] {
+  if (array.length) {
+    return 'screenNameChange' in array[0];
+  }
+  return false;
 }
