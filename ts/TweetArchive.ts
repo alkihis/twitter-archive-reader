@@ -243,7 +243,7 @@ export class TweetArchive {
 
   protected convertToPartial(tweet: PartialTweetGDPR) : PartialTweet {
     if (!this.user_cache) {
-      
+      throw new Error("User cache hasn't be filled. Init it with .__initUserCache().");
     }
 
     (tweet as unknown as PartialTweet).user = this.user_cache;

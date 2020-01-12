@@ -7,7 +7,6 @@ export const SUPPORTED_SAVE_VERSIONS = ["1.0.0"];
 
 export default async function createSaveFrom(archive: TwitterArchive) {
   const info = archive.synthetic_info;
-  info.hash = TwitterArchive.hash(info);
 
   function convertConversationToGDPRConversation(conversation: Conversation) : GDPRConversation {
     return {

@@ -6,6 +6,7 @@ export interface BasicArchiveInfo {
   user: TwitterUserDetails,
   /** Archive informations: Creation date and tweet count. */
   archive: {
+    /** Reliable only if `archive.is_gdpr === false`. */
     created_at: string,
     tweets: number
   },
@@ -25,7 +26,8 @@ export interface ArchiveSyntheticInfo {
   is_gdpr: boolean;
   version: string;
   last_tweet_date: string;
-  hash: string; /** ONLY AT INFORMATIVE GOAL. MAYBE HAVE COLLISIONS ! */
+  /** ONLY AT INFORMATIVE GOAL. MAYBE HAVE COLLISIONS ! */
+  hash: string; 
   tweet_count: number;
   dm_count: number;
 }

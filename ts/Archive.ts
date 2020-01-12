@@ -609,7 +609,11 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     return this.dms;
   }
 
-  /** ID of the user who created this archive. */
+  /** 
+   * ID of the user who created this archive. 
+   * 
+   * Shortcut of `.info.user.id`.
+   */
   get owner() {
     return this._info.user.id;
   }
@@ -622,6 +626,8 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   /** 
    * Screen name (@) of the user who created this archive.
    * May be obsolete (user can change screen_name over time).
+   * 
+   * Shortcut of `.info.user.screen_name`.
    */
   get owner_screen_name() {
     return this._info.user.screen_name;
@@ -632,7 +638,12 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     return TweetArchive.parseTwitterDate(this._info.archive.created_at);
   }
 
-  /** Archive information. */
+  /** 
+   * Archive information. 
+   * 
+   * - `.info.archive` : `{ created_at: string, tweets: number }`
+   * - `.info.user`: See `TwitterUserDetails`
+   */
   get info() {
     return this._info;
   }
@@ -855,11 +866,18 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
    * Contains the 'archive index' (without the tweets),
    * if the archive is GDPR, last tweet date,
    * tweet count and dm count.
-   * 
-   * **Even if the object has emplacement for, this does NOT contains archive hash.**
-   * To know current archive hash, use `archive.hash`.
    */
   get synthetic_info() {
+    const info = this.synthetic_info_without_hash;
+    info.hash = this.hash;
+
+    return info;
+  }
+
+  /**
+   * `.synthetic_info`, but without hash. Used to... calculate hash.
+   */
+  protected get synthetic_info_without_hash() {
     const info: ArchiveSyntheticInfo = {
       info: { ...this._info },
       is_gdpr: this.is_gdpr,
@@ -873,17 +891,22 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     // Take the last available year
     const last_year = Object.keys(this.statuses.index).sort((a, b) => Number(b) - Number(a))[0];
     const last_month = Object.keys(this.statuses.index[last_year]).sort((a, b) => Number(b) - Number(a))[0];
-    const tweets = this.statuses.index[last_year][last_month];
 
-    let last_date = 0;
-    for (const tweet of Object.values(tweets)) {
-      const cur_date = TweetArchive.dateFromTweet(tweet).getTime();
-      if (cur_date > last_date) {
-        last_date = cur_date;
+    if (last_year && last_month) {
+      const tweets = this.statuses.index[last_year][last_month];
+  
+      let last_date = 0;
+      for (const tweet of Object.values(tweets)) {
+        const cur_date = TweetArchive.dateFromTweet(tweet).getTime();
+        if (cur_date > last_date) {
+          last_date = cur_date;
+        }
       }
+      info.last_tweet_date = new Date(last_date).toString();
     }
-
-    info.last_tweet_date = new Date(last_date ? last_date : Date.now()).toString();
+    else {
+      info.last_tweet_date = new Date(0).toString();
+    }
 
     return info;
   }
@@ -893,7 +916,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
    * in order to have a fingerprint of one archive.
    */
   static hash(from: ArchiveSyntheticInfo | TwitterArchive) {
-    const info = from instanceof TwitterArchive ? from.synthetic_info : from;
+    const info = from instanceof TwitterArchive ? from.synthetic_info_without_hash : from;
 
     return md5(JSON.stringify({
       screen_name: info.info.user.screen_name,
