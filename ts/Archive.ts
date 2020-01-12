@@ -84,22 +84,39 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   protected dm_img_group_archive: BaseArchive<any>;
 
   protected _is_gdpr = false;
+  protected load_images_in_zip: boolean;
 
   /**
    * Twitter Archive constructor.
    * 
-   * @deprecated Please use `TwitterArchive.read()` static method, it will be more maintanable in the future. 
-   * Constructeur will become protected in ***4.0.0***.
-   * 
    * If you use the constructor, don't forget to await the archive ready-ness with `.ready()` method !
+   * 
+   * @param options.keep_loaded If possible, free the memory after load if set to false.
+   * @param options.load_images_in_zip 
+   * In Twitter GDPR archives v2, tweet and dm images are in ZIP archives inside the ZIP.
+   * If `true`, TwitterArchive will extract its content in RAM to allow the usage of images.
+   * If `false`, DMs images will be unavailable.
+   * If `undefined`, Twitter will extract in RAM in browser mode, and leave the ZIP untouched in Node.js.
+   * 
+   * If you want to save memory, set this parameter to `false`, 
+   * and before using `.dmImage()` methods, check if you need to load DM images ZIP 
+   * with `.requiresDmImageZipLoad()`.
+   * 
+   * Then, if you need to, load the DM image ZIP present in the archive using `.loadCurrentDmImageZip()`. 
+   * **Please note that `keep_loaded` should be set to `true` to use this method !**
    */
   constructor(
     file: AcceptedZipSources | Promise<AcceptedZipSources> | null, 
-    keep_loaded = false,
-    protected load_images_in_zip: boolean = undefined,
+    options: TwitterArchiveLoadOptions = { 
+      keep_loaded: false 
+    }
   ) {
     super();
     this.initEmptyExtendedContainer();
+
+    if (options.load_images_in_zip !== undefined) {
+      this.load_images_in_zip = options.load_images_in_zip;
+    }
 
     if (file === null) {
       this.state = "ready";
@@ -117,11 +134,11 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   
           // Initialisation de l'archive Twitter
           if (this.isGDPRArchive()) {
-            return this.initGDPR(keep_loaded);
+            return this.initGDPR(options.keep_loaded === true);
           }
           else {
             return this.initClassic().then(() => {
-              if (!keep_loaded) {
+              if (!options.keep_loaded) {
                 this.archive = undefined;
               }
             });
@@ -140,23 +157,13 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   /**
    * Build a new instance of TwitterArchive, and wait for its ready-ness.
    * 
-   * @param file Accept any source that `JSZip` library accepts, and string for filenames. 
-   * If this parameter is `null`, then you'll need to load each part one by one !
-
-   * To keep future's default parameter, set it to `undefined`.
-   * @param options.keep_loaded If possible, free the memory after load if set to false.
-   * @param options.load_images_in_zip 
-   * In Twitter GDPR archives v2, tweet and dm images are in ZIP archives inside the ZIP.
-   * If `true`, TwitterArchive will extract its content in RAM to allow the usage of images.
-   * If `false`, DMs images will be unavailable.
-   * If `undefined`, Twitter will extract in RAM in browser mode, and leave the ZIP untouched in Node.js.
+   * See constructor for options.
    * 
-   * If you want to save memory, set this parameter to `false`, 
-   * and before using `.dmImage()` methods, check if you need to load DM images ZIP 
-   * with `.requiresDmImageZipLoad()`.
-   * 
-   * Then, if you need to, load the DM image ZIP present in the archive using `.loadCurrentDmImageZip()`. 
-   * **Please note that `keep_loaded` should be set to `true` to use this method !**
+   * This is a shortcut for 
+   * ```ts
+   * archive = new TwitterArchive('filename');
+   * await archive.ready();
+   * ```
    */
   static async read(
     file: AcceptedZipSources | Promise<AcceptedZipSources> | null, 
@@ -164,11 +171,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       keep_loaded: false 
     }
   ) {
-    const archive = new TwitterArchive(
-      file, 
-      options.keep_loaded === true, 
-      options.load_images_in_zip
-    );
+    const archive = new TwitterArchive(file, options);
 
     await archive.ready();
 
