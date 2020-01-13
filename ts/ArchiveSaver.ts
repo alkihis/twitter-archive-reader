@@ -9,7 +9,9 @@ export interface ArchiveSave {
   info: ArchiveSyntheticInfo;
   mutes: string[];
   blocks: string[];
+  /** 1.0.0: `GPDRScreenNameHistory[]` ; 1.1.0+: `ScreenNameChange[]` */
   screen_name_history: ScreenNameChange[] | GPDRScreenNameHistory[];
+  /** 1.1.0+ */
   favorites?: PartialFavorite[];
 }
 
@@ -86,7 +88,7 @@ export default async function createSaveFrom(archive: TwitterArchive) : Promise<
     info,
     mutes,
     blocks,
-    screen_name_history: archive.collected ? archive.collected.screen_name_history : [],
+    screen_name_history: archive.user.screen_name_history ? archive.user.screen_name_history  : [],
     favorites: archive.favorites.all
   };
 }
@@ -136,12 +138,12 @@ export async function createFromSave(save: ArchiveSave | Promise<ArchiveSave>) 
     // Sideload screen name history
     const sn_h = save.screen_name_history;
     if (isGdprSNHArray(sn_h)) {
-      archive.collected.loadPart({
+      archive.user.loadPart({
         screen_name_history: sn_h.map(e => e.screenNameChange)
       });
     }
     else {
-      archive.collected.loadPart({
+      archive.user.loadPart({
         screen_name_history: sn_h
       });
     }

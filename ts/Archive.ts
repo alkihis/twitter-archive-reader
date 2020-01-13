@@ -560,7 +560,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   /** 
    * ID of the user who created this archive. 
    * 
-   * Shortcut of `.info.user.id`.
+   * Shortcut of `.user.id`.
    */
   get owner() {
     return this._user.id;
@@ -570,7 +570,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
    * Screen name (@) of the user who created this archive.
    * May be obsolete (user can change screen_name over time).
    * 
-   * Shortcut of `.info.user.screen_name`.
+   * Shortcut of `.user.screen_name`.
    */
   get owner_screen_name() {
     return this._user.screen_name;

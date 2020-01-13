@@ -186,7 +186,7 @@ const test_5 = async () => {
 
   console.log("Archive ok");
 
-  const collected = archive.collected;
+  const collected = archive.user;
 
   write('collected-2.json', JSON.stringify({
     screen_name_history: collected.screen_name_history,
