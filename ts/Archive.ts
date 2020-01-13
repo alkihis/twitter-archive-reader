@@ -5,7 +5,7 @@ import { EventTarget, defineEventAttribute } from 'event-target-shim';
 import md5 from 'js-md5';
 import TweetArchive from './TweetArchive';
 import { FavoriteArchive } from './FavoriteArchive';
-import CollectedUserData from './CollectedUserData';
+import UserData from './UserData';
 import AdArchive from './AdArchive';
 
 
@@ -53,7 +53,7 @@ type TwitterArchiveOnEvents = {
  * Remember that, in searchs in particular, tweets are **NOT** sorted.
  * 
  * Quick user information, like screen name, bio, location, ID and account
- * creation date is available through `.info.user`.
+ * creation date is available through `.user[.summary]`.
  *
  * 
  * Available on GDPR archives only
@@ -66,7 +66,7 @@ type TwitterArchiveOnEvents = {
  * 
  * Binary data of Direct Message images can be get through `.dmImagesOf(dm_id: string)` method.
  * 
- * User detailled data (screen name history, email address) is in `.collected` property.
+ * User detailled data (screen name history, email address) is in `.user` property.
  */
 export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArchiveOnEvents> {
   protected _ready: Promise<void> = Promise.resolve();
@@ -75,26 +75,11 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   /** Current archive load state. */
   public state: ArchiveReadState = "idle";
 
-  protected _info: BasicArchiveInfo = {
-    user: {
-      screen_name: "",
-      full_name: "",
-      location: "fr",
-      bio: "",
-      id: "",
-      created_at: (new Date).toISOString()
-    },
-    archive: {
-      created_at: (new Date).toISOString(),
-      tweets: 0
-    }
-  };
-
   protected statuses = new TweetArchive;
   protected dms: DMArchive;
   protected favs = new FavoriteArchive;
   protected extended_info_container: ExtendedInfoContainer;
-  protected deep_info: CollectedUserData;
+  protected _user = new UserData;
   protected ad_archive = new AdArchive;
 
   protected dm_img_archive: BaseArchive<any>;
@@ -102,6 +87,8 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
 
   protected _is_gdpr = false;
   protected load_images_in_zip: boolean;
+
+  protected _created_at = new Date().toISOString();
 
   /**
    * Twitter Archive constructor.
@@ -359,8 +346,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     };
 
     // Init deep user info
-    this.deep_info = new CollectedUserData;
-    await this.deep_info.init(this.archive);
+    await this._user.__init(this.archive);
   }
 
   protected async initClassic() {
@@ -512,10 +498,10 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
    * **Warning**: `.screen_name_history`, `.personalization`, `.protected_history`, `.age_info` properties
    * are removed.
    * 
-   * For screen name history, see `.collected.screen_name_history`.
-   * For personalization data, see `.collected.personalization`.
-   * For protected history, see `.collected.protected_history`.
-   * For age info, see `.collected.age`.
+   * For screen name history, see `.user.screen_name_history`.
+   * For personalization data, see `.user.personalization`.
+   * For protected history, see `.user.protected_history`.
+   * For age info, see `.user.age`.
    * 
    * ---
    * 
@@ -577,7 +563,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
    * Shortcut of `.info.user.id`.
    */
   get owner() {
-    return this._info.user.id;
+    return this._user.id;
   }
 
    /** 
@@ -587,22 +573,28 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
    * Shortcut of `.info.user.screen_name`.
    */
   get owner_screen_name() {
-    return this._info.user.screen_name;
+    return this._user.screen_name;
   }
 
   /** Archive creation date. Not accurate in GDPR archive (will be the current date). */
   get generation_date() {
-    return TweetArchive.parseTwitterDate(this._info.archive.created_at);
+    return TweetArchive.parseTwitterDate(this._created_at);
   }
 
   /** 
-   * Archive information. 
+   * Archive quick information. 
    * 
    * - `.info.archive` : `{ created_at: string, tweets: number }`
    * - `.info.user`: See `TwitterUserDetails`
    */
-  get info() {
-    return this._info;
+  get info() : BasicArchiveInfo {
+    return {
+      archive: {
+        created_at: this._created_at,
+        tweets: this.tweets.length
+      },
+      user: this._user.summary
+    };
   }
 
   /** True if archive is a GDPR archive. */
@@ -611,17 +603,6 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       return this.isGDPRArchive();
     return this._is_gdpr;
   }
-
-  /** 
-   * Access to the `AdArchive` object, that contains informations 
-   * about archive owner's seen and interacted ads.
-   * 
-   * `AdArchive` container does not contain any data if you 
-   * haven't used `{ build_ad_archive: true }` constructor parameter.
-   */
-  get ads() {
-    return this.ad_archive;
-  } 
 
   /** 
    * Raw archive object. Can be used to get specific files.
@@ -744,16 +725,33 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   }
 
   /** 
-   * Access to the `CollectedUserData` instance.
+   * All the archive owner's user data on Twitter.
    * 
-   * Contains data collected by Twitter about archive owner: age information, 
-   * phone number, personnalization infos, IP addresses, email addresses, ...
+   * Contains data sended to Twitter about archive owner, like: 
+   * - **Screen name (@)** 
+   * - **Tweet name (TN)**
+   * - **Account creation date**
+   * - **Biography**
+   * - **Phone number**
+   * - **Personnalization** (inferred informations about user interests)
+   * - **Email addresses**
+   * - *...*
    * 
-   * If `.is_gdpr === false`, this is `undefined`.
+   * If `.is_gdpr === false`, this is will contain only basic data (related to `.user.summary`).
    */
-  get collected() {
-    return this.deep_info;
+  get user() {
+    return this._user;
   }
+
+  /** 
+   * Informations about which ads archive owner seen or interacted with.
+   * 
+   * `AdArchive` container does not contain any data if you 
+   * haven't used `{ build_ad_archive: true }` constructor parameter.
+   */
+  get ads() {
+    return this.ad_archive;
+  } 
 
   /** -------------------- */
   /** SIDELOADING MANUALLY */
@@ -789,34 +787,34 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     if (parts.account) {
       // Init informations
       const account = parts.account[0].account;
-      
-      this._info.user.screen_name = account.username;
-      this._info.user.full_name = account.accountDisplayName;
-      this._info.user.id = account.accountId;
-      this._info.user.created_at = account.createdAt;
+
+      this._user.loadPart({
+        summary: {
+          ...this._user.summary,
+          screen_name: account.username,
+          full_name: account.accountDisplayName,
+          id: account.accountId,
+          created_at: account.createdAt
+        }
+      });
 
       // (re)init the tweet archive user cache
-      this.statuses.__initUserCache({
-        id_str: this._info.user.id,
-        screen_name: this._info.user.screen_name,
-        name: this._info.user.full_name,
-        profile_image_url_https: this._info.user.profile_image_url_https
-      });
+      this.initUserCache();
     }
     if (parts.profile) {
       const profile = parts.profile[0].profile;
 
-      this._info.user.location = profile.description.location;
-      this._info.user.bio = profile.description.bio;
-      this._info.user.profile_image_url_https = profile.avatarMediaUrl;
+      this._user.loadPart({
+        summary: {
+          ...this._user.summary,
+          location: profile.description.location,
+          bio: profile.description.bio,
+          profile_image_url_https: profile.avatarMediaUrl
+        }
+      });
 
       // (re)init the tweet archive user cache
-      this.statuses.__initUserCache({
-        id_str: this._info.user.id,
-        screen_name: this._info.user.screen_name,
-        name: this._info.user.full_name,
-        profile_image_url_https: this._info.user.profile_image_url_https
-      });
+      this.initUserCache();
     }
     if (parts.tweets) {
       this.readGDPRTweets(parts.tweets);
@@ -886,10 +884,12 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       this.readTweets(TweetArchive.sortTweets(parts.tweets));
     }
     if (parts.user) {
-      this._info.user = parts.user;
+      this._user.loadPart({
+        summary: parts.user
+      });
     }
     if (parts.payload) {
-      this._info.archive = parts.payload;
+      this._created_at = parts.payload.created_at;
     }
   }
 
@@ -898,9 +898,6 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
    */
   protected readGDPRTweets(tweets: PartialTweetGDPR[]) {
     this.statuses.addGDPR(tweets);
-
-    // Set right tweet number
-    this._info.archive.tweets = this.statuses.length;
   }
 
   /**
@@ -908,9 +905,6 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
    */
   protected readTweets(tweets: PartialTweet[]) {
     this.statuses.add(tweets);
-
-    // Set right tweet number
-    this._info.archive.tweets = this.statuses.length;
   }
 
    /**
@@ -978,6 +972,15 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     };
   }
 
+  protected initUserCache() {
+    this.statuses.__initUserCache({
+      id_str: this._user.id,
+      screen_name: this._user.screen_name,
+      name: this._user.name,
+      profile_image_url_https: this._user.profile_img_url
+    });
+  }
+
   /** --------------------------------------- */
   /** ARCHIVE FINGERPRINTING AND INFORMATIONS */
   /** --------------------------------------- */
@@ -1001,7 +1004,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
    */
   protected get synthetic_info_without_hash() {
     const info: ArchiveSyntheticInfo = {
-      info: { ...this._info },
+      info: { ...this.info },
       is_gdpr: this.is_gdpr,
       version: "1.0.0",
       last_tweet_date: "",

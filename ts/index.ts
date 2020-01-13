@@ -8,6 +8,6 @@ export * from './DMArchive';
 export * from './TweetArchive';
 export * from './ArchiveSaver';
 export * from './FavoriteArchive';
-export * from './CollectedUserData';
+export * from './UserData';
 
 export default TwitterArchive;

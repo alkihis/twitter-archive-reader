@@ -1,9 +1,9 @@
 import { BaseArchive } from "./StreamArchive";
-import { ScreenNameChange, GPDRProtectedHistory, InnerGDPRPersonalization, InnerGDPRAgeInfo, GDPRAgeInfo, GPDRScreenNameHistory, UserFullAgeInfo, ConnectedApplication, UserEmailAddressChange, IpAudit, PushDevice, MessagingDevice, UserPersonalization } from "./TwitterTypes";
+import { ScreenNameChange, GPDRProtectedHistory, InnerGDPRPersonalization, InnerGDPRAgeInfo, GDPRAgeInfo, GPDRScreenNameHistory, UserFullAgeInfo, ConnectedApplication, UserEmailAddressChange, IpAudit, PushDevice, MessagingDevice, UserPersonalization, TwitterUserDetails } from "./TwitterTypes";
 import TweetArchive from "./TweetArchive";
 import { parseTwitterDate } from "./Archive";
 
-export class CollectedUserData {
+export class UserData {
   protected archive: BaseArchive<any>;
 
   protected _sn_history: ScreenNameChange[] = [];
@@ -24,9 +24,23 @@ export class CollectedUserData {
   protected _verified = false;
   protected _phone_nb: string | undefined;
   protected _p13n: UserPersonalization;
+  protected _basic_info: TwitterUserDetails = {
+    screen_name: "",
+    full_name: "",
+    created_at: "",
+    location: "",
+    bio: "",
+    id: ""
+  };
 
-  
-  async init(archive: BaseArchive<any>) {
+  /**
+   * **For internal module use only.**
+   * 
+   * Can **ONLY** be used with GDPR archives.
+   * 
+   * For loading basic user info, you must use `.loadPart()`.
+   */
+  async __init(archive: BaseArchive<any>) {
     this.archive = archive;
 
     await Promise.all([
@@ -91,7 +105,7 @@ export class CollectedUserData {
       }
       if (p13n.inferredAgeInfo && this._age) {
         this._age.inferred = {
-          age: CollectedUserData.parseAge(p13n.inferredAgeInfo.age),
+          age: UserData.parseAge(p13n.inferredAgeInfo.age),
           birthDate: p13n.inferredAgeInfo.birthDate
         };
       }
@@ -116,13 +130,13 @@ export class CollectedUserData {
       const age_meta = (await this.archive.get('ageinfo.js') as GDPRAgeInfo)[0].ageMeta;
 
       this._age = {
-        age: CollectedUserData.parseAge(age_meta.ageInfo.age),
+        age: UserData.parseAge(age_meta.ageInfo.age),
         birthDate: age_meta.ageInfo.birthDate,
       };
 
       if (age_meta.inferredAgeInfo) {
         this._age.inferred = {
-          age: CollectedUserData.parseAge(age_meta.inferredAgeInfo.age),
+          age: UserData.parseAge(age_meta.inferredAgeInfo.age),
           birthDate: age_meta.inferredAgeInfo.birthDate
         };
       }
@@ -263,7 +277,8 @@ export class CollectedUserData {
     email_address_changes, 
     login_ips, 
     timezone, 
-    applications
+    applications,
+    summary
   }: {
     phone_number?: string;
     verified?: boolean;
@@ -274,7 +289,8 @@ export class CollectedUserData {
     timezone?: string;
     applications?: ConnectedApplication[],
     email_address_changes?: UserEmailAddressChange[],
-    login_ips?: IpAudit[]
+    login_ips?: IpAudit[],
+    summary?: TwitterUserDetails,
   } = {}) {
     if (phone_number) {
       this._phone_nb = phone_number;
@@ -305,6 +321,9 @@ export class CollectedUserData {
     }
     if (applications) {
       this._apps = applications;
+    }
+    if (summary) {
+      this._basic_info = summary;
     }
   }
 
@@ -416,6 +435,48 @@ export class CollectedUserData {
 
     return last_address;
   }
+
+  /** User summary (screen name, name, account creation date...)  */
+  get summary() {
+    return this._basic_info;
+  }
+
+  /// SUMMARY QUICK ACCESSORS ///
+
+  /** User screen name (also called Twitter @). */
+  get screen_name() {
+    return this._basic_info.screen_name;
+  }
+
+  /** User ID. */
+  get id() {
+    return this._basic_info.id;
+  }
+
+  /** Archive owner profile biography. */
+  get bio() {
+    return this._basic_info.bio;
+  }
+
+  /** Account creation date. */
+  get created_at() {
+    return this._basic_info.created_at;
+  }
+
+  /** Twitter name (also called TN). */
+  get name() {
+    return this._basic_info.full_name;
+  }
+
+  /** Archive owner profile location. */
+  get location() {
+    return this._basic_info.location;
+  }
+
+  /** Account profile image (defined only if `archive.is_gdpr === true`).  */
+  get profile_img_url() {
+    return this._basic_info.profile_image_url_https;
+  }
   
 
   /** ------- */
@@ -435,4 +496,4 @@ export class CollectedUserData {
   }
 }
 
-export default CollectedUserData;
+export default UserData;
