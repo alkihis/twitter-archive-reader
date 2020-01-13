@@ -318,7 +318,8 @@ export class CollectedUserData {
     return this._sn_history;
   }
 
-  /** History of changed made to protection on account (lock). */
+  /** History of a user protecting and unprotecting their Tweets, 
+   * within the 6 months prior to the date the archive was created */
   get protected_history() {
     return this._lock_history;
   }

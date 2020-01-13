@@ -21,7 +21,8 @@ const write = (name: string, data: any) => {
 
 const test_1 = async () => {
   console.log("Reading archive...");
-  const archive = await TwitterArchive.read(commander.file, { keep_loaded: true });
+  const archive = new TwitterArchive(commander.file, { keep_loaded: true });
+  await archive.ready();
 
   await archive.loadArchivePart({ current_dm_images: true });
   console.log("Archive ok");
@@ -39,10 +40,10 @@ const test_1 = async () => {
   //console.log(archive.messages.count);
 
   // console.log(TweetSearcher.search(archive.all, 'from:erykyu'));
-  console.log(archive.all.slice(0, 5))
+  console.log(archive.tweets.all.slice(0, 5))
 
   // List the 30 first tweets in the archive
-  write('30_first', archive.all.slice(0, 5));
+  write('30_first', archive.tweets.all.slice(0, 5));
 
   // Get all the tweets sent between two dates
   write('between_tweets', archive.tweets.between(new Date("2018-01-31"), new Date("2018-02-02")).length);
@@ -113,7 +114,8 @@ const test_1 = async () => {
 
 const test_2 = async () => {
   console.log("Reading archive...");
-  const archive = await TwitterArchive.read(commander.file);
+  const archive = new TwitterArchive(commander.file);
+  await archive.ready();
 
   console.log("Archive ok");
 
@@ -131,7 +133,8 @@ const test_2 = async () => {
 
 const test_3 = async () => {
   // Test archive import/export
-  const test_archive = await TwitterArchive.read(commander.file);
+  const test_archive = new TwitterArchive(commander.file);
+  await test_archive.ready();
 
   console.log("Archive ok");
 
@@ -163,7 +166,8 @@ const test_3 = async () => {
 
 const test_4 = async () => {
   // Test archive import/export
-  const test_archive = await TwitterArchive.read(commander.file);
+  const test_archive = new TwitterArchive(commander.file);
+  await test_archive.ready();
 
   console.log("Archive ok");
 
@@ -172,7 +176,8 @@ const test_4 = async () => {
 
 const test_5 = async () => {
   // Test archive collected data
-  const archive = await TwitterArchive.read(commander.file);
+  const archive = new TwitterArchive(commander.file);
+  await archive.ready();
 
   if (!archive.is_gdpr) {
     console.error("Archive loaded is not GDPR compatible. Exiting...");

@@ -38,7 +38,7 @@ export default async function createSaveFrom(archive: TwitterArchive) : Promise<
     };
   }
 
-  const tweets = archive.all;
+  const tweets = archive.tweets.all;
   for (const tweet of tweets) {
     delete tweet.created_at_d;
   }
@@ -98,7 +98,7 @@ export async function createFromSave(save: ArchiveSave | Promise<ArchiveSave>) 
     throw new Error("Save version is not supported.");
   }
 
-  const archive = await TwitterArchive.read(null);
+  const archive = new TwitterArchive(null);
 
   archive.info.archive = save.info.info.archive;
   archive.info.user = save.info.info.user;

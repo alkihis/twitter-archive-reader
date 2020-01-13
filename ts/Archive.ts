@@ -6,8 +6,7 @@ import md5 from 'js-md5';
 import TweetArchive from './TweetArchive';
 import { FavoriteArchive } from './FavoriteArchive';
 import CollectedUserData from './CollectedUserData';
-
-/// TODO: do advertiser parse data (v5.0.0)
+import AdArchive from './AdArchive';
 
 
 /**
@@ -44,13 +43,30 @@ type TwitterArchiveOnEvents = {
 };
 
 /**
- * Represents a full TwitterArchive. Support GDPR and classic archive.
+ * Represents a full Twitter Archive. Support GDPR and classic archive.
  * 
- * Tweets are available in `.tweets`.
+ * You can check if the archive is a GDPR archive with property `.is_gdpr`.
+ * 
+ * Available on both GDPR and old classic archives
+ * -----
+ * Tweets, that are available in `.tweets`.
  * Remember that, in searchs in particular, tweets are **NOT** sorted.
+ * 
+ * Quick user information, like screen name, bio, location, ID and account
+ * creation date is available through `.info.user`.
+ *
+ * 
+ * Available on GDPR archives only
+ * -----
+ * Favorites, mutes, blocks, followings, followers, that are stored in 
+ * `.favorites`, `.mutes`, `.blocks`, `.followings` and `.followers`.
  * 
  * Direct messages, parsed if archive is a GDPR archive, stored in `.messages`, 
  * are returned and sorted from the most older to the more recent.
+ * 
+ * Binary data of Direct Message images can be get through `.dmImagesOf(dm_id: string)` method.
+ * 
+ * User detailled data (screen name history, email address) is in `.collected` property.
  */
 export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArchiveOnEvents> {
   protected _ready: Promise<void> = Promise.resolve();
@@ -79,6 +95,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   protected favs = new FavoriteArchive;
   protected extended_info_container: ExtendedInfoContainer;
   protected deep_info: CollectedUserData;
+  protected ad_archive = new AdArchive;
 
   protected dm_img_archive: BaseArchive<any>;
   protected dm_img_group_archive: BaseArchive<any>;
@@ -100,15 +117,19 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
    * 
    * If you want to save memory, set this parameter to `false`, 
    * and before using `.dmImage()` methods, check if you need to load DM images ZIP 
-   * with `.requiresDmImageZipLoad()`.
+   * with `.requires_dm_image_load`.
    * 
-   * Then, if you need to, load the DM image ZIP present in the archive using `.loadCurrentDmImageZip()`. 
+   * Then, if you need to, load the DM image ZIP present in the archive using `.loadArchivePart({ current_dm_images: true })`. 
    * **Please note that `keep_loaded` should be set to `true` to use this method !**
+   * 
+   * @param options.build_ad_archive
+   * `true` if ad
    */
   constructor(
     file: AcceptedZipSources | Promise<AcceptedZipSources> | null, 
     options: TwitterArchiveLoadOptions = { 
-      keep_loaded: false 
+      keep_loaded: false,
+      build_ad_archive: false,
     }
   ) {
     super();
@@ -134,7 +155,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   
           // Initialisation de l'archive Twitter
           if (this.isGDPRArchive()) {
-            return this.initGDPR(options.keep_loaded === true);
+            return this.initGDPR(options.keep_loaded === true, options.build_ad_archive === true);
           }
           else {
             return this.initClassic().then(() => {
@@ -154,31 +175,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     }
   }
 
-  /**
-   * Build a new instance of TwitterArchive, and wait for its ready-ness.
-   * 
-   * See constructor for options.
-   * 
-   * This is a shortcut for 
-   * ```ts
-   * archive = new TwitterArchive('filename');
-   * await archive.ready();
-   * ```
-   */
-  static async read(
-    file: AcceptedZipSources | Promise<AcceptedZipSources> | null, 
-    options: TwitterArchiveLoadOptions = { 
-      keep_loaded: false 
-    }
-  ) {
-    const archive = new TwitterArchive(file, options);
-
-    await archive.ready();
-
-    return archive;
-  }
-
-  protected async initGDPR(keep_loaded: boolean) {
+  protected async initGDPR(keep_loaded: boolean, build_ad_archive: boolean) {
     try {
       // Delete the tweet media folder (big & useless)
       if (this.archive instanceof Archive) {
@@ -273,6 +270,10 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     this.dispatchEvent({ type: 'willreadextended' });
 
     await this.initExtendedGDPR();
+
+    if (build_ad_archive) {
+      await this.ad_archive.init(this.archive);
+    }
 
     this.state = "ready";
 
@@ -506,68 +507,6 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   /** ------------------------------------ */
 
   /**
-   * @deprecated Use `TweetArchive.isGDPRTweet()` instead.
-   */
-  isGDPRTweet(tweet: PartialTweetGDPR | PartialTweet) : tweet is PartialTweetGDPR {
-    return TweetArchive.isGDPRTweet(tweet);
-  }
-
-  /**
-   * @deprecated Use `.tweets.month()` instead.
-   */
-  month(month: string, year: string) {
-    return this.statuses.month(month, year);
-  }
-
-  /**
-   * @deprecated Use `.tweets.fromThatDay()` instead.
-   */
-  fromThatDay() {
-    return this.statuses.fromThatDay();
-  }
-
-  /**
-   * @deprecated Use `.tweets.between()` instead.
-   */
-  between(since: Date, until: Date) {
-    return this.statuses.between(since, until);
-  }
-  
-  /**
-   * @deprecated Please use `.tweets.single()` instead.
-   */
-  id(id_str: string) : PartialTweet | null {
-    return this.statuses.single(id_str);
-  }
-
-  /**
-   * @deprecated Please use `.tweets.all` instead.
-   */
-  get all() : PartialTweet[] {
-    return this.tweets.all;
-  }
-
-  /** 
-   * @deprecated Will be removed. Tweet index is moved to `.tweets.index` and
-   * archive info to `.info`.
-   */
-  get index() {
-    return {
-      info: this._info.user,
-      archive: this._info.archive,
-      by_id: this.tweets.id_index,
-      years: this.tweets.index
-    };
-  }
-
-  /**
-   * @deprecated Please use `.tweets.length` instead.
-   */
-  get length() {
-    return this.statuses.length;
-  }
-
-  /**
    * @deprecated Please use appropriate getters for those kind of infos instead.
    * 
    * **Warning**: `.screen_name_history`, `.personalization`, `.protected_history`, `.age_info` properties
@@ -673,7 +612,18 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     return this._is_gdpr;
   }
 
-    /** 
+  /** 
+   * Access to the `AdArchive` object, that contains informations 
+   * about archive owner's seen and interacted ads.
+   * 
+   * `AdArchive` container does not contain any data if you 
+   * haven't used `{ build_ad_archive: true }` constructor parameter.
+   */
+  get ads() {
+    return this.ad_archive;
+  } 
+
+  /** 
    * Raw archive object. Can be used to get specific files.
    * 
    * Returns `[twitter_archive, dm_image_archive, dm_group_image_archive]`.
@@ -1056,7 +1006,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       version: "1.0.0",
       last_tweet_date: "",
       hash: "",
-      tweet_count: this.length,
+      tweet_count: this.tweets.length,
       dm_count: this.messages ? this.messages.count : 0,
     };
 
