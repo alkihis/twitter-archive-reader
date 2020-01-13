@@ -259,7 +259,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     await this.initExtendedGDPR();
 
     if (build_ad_archive) {
-      await this.ad_archive.init(this.archive);
+      await this.ad_archive.__init(this.archive);
     }
 
     this.state = "ready";

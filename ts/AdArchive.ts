@@ -32,7 +32,7 @@ export class AdArchive {
    */
   online_conversions: AdOnlineConversion[] = [];
 
-  async init(archive: BaseArchive<any>) {
+  async __init(archive: BaseArchive<any>) {
     try {
       const impressions = await archive.get('ad-impressions.js') as AdImpressionFile;
       for (const i of impressions) {

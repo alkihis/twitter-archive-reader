@@ -1,5 +1,5 @@
 import { BaseArchive } from "./StreamArchive";
-import { ScreenNameChange, GPDRProtectedHistory, InnerGDPRPersonalization, InnerGDPRAgeInfo, GDPRAgeInfo, GPDRScreenNameHistory, UserFullAgeInfo, ConnectedApplication, UserEmailAddressChange, IpAudit, PushDevice, MessagingDevice, UserPersonalization, TwitterUserDetails } from "./TwitterTypes";
+import { ScreenNameChange, GPDRProtectedHistory, InnerGDPRPersonalization, GDPRAgeInfo, GPDRScreenNameHistory, UserFullAgeInfo, ConnectedApplication, UserEmailAddressChange, IpAudit, PushDevice, MessagingDevice, UserPersonalization, TwitterUserDetails } from "./TwitterTypes";
 import TweetArchive from "./TweetArchive";
 import { parseTwitterDate } from "./Archive";
 
