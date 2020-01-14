@@ -102,14 +102,11 @@ export async function createFromSave(save: ArchiveSave | Promise<ArchiveSave>) 
 
   const archive = new TwitterArchive(null);
 
-  archive.info.archive = save.info.info.archive;
-  archive.info.user = save.info.info.user;
-
   const tweet_archive = await JSZip.loadAsync(save.tweets);
   let current_load_object = JSON.parse(await tweet_archive.file("tweet.json").async("text"));
 
   // Tweets are extracted from a previous archive, they've been converted to classic format.
-  archive.loadClassicArchivePart({ tweets: current_load_object });
+  archive.loadClassicArchivePart({ tweets: current_load_object, user: save.info.info.user });
   current_load_object = undefined;
 
   if (save.info.is_gdpr) {

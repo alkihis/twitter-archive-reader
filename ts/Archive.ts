@@ -1012,6 +1012,8 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       tweet_count: this.tweets.length,
       dm_count: this.messages ? this.messages.count : 0,
     };
+    // Delete archive info (useless)
+    delete info.info.archive;
 
     // Take the last available year
     const last_year = Object.keys(this.statuses.index).sort((a, b) => Number(b) - Number(a))[0];

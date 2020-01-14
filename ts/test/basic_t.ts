@@ -13,6 +13,7 @@ commander
   .option('-3, --test-three', "Test 3")
   .option('-4, --test-four', "Test 4")
   .option('-5, --test-five', "Test 5")
+  .option('-u, --unit', 'Start unit tests')
 .parse(process.argv);
 
 const write = (name: string, data: any) => {
@@ -30,7 +31,7 @@ const test_1 = async () => {
   // Test dm
   if (archive.is_gdpr) {
     // @ts-ignore
-    console.log(archive.dm_img_archive);
+    // console.log(archive.dm_img_archive);
     try {
       const blob = await archive.dmImage("818102592802848773-BrcGVlp3.jpg", false, true) as ArrayBuffer;
       writeFileSync('test_dir/mon_img.jpg', Buffer.from(blob));
@@ -40,7 +41,6 @@ const test_1 = async () => {
   //console.log(archive.messages.count);
 
   // console.log(TweetSearcher.search(archive.all, 'from:erykyu'));
-  console.log(archive.tweets.all.slice(0, 5))
 
   // List the 30 first tweets in the archive
   write('30_first', archive.tweets.all.slice(0, 5));
@@ -132,9 +132,9 @@ const test_2 = async () => {
 };
 
 const test_3 = async () => {
-  // Test archive import/export
   const test_archive = new TwitterArchive(commander.file);
   await test_archive.ready();
+  // Test archive import/export
 
   console.log("Archive ok");
 
@@ -204,6 +204,10 @@ const test_5 = async () => {
   }, null, 2));
 };
 
+const test_unit = async () => {
+  const archive = new TwitterArchive("")
+};
+
 if (commander.testOne) {
   test_1();
 }
@@ -218,4 +222,7 @@ if (commander.testFour) {
 }
 if (commander.testFive) {
   test_5();
+}
+if (commander.unit) {
+  test_unit();
 }

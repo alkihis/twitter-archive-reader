@@ -5,7 +5,7 @@ export interface BasicArchiveInfo {
   /** Contains informations about the user who created archive */
   user: TwitterUserDetails,
   /** Archive informations: Creation date and tweet count. */
-  archive: {
+  archive?: {
     /** Reliable only if `archive.is_gdpr === false`. */
     created_at: string,
     tweets: number

@@ -73,7 +73,7 @@ export class TweetArchive {
   /** ---------------- */
 
   /** Extract tweets from a specific month. */
-  month(month: string, year: string) : PartialTweet[] {
+  month(month: string | number, year: string | number) : PartialTweet[] {
     if (year in this.years) {
       if (month in this.years[year]) {
         return Object.values(this.years[year][month]);

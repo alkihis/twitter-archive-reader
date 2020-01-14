@@ -9,6 +9,8 @@ export class DMArchive {
     [convId: string]: Conversation
   } = {};
   protected all_messages: GlobalConversation | undefined;
+  protected sorted_date: Conversation[];
+  protected sorted_count: Conversation[];
 
   constructor(protected me_id: string) { }
 
@@ -22,6 +24,8 @@ export class DMArchive {
         }
         else {
           const tmp = new Conversation(conv, this.me_id);
+          this.sorted_count = undefined;
+          this.sorted_date = undefined;
           this.index[tmp.id] = tmp;
         }
       }
@@ -115,6 +119,31 @@ export class DMArchive {
   /** Conversation count. */
   get length() {
     return this.all.length;
+  }
+
+  /** All conversations sorted by last message sent date (descending). */
+  get sorted_by_date() {
+    if (this.sorted_date) {
+      return this.sorted_date;
+    }
+
+    return this.sorted_date = this.all.sort((a, b) => {
+      const last_a = a.last;
+      const last_b = b.last;
+
+      if (last_a && last_b) {
+        return last_b.createdAtDate.getTime() - last_a.createdAtDate.getTime();
+      }
+      return 0;
+    });
+  }
+
+  /** All conversations sorted by message count (descending). */
+  get sorted_by_count() {
+    if (this.sorted_count) {
+      return this.sorted_count;
+    }
+    return this.sorted_count = this.all.sort((a, b) => b.length - a.length);
   }
 
   /** Iterates all over conversations. */
