@@ -424,7 +424,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
    * Give the media url in direct message, obtain the Blob-bed image. 
    * For use in Node.js, you must set `as_array_buffer` to `true` ! 
    */
-  dmImageFromUrl(url: string, is_group = false, as_array_buffer = false) {
+  dmImageFromUrl(url: string, is_group: boolean = false, as_array_buffer = false) {
     const [, , , , id, , image] = url.split('/');
 
     if (id && image) {
@@ -437,7 +437,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
    * Extract a direct message image from GDPR archive (exact filename required). 
    * For use in Node.js, you must set `as_array_buffer` to `true` ! 
    */
-  dmImage(name: string, is_group = false, as_array_buffer = false) : Promise<Blob | ArrayBuffer> {
+  dmImage(name: string, is_group: boolean = false, as_array_buffer = false) : Promise<Blob | ArrayBuffer> {
     if (!this.is_gdpr) {
       return Promise.reject("Archive not supported");
     }
@@ -490,9 +490,10 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
    * Otherwise, return a array of `Blob` / `ArrayBuffer`
    * 
    * @param direct_message Direct Message id | Direct message
+   * @param is_group `true` if direct message is in a group conversation
    * @param as_array_buffer Return an `ArrayBuffer` array, instead of a `Blob` array
    */
-  async dmImagesOf(direct_message: string | DirectMessage, as_array_buffer = false): Promise<(Blob | ArrayBuffer)[]> {
+  async dmImagesOf(direct_message: string | DirectMessage, is_group = false, as_array_buffer = false): Promise<(Blob | ArrayBuffer)[]> {
     if (!this.is_gdpr || !this.messages) {
       return [];
     }
@@ -508,7 +509,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
 
     const images: Promise<Blob | ArrayBuffer>[] = [];
     for (const media of direct_message.mediaUrls) {
-      images.push(this.dmImageFromUrl(media, as_array_buffer));
+      images.push(this.dmImageFromUrl(media, is_group, as_array_buffer));
     }
 
     return Promise.all(images);
