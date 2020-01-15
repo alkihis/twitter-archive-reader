@@ -490,59 +490,30 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
    * Otherwise, return a array of `Blob` / `ArrayBuffer`
    * 
    * @param direct_message Direct Message id | Direct message
-   * @param is_group `true` if direct message is in a group conversation
    * @param as_array_buffer Return an `ArrayBuffer` array, instead of a `Blob` array
    */
-  async dmImagesOf(direct_message: string | DirectMessage, is_group = false, as_array_buffer = false): Promise<(Blob | ArrayBuffer)[]> {
+  async dmImagesOf(direct_message: string | DirectMessage, as_array_buffer = false): Promise<(Blob | ArrayBuffer)[]> {
     if (!this.is_gdpr || !this.messages) {
       return [];
     }
 
-    if (typeof direct_message === 'string') {
-      direct_message = this.messages.single(direct_message);
-    }
-
-    if (!direct_message) {
-      // Message not found
+    const conv = this.messages.conversationOf(direct_message);
+    if (!conv) {
+      // msg not found
       return [];
     }
 
+    if (typeof direct_message === 'string') 
+      direct_message = conv.single(direct_message);
+
     const images: Promise<Blob | ArrayBuffer>[] = [];
     for (const media of direct_message.mediaUrls) {
-      images.push(this.dmImageFromUrl(media, is_group, as_array_buffer));
+      images.push(this.dmImageFromUrl(media, conv.is_group_conversation, as_array_buffer));
     }
 
     return Promise.all(images);
   }
 
-  /** ------------------------------------ */
-  /** TWEET RELATED STUFF THAT SHOULD MOVE */
-  /** ------------------------------------ */
-
-  /**
-   * @deprecated Please use appropriate getters for those kind of infos instead.
-   * 
-   * **Warning**: `.screen_name_history`, `.personalization`, `.protected_history`, `.age_info` properties
-   * are removed.
-   * 
-   * For screen name history, see `.user.screen_name_history`.
-   * For personalization data, see `.user.personalization`.
-   * For protected history, see `.user.protected_history`.
-   * For age info, see `.user.age`.
-   * 
-   * ---
-   * 
-   * Replacements for other properties, except favorites, are directly exposed on `TwitterArchive` instance.
-   * 
-   * Favorites are available in a new object, `FavoriteArchive`, 
-   * in the `.favorites` property of the current `TwitterArchive` instance.
-   */
-  get extended_gdpr() {
-    return { 
-      ...this.extended_info_container,
-      favorites: this.favorites.registred,
-    };
-  }
 
   /** ----------------- */
   /** ARCHIVE ACCESSORS */
@@ -593,25 +564,6 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     }
     // archive not loaded and any dm image archive
     return false;
-  }
-
-  /** 
-   * ID of the user who created this archive. 
-   * 
-   * Shortcut of `.user.id`.
-   */
-  get owner() {
-    return this._user.id;
-  }
-
-   /** 
-   * Screen name (@) of the user who created this archive.
-   * May be obsolete (user can change screen_name over time).
-   * 
-   * Shortcut of `.user.screen_name`.
-   */
-  get owner_screen_name() {
-    return this._user.screen_name;
   }
 
   /** Archive creation date. Not accurate in GDPR archive (will be the current date). */
@@ -835,7 +787,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     }
     if (parts.dms) {
       if (!this.dms) {
-        this.dms = new DMArchive(this.owner);
+        this.dms = new DMArchive(this.user.id);
       }
       
       for (const file of parts.dms) {

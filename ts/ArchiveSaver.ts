@@ -53,8 +53,8 @@ export default async function createSaveFrom(archive: TwitterArchive) : Promise<
     }
   });
 
-  const mutes = archive.extended_gdpr ? [...archive.extended_gdpr.mutes] : [];
-  const blocks = archive.extended_gdpr ? [...archive.extended_gdpr.blocks] : [];
+  const mutes = [...archive.mutes];
+  const blocks = [...archive.blocks];
 
   let dms: ArrayBuffer = null;
   if (archive.is_gdpr && archive.messages) {

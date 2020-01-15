@@ -123,6 +123,12 @@ test('image dm', async () => {
   archive.releaseZip();
 
   const image = await archive.dmImage("818102592802848773-BrcGVlp3.jpg", false, true) as ArrayBuffer;
-
   expect(image.byteLength).toBe(47371);
+
+  const group_img = await archive.dmImage("890153850757427204-zZjQV7v4.jpg", true, true) as ArrayBuffer;
+  expect(group_img.byteLength).toBe(38360);
+
+  const images_of = await archive.dmImagesOf("1137291040317218820", true) as ArrayBuffer[];
+  expect(images_of.length).toBe(1);
+  expect(images_of[0].byteLength).toBe(105634);
 });
