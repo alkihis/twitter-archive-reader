@@ -1,8 +1,8 @@
 import path from 'path';
 import TwitterArchive from '..';
 import createSaveFrom, { createFromSave } from '../ArchiveSaver';
-import Timer from 'timerize';
 
+// Archive load / save could take a long time
 jest.setTimeout(9999999);
 
 const UNIT_TEST_FILE = path.join(__dirname, '../../../Documents/Archives Twitter/GDPR-2019-09-16-ALKIHIS.zip');
@@ -16,7 +16,7 @@ test('tweets', async () => {
   expect(archive.tweets.month(1, 2019).length).toBe(702);
 
   // Trying to find retweets containing 'lgbt' since 2016/01/01 and until 2019/02/01, case insensitive
-  expect(archive.tweets.find("since:2016-01-01 until:2019-02-01 lgbt", "i", ["retweets_only"]).length).toBe(11);
+  expect(archive.tweets.find("since:2016 until:2019-02 lgbt", "i", ["retweets_only"]).length).toBe(11);
   
   // Trying to find tweets (w/out RTs) containing 'bonjour' at the beginning of the tweet, before 2018/03/25, case insensitive
   expect(archive.tweets.find("until:2018-03-25 ^bonjour", "i", ["no_retweets"]).length).toBe(102);
@@ -112,4 +112,17 @@ test('direct messages', async () => {
   expect(archive.messages.sorted_by_date[0].all[0]).toHaveProperty('id', '739055630191841283');
   expect(archive.messages.sorted_by_date[0].all[0]).toHaveProperty('previous', null);
   expect(archive.messages.sorted_by_date[0].id);
+});
+
+test('image dm', async () => {
+  await archive.ready();
+
+  if (!archive.is_dm_images_available) {
+    await archive.loadArchivePart({ current_dm_images: true });
+  }
+  archive.releaseZip();
+
+  const image = await archive.dmImage("818102592802848773-BrcGVlp3.jpg", false, true) as ArrayBuffer;
+
+  expect(image.byteLength).toBe(47371);
 });

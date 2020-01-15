@@ -13,7 +13,6 @@ export interface BasicArchiveInfo {
 }
 
 export interface TwitterArchiveLoadOptions {
-  keep_loaded?: boolean,
   load_images_in_zip?: boolean,
   build_ad_archive?: boolean,
 }

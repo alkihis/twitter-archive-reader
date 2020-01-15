@@ -22,7 +22,7 @@ const write = (name: string, data: any) => {
 
 const test_1 = async () => {
   console.log("Reading archive...");
-  const archive = new TwitterArchive(commander.file, { keep_loaded: true });
+  const archive = new TwitterArchive(commander.file);
   await archive.ready();
 
   await archive.loadArchivePart({ current_dm_images: true });
