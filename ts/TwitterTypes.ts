@@ -264,7 +264,10 @@ export interface UserAgeInfo {
   birthDate: string;
 }
 
-export interface UserFullAgeInfo extends UserAgeInfo {
+/**
+ * Every property can be undefined, because Twitter does not provide data systematically.
+ */
+export interface UserFullAgeInfo extends Partial<UserAgeInfo> {
   inferred?: UserAgeInfo;
 }
 

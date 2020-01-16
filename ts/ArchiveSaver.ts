@@ -51,12 +51,7 @@ export interface ArchiveSave {
     member_of: string[];
     subscribed: string[];
   };
-  ad_archive?: {
-    impressions: AdImpression[];
-    engagements: AdEngagement[];
-    mobile_conversions: AdMobileConversion[];
-    online_conversions: AdOnlineConversion[];
-  };
+  ad_archive?: ArrayBuffer;
 }
 
 export interface ArchiveSaveOptions {
@@ -161,6 +156,29 @@ export class ArchiveSaver {
 
     info.version = this.CURRENT_EXPORT_VERSION;
 
+    let ads: ArrayBuffer = null;
+    if (options.ad_archive) {
+      const all = JSON.stringify({  
+        impressions: archive.ads.impressions,
+        engagements: archive.ads.engagements,
+        mobile_conversions: archive.ads.mobile_conversions,
+        online_conversions: archive.ads.online_conversions,
+      });
+
+      ads = await new JSZip()
+        .file(
+          "ads.json", 
+          all
+        )
+        .generateAsync({
+          type: "arraybuffer",
+          compression: "DEFLATE",
+          compressionOptions: {
+            level: 6 // Not too much, if we want a good generation time
+          }
+        });
+    }
+
     const save: ArchiveSave = {
       tweets: tweet_zip,
       dms,
@@ -171,12 +189,7 @@ export class ArchiveSaver {
       followings: options.followings ? [...archive.followings] : undefined,
       moments: options.moments ? archive.moments : undefined,
       lists: options.lists ? archive.lists : undefined,
-      ad_archive: options.ad_archive ? {  
-        impressions: archive.ads.impressions,
-        engagements: archive.ads.engagements,
-        mobile_conversions: archive.ads.mobile_conversions,
-        online_conversions: archive.ads.online_conversions,
-      } : undefined,
+      ad_archive: ads,
       screen_name_history: archive.user.screen_name_history,
       favorites: options.favorites ? archive.favorites.all : [],
       user: {},
@@ -268,10 +281,13 @@ export class ArchiveSaver {
       archive.lists.subscribed = save.lists.subscribed;
     }
     if (save.ad_archive) {
-      archive.ads.impressions = save.ad_archive.impressions;
-      archive.ads.engagements = save.ad_archive.engagements;
-      archive.ads.online_conversions = save.ad_archive.online_conversions;
-      archive.ads.mobile_conversions = save.ad_archive.mobile_conversions;
+      const ad_archive = await JSZip.loadAsync(save.ad_archive);
+      let current_load_object = JSON.parse(await ad_archive.file("ads.json").async("text")) as any;
+
+      archive.ads.impressions = current_load_object.impressions;
+      archive.ads.engagements = current_load_object.engagements;
+      archive.ads.online_conversions = current_load_object.online_conversions;
+      archive.ads.mobile_conversions = current_load_object.mobile_conversions;
     }
     if (save.user) {
       archive.user.loadPart(save.user);

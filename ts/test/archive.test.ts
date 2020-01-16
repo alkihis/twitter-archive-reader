@@ -95,7 +95,8 @@ test('archive save', async () => {
     moments: true,
     user: {
       applications: true
-    }
+    },
+    ad_archive: true
   }));
   const save = await ArchiveSaver.restore(as_promise);
 
@@ -112,6 +113,7 @@ test('archive save', async () => {
   expect(archive.user.screen_name_history.length).toBe(save.user.screen_name_history.length);
   expect(archive.moments.length).toBe(save.moments.length);
   expect(save.user.authorized_applications).toHaveLength(archive.user.authorized_applications.length);
+  expect(save.ads.impressions).toHaveLength(archive.ads.impressions.length);
 });
 
 test('user data', async () => {
