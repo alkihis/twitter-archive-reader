@@ -206,8 +206,14 @@ export class ArchiveSaver {
     }
 
     const archive = new TwitterArchive(null);
-
-    archive.loadClassicArchivePart({ user: save.info.info.user });
+    const save_info = save.info;
+    if ('index' in save_info) {
+      // @ts-ignore
+      archive.loadClassicArchivePart({ user: save_info.index.info });
+    }
+    else {
+      archive.loadClassicArchivePart({ user: save_info.info.user });
+    }
 
     if (save.tweets) {
       const tweet_archive = await JSZip.loadAsync(save.tweets);
