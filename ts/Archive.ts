@@ -112,7 +112,12 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   /**
    * Twitter Archive constructor.
    * 
-   * If you use the constructor, don't forget to await the archive ready-ness with `.ready()` method !
+   * Don't forget to await the archive ready-ness with `.ready()` method !
+   * 
+   * @param file Archive to load.
+   * 
+   * If you want to build an archive instance **without** a file, you can pass `null` here.
+   * You must then load parts of the archive with `.loadArchivePart()` or `.loadClassicArchivePart()` !
    *
    * @param options.load_images_in_zip 
    * In Twitter GDPR archives v2, tweet and dm images are in ZIP archives inside the ZIP.

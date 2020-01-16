@@ -313,15 +313,30 @@ export class UserData {
       this._age = age_info;
     }
     if (email_address_changes) {
+      for (const e of email_address_changes) {
+        if (typeof e.changedAt === 'string') {
+          e.changedAt = parseTwitterDate(e.changedAt);
+        }
+      }
       this._email_addresses = email_address_changes;
     }
     if (login_ips) {
+      for (const ip of login_ips) {
+        if (typeof ip.createdAt === 'string') {
+          ip.createdAt = parseTwitterDate(ip.createdAt);
+        }
+      }
       this._login_ips = login_ips;
     }
     if (timezone) {
       this._timezone = timezone;
     }
     if (applications) {
+      for (const app of applications) {
+        if (typeof app.approvedAt === 'string') {
+          app.approvedAt = parseTwitterDate(app.approvedAt);
+        }
+      }
       this._apps = applications;
     }
     if (summary) {
@@ -370,7 +385,7 @@ export class UserData {
   /** "Guessed" things by Twitter about archive owner.
    * 
    * ```ts
-   * const p13n = archive.collected.personalization;
+   * const p13n = archive.user.personalization;
    * // "Speaked" languages (this is VERY approximative)
    * p13n.demographics.languages // => string[]
    * // Archive owner assigned gender

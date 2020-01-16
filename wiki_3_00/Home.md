@@ -36,7 +36,7 @@ Module will use a fallback to `big-integer` npm module if `BigInt` does not exis
 First, we will see how initialize the main class of the module, how to explore tweets in it, then we will explore direct messages.
 
 1) [Installation & Instantiation](./Installation-&-Instantiation.md)
-2) [Archive Properties](./twitter-archive-reader/wiki/Archive-properties.md)
+2) [Archive Properties](./Archive-properties.md)
 3) Tweets
   - [Tweet access and manipulating tweets](./Tweet-access-and-manipulating-tweets.md)
   - [Search into tweets](./Search-into-tweets.md)

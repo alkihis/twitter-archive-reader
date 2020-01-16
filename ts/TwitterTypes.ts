@@ -373,8 +373,11 @@ export interface GPDRScreenNameHistory {
 }
 
 export interface ScreenNameChange {
+  /** When user changed its @ */
   changedAt: string;
+  /** @ before the change */
   changedFrom: string;
+  /** @ after the change */
   changedTo: string;
 }
 
