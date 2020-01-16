@@ -207,7 +207,7 @@ export class ArchiveSaver {
 
     const archive = new TwitterArchive(null);
     const save_info = save.info;
-    if ('index' in save_info) {
+    if (save.info.version === "1.0.0" && 'index' in save_info) {
       // @ts-ignore
       archive.loadClassicArchivePart({ user: save_info.index.info });
     }
