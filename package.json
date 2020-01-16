@@ -7,22 +7,22 @@
     "test": "jest"
   },
   "author": "Louis Béranger",
-  "license": "CC BY-SA 4.0",
+  "license": "CC-BY-SA-4.0",
   "repository": "https://github.com/alkihis/twitter-archive-reader",
   "bugs": "https://github.com/alkihis/twitter-archive-reader/issues",
   "dependencies": {
-    "big-integer": "^1.6.44",
+    "big-integer": "^1.6.48",
     "event-target-shim": "^5.0.1",
-    "events": "^3.0.0",
+    "events": "^3.1.0",
     "js-md5": "^0.7.3",
     "jszip": "^3.2.2",
     "twitter-d": "^0.4.0"
   },
   "devDependencies": {
-    "@types/jest": "^24.0.25",
+    "@types/jest": "^24.9.0",
     "@types/js-md5": "^0.4.2",
-    "@types/jszip": "^3.1.6",
-    "commander": "^3.0.1",
+    "@types/jszip": "^3.1.7",
+    "commander": "^4.1.0",
     "jest": "^24.9.0",
     "timerize": "^1.0.3"
   },
