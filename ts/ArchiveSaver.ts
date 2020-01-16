@@ -1,7 +1,8 @@
 import TwitterArchive from "./index";
-import { GDPRConversation, DMFile, ScreenNameChange, GPDRScreenNameHistory, ArchiveSyntheticInfo, PartialFavorite } from "./TwitterTypes";
+import { GDPRConversation, DMFile, ScreenNameChange, GPDRScreenNameHistory, ArchiveSyntheticInfo, PartialFavorite, PartialTweet, GDPRMoment, AdImpression, AdEngagement, AdMobileConversion, AdOnlineConversion } from "./TwitterTypes";
 import Conversation from "./Conversation";
 import JSZip from 'jszip';
+import { UserLoadObject } from "./UserData";
 
 function convertConversationToGDPRConversation(conversation: Conversation) : GDPRConversation {
   return {
@@ -39,6 +40,49 @@ export interface ArchiveSave {
   screen_name_history: ScreenNameChange[] | GPDRScreenNameHistory[];
   /** 1.1.0+ */
   favorites?: PartialFavorite[];
+  /** 1.1.0+ */
+  user?: UserLoadObject;
+
+  followers?: string[];
+  followings?: string[];
+  moments?: GDPRMoment[];
+  lists?: {
+    created: string[];
+    member_of: string[];
+    subscribed: string[];
+  };
+  ad_archive?: {
+    impressions: AdImpression[];
+    engagements: AdEngagement[];
+    mobile_conversions: AdMobileConversion[];
+    online_conversions: AdOnlineConversion[];
+  };
+}
+
+export interface ArchiveSaveOptions {
+  tweets?: boolean;
+  dms?: boolean;
+  mutes?: boolean;
+  favorites?: boolean;
+  blocks?: boolean;
+  followers?: boolean;
+  followings?: boolean;
+  moments?: boolean;
+  lists?: boolean;
+  ad_archive?: boolean;
+
+  /** Summary user data and screen name history is always stored. */
+  user?: {
+    phone_number?: boolean, 
+    verified?: boolean, 
+    personalization?: boolean, 
+    protected_history?: boolean, 
+    age_info?: boolean, 
+    email_address_changes?: boolean, 
+    login_ips?: boolean, 
+    timezone?: boolean, 
+    applications?: boolean
+  };
 }
 
 export class ArchiveSaver {
@@ -46,31 +90,41 @@ export class ArchiveSaver {
   static readonly CURRENT_EXPORT_VERSION = "1.1.0";
   
   /**
-   * Create a save from a Twitter Archive (partially).
+   * Create a save from a Twitter Archive.
    * 
    * Restore an `ArchiveSave` with `.restore()`.
    */
-  static async create(archive: TwitterArchive) : Promise<ArchiveSave> {
+  static async create(archive: TwitterArchive, options: ArchiveSaveOptions = {
+    tweets: true, 
+    dms: true, 
+    mutes: true, 
+    favorites: true, 
+    blocks: true,
+    user: {},
+  }) : Promise<ArchiveSave> {
     const info = archive.synthetic_info;
 
-    const tweets = archive.tweets.all;
-    for (const tweet of tweets) {
-      delete tweet.created_at_d;
+    let tweet_zip: ArrayBuffer;
+    if (options.tweets) {
+      const tweets = archive.tweets.all;
+      for (const tweet of tweets) {
+        delete tweet.created_at_d;
+      }
+  
+      tweet_zip = await new JSZip().file("tweet.json", JSON.stringify(tweets)).generateAsync({
+        type: "arraybuffer",
+        compression: "DEFLATE",
+        compressionOptions: {
+          level: 6 // Not too much, if we want a good generation time
+        }
+      });
     }
 
-    const tweet_zip = await new JSZip().file("tweet.json", JSON.stringify(tweets)).generateAsync({
-      type: "arraybuffer",
-      compression: "DEFLATE",
-      compressionOptions: {
-        level: 6 // Not too much, if we want a good generation time
-      }
-    });
-
-    const mutes = [...archive.mutes];
-    const blocks = [...archive.blocks];
+    const mutes = options.mutes ? [...archive.mutes] : [];
+    const blocks = options.blocks ? [...archive.blocks] : [];
 
     let dms: ArrayBuffer = null;
-    if (archive.is_gdpr && archive.messages) {
+    if (options.dms && archive.is_gdpr && archive.messages) {
       // Swallow copy all the dms, save them to a JSZip instance
       /* 
         dm.json => [
@@ -95,15 +149,38 @@ export class ArchiveSaver {
 
     info.version = this.CURRENT_EXPORT_VERSION;
 
-    return {
+    const save: ArchiveSave = {
       tweets: tweet_zip,
       dms,
       info,
       mutes,
       blocks,
-      screen_name_history: archive.user.screen_name_history ? archive.user.screen_name_history  : [],
-      favorites: archive.favorites.all
+      followers: options.followers ? [...archive.followers] : undefined,
+      followings: options.followings ? [...archive.followings] : undefined,
+      moments: options.moments ? archive.moments : undefined,
+      lists: options.lists ? archive.lists : undefined,
+      ad_archive: options.ad_archive ? {  
+        impressions: archive.ads.impressions,
+        engagements: archive.ads.engagements,
+        mobile_conversions: archive.ads.mobile_conversions,
+        online_conversions: archive.ads.online_conversions,
+      } : undefined,
+      screen_name_history: archive.user.screen_name_history,
+      favorites: options.favorites ? archive.favorites.all : [],
+      user: {},
     };
+
+    // Userdata ok
+    if (options.user && Object.keys(options.user).length) {
+      for (const [name, value] of Object.entries(archive.user.dump())) {
+        if (name in options.user) {
+          // @ts-ignore
+          save.user[name] = value;
+        }
+      }
+    }
+
+    return save;
   }
 
   /**
@@ -118,12 +195,15 @@ export class ArchiveSaver {
 
     const archive = new TwitterArchive(null);
 
-    const tweet_archive = await JSZip.loadAsync(save.tweets);
-    let current_load_object = JSON.parse(await tweet_archive.file("tweet.json").async("text"));
+    archive.loadClassicArchivePart({ user: save.info.info.user });
 
-    // Tweets are extracted from a previous archive, they've been converted to classic format.
-    archive.loadClassicArchivePart({ tweets: current_load_object, user: save.info.info.user });
-    current_load_object = undefined;
+    if (save.tweets) {
+      const tweet_archive = await JSZip.loadAsync(save.tweets);
+      let current_load_object = JSON.parse(await tweet_archive.file("tweet.json").async("text"));
+  
+      // Tweets are extracted from a previous archive, they've been converted to classic format.
+      archive.loadClassicArchivePart({ tweets: current_load_object });
+    }
 
     if (save.info.is_gdpr) {
       // Side effect of this method is to define archive to GDPR format
@@ -132,18 +212,53 @@ export class ArchiveSaver {
 
     if (save.dms) {
       const dm_archive = await JSZip.loadAsync(save.dms);
-      current_load_object = JSON.parse(await dm_archive.file("dm.json").async("text")) as DMFile;
+      let current_load_object = JSON.parse(await dm_archive.file("dm.json").async("text")) as DMFile;
 
       await archive.loadArchivePart({
         dms: [current_load_object]
       });
     }
-    if (archive.is_gdpr) {
+
+    if (save.mutes && save.mutes.length) {
       await archive.loadArchivePart({
         mutes: save.mutes,
-        blocks: save.blocks
       });
-
+    }
+    if (save.blocks && save.blocks.length) {
+      await archive.loadArchivePart({
+        blocks: save.blocks,
+      });
+    }
+    if (save.followers && save.followers.length) {
+      await archive.loadArchivePart({
+        followers: save.followers,
+      });
+    }
+    if (save.followings && save.followings.length) {
+      await archive.loadArchivePart({
+        followings: save.followings,
+      });
+    }
+    if (save.moments && save.moments.length) {
+      await archive.loadArchivePart({
+        moments: save.moments,
+      });
+    }
+    if (save.lists) {
+      archive.lists.created = save.lists.created;
+      archive.lists.member_of = save.lists.member_of;
+      archive.lists.subscribed = save.lists.subscribed;
+    }
+    if (save.ad_archive) {
+      archive.ads.impressions = save.ad_archive.impressions;
+      archive.ads.engagements = save.ad_archive.engagements;
+      archive.ads.online_conversions = save.ad_archive.online_conversions;
+      archive.ads.mobile_conversions = save.ad_archive.mobile_conversions;
+    }
+    if (save.user) {
+      archive.user.loadPart(save.user);
+    }
+    if (archive.is_gdpr) {
       if (save.favorites) {
         archive.favorites.add(save.favorites);
       }

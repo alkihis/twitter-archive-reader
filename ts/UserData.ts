@@ -3,6 +3,20 @@ import { ScreenNameChange, GPDRProtectedHistory, InnerGDPRPersonalization, GDPRA
 import TweetArchive from "./TweetArchive";
 import { parseTwitterDate } from "./Archive";
 
+export interface UserLoadObject {
+  phone_number?: string;
+  verified?: boolean;
+  personalization?: UserPersonalization,
+  screen_name_history?: ScreenNameChange[],
+  protected_history?: GPDRProtectedHistory[],
+  age_info?: UserFullAgeInfo;
+  timezone?: string;
+  applications?: ConnectedApplication[],
+  email_address_changes?: UserEmailAddressChange[],
+  login_ips?: IpAudit[],
+  summary?: TwitterUserDetails,
+}
+
 export class UserData {
   protected archive: BaseArchive<any>;
 
@@ -279,19 +293,7 @@ export class UserData {
     timezone, 
     applications,
     summary
-  }: {
-    phone_number?: string;
-    verified?: boolean;
-    personalization?: UserPersonalization,
-    screen_name_history?: ScreenNameChange[],
-    protected_history?: GPDRProtectedHistory[],
-    age_info?: UserFullAgeInfo;
-    timezone?: string;
-    applications?: ConnectedApplication[],
-    email_address_changes?: UserEmailAddressChange[],
-    login_ips?: IpAudit[],
-    summary?: TwitterUserDetails,
-  } = {}) {
+  }: UserLoadObject = {}) {
     if (phone_number) {
       this._phone_nb = phone_number;
     }
@@ -325,6 +327,23 @@ export class UserData {
     if (summary) {
       this._basic_info = summary;
     }
+  }
+
+  /** Get all data stored in this instance, in an object loadable by `.loadPart()` */
+  dump() {
+    return {
+      phone_number: this._phone_nb, 
+      verified: this.verified, 
+      personalization: this._p13n, 
+      protected_history: this._lock_history, 
+      screen_name_history: this._sn_history, 
+      age_info: this._age, 
+      email_address_changes: this._email_addresses, 
+      login_ips: this._login_ips, 
+      timezone: this._timezone, 
+      applications: this._apps,
+      summary: this.summary
+    };
   }
 
 
