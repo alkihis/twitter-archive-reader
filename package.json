@@ -1,6 +1,6 @@
 {
   "name": "twitter-archive-reader",
-  "version": "3.1.1",
+  "version": "4.0.0",
   "description": "",
   "main": "js/index.js",
   "scripts": {
@@ -27,6 +27,8 @@
     "timerize": "^1.0.3"
   },
   "jest": {
-    "testMatch": ["**/js/test/*.test.js"]
+    "testMatch": [
+      "**/js/test/*.test.js"
+    ]
   }
 }
