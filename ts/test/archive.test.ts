@@ -8,6 +8,11 @@ jest.setTimeout(9999999);
 const UNIT_TEST_FILE = path.join(__dirname, '../../../Documents/Archives Twitter/GDPR-2019-09-16-ALKIHIS.zip');
 const archive = new TwitterArchive(UNIT_TEST_FILE, { build_ad_archive: true, load_images_in_zip: true });
 
+test('archive init', async () => {
+  await archive.ready();
+  expect(archive.state).toBe("ready");
+});
+
 test('archive properties', async () => {
   await archive.ready();
 
