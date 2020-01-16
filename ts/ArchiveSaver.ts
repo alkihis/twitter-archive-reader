@@ -93,6 +93,18 @@ export class ArchiveSaver {
    * Create a save from a Twitter Archive.
    * 
    * Restore an `ArchiveSave` with `.restore()`.
+   * 
+   * Default parameter for {options} is:
+   * ```ts
+   * options = {
+   *  tweets: true, 
+   *  dms: true, 
+   *  mutes: true, 
+   *  favorites: true, 
+   *  blocks: true,
+   *  user: {}
+   * }
+   * ```
    */
   static async create(archive: TwitterArchive, options: ArchiveSaveOptions = {
     tweets: true, 
@@ -173,7 +185,7 @@ export class ArchiveSaver {
     // Userdata ok
     if (options.user && Object.keys(options.user).length) {
       for (const [name, value] of Object.entries(archive.user.dump())) {
-        if (name in options.user) {
+        if (value && name in options.user) {
           // @ts-ignore
           save.user[name] = value;
         }

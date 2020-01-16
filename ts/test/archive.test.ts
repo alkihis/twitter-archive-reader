@@ -12,7 +12,8 @@ test('archive properties', async () => {
   await archive.ready();
 
   expect(archive.favorites.has_extended_favorites).toBe(true);
-
+  expect(archive.moments.length).toBe(1);
+  expect(archive.user.authorized_applications.length).toBe(2);
 });
 
 test('tweets', async () => {
@@ -80,7 +81,18 @@ test('tweets', async () => {
 });
 
 test('archive save', async () => {
-  const save = await ArchiveSaver.restore(archive.ready().then(() => ArchiveSaver.create(archive)));
+  const as_promise = archive.ready().then(() => ArchiveSaver.create(archive, {
+    tweets: true,
+    dms: true,
+    mutes: true,
+    blocks: true,
+    favorites: true,
+    moments: true,
+    user: {
+      applications: true
+    }
+  }));
+  const save = await ArchiveSaver.restore(as_promise);
 
   expect(
     [...archive.tweets.sortedIterator()].slice(0, 20).map(e => { delete e.created_at_d; return e })
@@ -93,6 +105,8 @@ test('archive save', async () => {
   expect(archive.synthetic_info).toEqual(save.synthetic_info);
   expect(archive.favorites.length).toBe(save.favorites.length);
   expect(archive.user.screen_name_history.length).toBe(save.user.screen_name_history.length);
+  expect(archive.moments.length).toBe(save.moments.length);
+  expect(save.user.authorized_applications).toHaveLength(archive.user.authorized_applications.length);
 });
 
 test('user data', async () => {
@@ -125,7 +139,7 @@ test('image dm', async () => {
   await archive.ready();
 
   if (!archive.is_dm_images_available) {
-    // this is never validated
+    // this is never true
     await archive.loadArchivePart({ current_dm_images: true });
   }
   archive.releaseZip();
