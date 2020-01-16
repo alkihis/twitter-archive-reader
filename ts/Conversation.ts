@@ -391,6 +391,10 @@ export class Conversation extends ConversationBase {
   protected info: FullConversationInfo;
   protected unindexed: DirectMessage[] = [];
 
+  /** Quick access to first and last DMs */
+  protected _first: LinkedDirectMessage = null;
+  protected _last: LinkedDirectMessage = null;
+
   /** 
    * Create a new Conversation instance, from raw GDPR conversation. 
    * Need self user_id to recognize which user is you.
@@ -453,6 +457,10 @@ export class Conversation extends ConversationBase {
 
     // Indexation (ajout d'une clé next et previous)
     let previous_message: LinkedDirectMessage | null = null;
+    if (msgs.length) {
+      this._first = msgs[0] as LinkedDirectMessage;
+      this._last = msgs[msgs.length - 1] as LinkedDirectMessage;
+    }
 
     for (const actual_msg of msgs) {
       const swallow = actual_msg as LinkedDirectMessage;
@@ -487,6 +495,14 @@ export class Conversation extends ConversationBase {
   /** Conversation ID */
   get id() : string {
     return this.info.id;
+  }
+
+  get first() {
+    return this._first;
+  }
+
+  get last() {
+    return this._last;
   }
 }
 

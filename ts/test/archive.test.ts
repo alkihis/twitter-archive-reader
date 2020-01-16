@@ -1,12 +1,19 @@
 import path from 'path';
 import TwitterArchive from '..';
-import createSaveFrom, { createFromSave } from '../ArchiveSaver';
+import ArchiveSaver from '../ArchiveSaver';
 
 // Archive load / save could take a long time
 jest.setTimeout(9999999);
 
 const UNIT_TEST_FILE = path.join(__dirname, '../../../Documents/Archives Twitter/GDPR-2019-09-16-ALKIHIS.zip');
-const archive = new TwitterArchive(UNIT_TEST_FILE, { build_ad_archive: true });
+const archive = new TwitterArchive(UNIT_TEST_FILE, { build_ad_archive: true, load_images_in_zip: true });
+
+test('archive properties', async () => {
+  await archive.ready();
+
+  expect(archive.favorites.has_extended_favorites).toBe(true);
+
+});
 
 test('tweets', async () => {
   await archive.ready();
@@ -73,7 +80,7 @@ test('tweets', async () => {
 });
 
 test('archive save', async () => {
-  const save = await createFromSave(archive.ready().then(() => createSaveFrom(archive)));
+  const save = await ArchiveSaver.restore(archive.ready().then(() => ArchiveSaver.create(archive)));
 
   expect(
     [...archive.tweets.sortedIterator()].slice(0, 20).map(e => { delete e.created_at_d; return e })
@@ -118,6 +125,7 @@ test('image dm', async () => {
   await archive.ready();
 
   if (!archive.is_dm_images_available) {
+    // this is never validated
     await archive.loadArchivePart({ current_dm_images: true });
   }
   archive.releaseZip();

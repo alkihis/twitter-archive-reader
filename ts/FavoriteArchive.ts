@@ -58,4 +58,12 @@ export class FavoriteArchive {
   get length() {
     return this.all.length;
   }
+
+  /** `true` if this archive's favorites supported "extended" properties: `.fullText` and `.expandedUrl`. */
+  get has_extended_favorites() {
+    if (this.length) {
+      return 'fullText' in this.all[0];
+    }
+    return false;
+  }
 }

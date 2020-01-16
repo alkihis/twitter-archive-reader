@@ -103,7 +103,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
   protected dm_img_archive: BaseArchive<any>;
   protected dm_img_group_archive: BaseArchive<any>;
 
-  protected _is_gdpr = false;
+  protected _is_gdpr: boolean;
   protected load_images_in_zip: boolean;
   protected _dm_images_type: ArchiveDMImagesFormation = "none";
 
@@ -159,11 +159,15 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
           : (this.archive = constructArchive(file)).ready()
         )
         .then(() => {
+          // Detect DM types
           this._dm_images_type = TwitterArchive.autoDetectDmStoreType(this.archive);
+          // Detect archive type
+          this._is_gdpr = this.archive.search(/^tweets\.csv$/).length === 0;
+
           this.dispatchEvent({ type: 'zipready' });
   
           // Initialisation de l'archive Twitter
-          if (this.isGDPRArchive()) {
+          if (this.is_gdpr) {
             return this.initGDPR(options.build_ad_archive === true);
           }
           else {
@@ -412,10 +416,6 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     this.state = "ready";
   }
 
-  protected isGDPRArchive() {
-    return this._is_gdpr = this.archive.search(/^tweets\.csv$/).length === 0;
-  }
-
   /** --------------- */
   /** DM IMAGES STUFF */
   /** --------------- */
@@ -587,10 +587,8 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     };
   }
 
-  /** True if archive is a GDPR archive. */
+  /** `true` if archive is a GDPR archive. */
   get is_gdpr() {
-    if (this._is_gdpr === undefined)
-      return this.isGDPRArchive();
     return this._is_gdpr;
   }
 
