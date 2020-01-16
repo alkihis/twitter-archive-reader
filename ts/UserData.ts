@@ -92,36 +92,38 @@ export class UserData {
       let advertisers = new Set<string>();
       let shows = new Set<string>();
 
-      if (p13n.demographics) {
-        if (p13n.demographics.languages) {
-          for (const lang of p13n.demographics.languages) {
-            languages.add(lang.language);
+      if (p13n) {
+        if (p13n.demographics) {
+          if (p13n.demographics.languages) {
+            for (const lang of p13n.demographics.languages) {
+              languages.add(lang.language);
+            }
+          }
+          if (p13n.demographics.genderInfo) {
+            gender = p13n.demographics.genderInfo.gender;
           }
         }
-        if (p13n.demographics.genderInfo) {
-          gender = p13n.demographics.genderInfo.gender;
-        }
-      }
-      if (p13n.interests) {
-        if (p13n.interests.interests) {
-          for (const interest of p13n.interests.interests) {
-            interests_names.add(interest.name);
+        if (p13n.interests) {
+          if (p13n.interests.interests) {
+            for (const interest of p13n.interests.interests) {
+              interests_names.add(interest.name);
+            }
+          }
+          if (p13n.interests.audienceAndAdvertisers) {
+            if (p13n.interests.audienceAndAdvertisers.advertisers) {
+              advertisers = new Set(p13n.interests.audienceAndAdvertisers.advertisers);
+            }
+          }
+          if (p13n.interests.shows) {
+            shows = new Set(p13n.interests.shows);
           }
         }
-        if (p13n.interests.audienceAndAdvertisers) {
-          if (p13n.interests.audienceAndAdvertisers.advertisers) {
-            advertisers = new Set(p13n.interests.audienceAndAdvertisers.advertisers);
-          }
+        if (p13n.inferredAgeInfo && this._age) {
+          this._age.inferred = {
+            age: UserData.parseAge(p13n.inferredAgeInfo.age),
+            birthDate: p13n.inferredAgeInfo.birthDate
+          };
         }
-        if (p13n.interests.shows) {
-          shows = new Set(p13n.interests.shows);
-        }
-      }
-      if (p13n.inferredAgeInfo && this._age) {
-        this._age.inferred = {
-          age: UserData.parseAge(p13n.inferredAgeInfo.age),
-          birthDate: p13n.inferredAgeInfo.birthDate
-        };
       }
 
       this._p13n = {
@@ -154,7 +156,12 @@ export class UserData {
           birthDate: age_meta.inferredAgeInfo.birthDate
         };
       }
-    } catch (e) { }
+    } catch (e) {
+      this._age = {
+        age: undefined,
+        birthDate: undefined,
+      };
+    }
   }
 
   protected async initScreenNameHistory() {
