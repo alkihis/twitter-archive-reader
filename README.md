@@ -30,9 +30,14 @@ This package is usable inside a browser or in Node.js.
 
 ### Getting ready
 
-Full documentation is available on [GitHub Wiki](https://github.com/alkihis/twitter-archive-reader/wiki). Take a look !
+Full documentation (version 4.x.x) is available on [GitHub Wiki](https://github.com/alkihis/twitter-archive-reader/wiki). Take a look !
 
-If you don't like, you can still access the good ol' full unique README.md file in [this commit](https://github.com/alkihis/twitter-archive-reader/blob/779b058bb26c837fbafb71e447c503f53ed4152c/README.md). Note that some thing may be outdated.
+
+#### Old documentation
+
+Wiki for 2.x.x is available [here](./wiki_2_00/Home.md).
+
+Wiki for 3.x.x is available [here](./wiki_3_00/Home.md).
 
 ## Migrate from 2.x.x to 3.x.x
 
