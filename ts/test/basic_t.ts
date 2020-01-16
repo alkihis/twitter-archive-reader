@@ -2,9 +2,9 @@ import commander from 'commander';
 import { TwitterArchive } from '../Archive';
 import { writeFileSync } from 'fs';
 import { inspect } from 'util';
-import TweetSearcher from '../TweetSearcher';
 import Timer from 'timerize';
-import createSaveFrom, { createFromSave } from '../ArchiveSaver';
+import ArchiveSaver from '../ArchiveSaver';
+import { TweetSearcher } from '../TweetArchive';
 
 commander
   .option('-f, --file <zipFile>', "Archive ZIP to load")
@@ -12,6 +12,8 @@ commander
   .option('-2, --test-two', "Test 2")
   .option('-3, --test-three', "Test 3")
   .option('-4, --test-four', "Test 4")
+  .option('-5, --test-five', "Test 5")
+  .option('-u, --unit', 'Start unit tests')
 .parse(process.argv);
 
 const write = (name: string, data: any) => {
@@ -19,12 +21,9 @@ const write = (name: string, data: any) => {
 };
 
 const test_1 = async () => {
-  const archive = new TwitterArchive(commander.file, true, true);
-
   console.log("Reading archive...");
-  // You must wait for ZIP reading and archive object build
-  //await archive.ready();
-  console.log(await archive.ready().catch(console.error));
+  const archive = new TwitterArchive(commander.file);
+  await archive.ready();
 
   await archive.loadArchivePart({ current_dm_images: true });
   console.log("Archive ok");
@@ -32,7 +31,7 @@ const test_1 = async () => {
   // Test dm
   if (archive.is_gdpr) {
     // @ts-ignore
-    console.log(archive.dm_img_archive);
+    // console.log(archive.dm_img_archive);
     try {
       const blob = await archive.dmImage("818102592802848773-BrcGVlp3.jpg", false, true) as ArrayBuffer;
       writeFileSync('test_dir/mon_img.jpg', Buffer.from(blob));
@@ -42,10 +41,9 @@ const test_1 = async () => {
   //console.log(archive.messages.count);
 
   // console.log(TweetSearcher.search(archive.all, 'from:erykyu'));
-  console.log(archive.all.slice(0, 5))
 
   // List the 30 first tweets in the archive
-  write('30_first', archive.all.slice(0, 5));
+  write('30_first', archive.tweets.all.slice(0, 5));
 
   // Get all the tweets sent between two dates
   write('between_tweets', archive.tweets.between(new Date("2018-01-31"), new Date("2018-02-02")).length);
@@ -115,12 +113,9 @@ const test_1 = async () => {
 };
 
 const test_2 = async () => {
-  const archive = new TwitterArchive(commander.file);
-
   console.log("Reading archive...");
-
-  // Attendre que l'archive soit lue
-  await archive.ready().catch(console.error);
+  const archive = new TwitterArchive(commander.file);
+  await archive.ready();
 
   console.log("Archive ok");
 
@@ -137,25 +132,23 @@ const test_2 = async () => {
 };
 
 const test_3 = async () => {
-  // Test archive import/export
   const test_archive = new TwitterArchive(commander.file);
-
-  // Attendre que l'archive soit lue
-  await test_archive.ready().catch(console.error);
+  await test_archive.ready();
+  // Test archive import/export
 
   console.log("Archive ok");
 
   Timer.default_format = "s";
   const timer = new Timer;
-  const exported = await createSaveFrom(test_archive);
+  const exported = await ArchiveSaver.create(test_archive);
 
   console.log("Archive exported in", timer.elapsed, "seconds");
 
   timer.reset();
 
-  console.log("Creation archive from export");
+  console.log("Creating archive from export");
 
-  const archive = await createFromSave(exported);
+  const archive = await ArchiveSaver.restore(exported);
 
   console.log("Archive imported in", timer.elapsed, "seconds");
 
@@ -174,13 +167,45 @@ const test_3 = async () => {
 const test_4 = async () => {
   // Test archive import/export
   const test_archive = new TwitterArchive(commander.file);
-
-  // Attendre que l'archive soit lue
-  await test_archive.ready().catch(console.error);
+  await test_archive.ready();
 
   console.log("Archive ok");
 
   console.log(test_archive.synthetic_info);
+};
+
+const test_5 = async () => {
+  // Test archive collected data
+  const archive = new TwitterArchive(commander.file);
+  await archive.ready();
+
+  if (!archive.is_gdpr) {
+    console.error("Archive loaded is not GDPR compatible. Exiting...");
+    return;
+  }
+
+  console.log("Archive ok");
+
+  const collected = archive.user;
+
+  write('collected-2.json', JSON.stringify({
+    screen_name_history: collected.screen_name_history,
+    account_creation_ip: collected.account_creation_ip,
+    age: collected.age,
+    email_addresses: collected.email_address_history,
+    email_address: collected.email_address,
+    timezone: collected.timezone,
+    applications: collected.authorized_applications,
+    devices: collected.devices,
+    verified: collected.verified,
+    phone_number: collected.phone_number,
+    protected_history: collected.protected_history,
+    personalization: collected.personalization,
+  }, null, 2));
+};
+
+const test_unit = async () => {
+  const archive = new TwitterArchive("")
 };
 
 if (commander.testOne) {
@@ -194,4 +219,10 @@ if (commander.testThree) {
 }
 if (commander.testFour) {
   test_4();
+}
+if (commander.testFive) {
+  test_5();
+}
+if (commander.unit) {
+  test_unit();
 }

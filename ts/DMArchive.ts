@@ -1,4 +1,4 @@
-import { DMFile } from './TwitterTypes'
+import { DMFile, DirectMessage } from './TwitterTypes'
 import Conversation, { GlobalConversation } from "./Conversation";
 
 /**
@@ -9,6 +9,8 @@ export class DMArchive {
     [convId: string]: Conversation
   } = {};
   protected all_messages: GlobalConversation | undefined;
+  protected sorted_date: Conversation[];
+  protected sorted_count: Conversation[];
 
   constructor(protected me_id: string) { }
 
@@ -22,6 +24,8 @@ export class DMArchive {
         }
         else {
           const tmp = new Conversation(conv, this.me_id);
+          this.sorted_count = undefined;
+          this.sorted_date = undefined;
           this.index[tmp.id] = tmp;
         }
       }
@@ -55,6 +59,36 @@ export class DMArchive {
       const msg = conv.single(id);
       if (msg) {
         return msg;
+      }
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Get the conversation related to a direct message.
+   */
+  conversationOf(direct_message: string | DirectMessage) : Conversation | undefined {
+    if (typeof direct_message !== 'string') {
+      if ('conversation' in direct_message) {
+        // @ts-ignore
+        return direct_message.conversation;
+      }
+    }
+
+    const direct_message_id = typeof direct_message === 'string' ? direct_message : direct_message.id;
+
+    if (this.all_messages) {
+      const msg = this.all_messages.single(direct_message_id);
+      if (msg) {
+        return msg.conversation;
+      }
+    }
+
+    for (const conv of this.all) {
+      const msg = conv.single(direct_message_id);
+      if (msg) {
+        return conv;
       }
     }
 
@@ -115,6 +149,31 @@ export class DMArchive {
   /** Conversation count. */
   get length() {
     return this.all.length;
+  }
+
+  /** All conversations sorted by last message sent date (descending). */
+  get sorted_by_date() {
+    if (this.sorted_date) {
+      return this.sorted_date;
+    }
+
+    return this.sorted_date = this.all.sort((a, b) => {
+      const last_a = a.last;
+      const last_b = b.last;
+
+      if (last_a && last_b) {
+        return last_b.createdAtDate.getTime() - last_a.createdAtDate.getTime();
+      }
+      return 0;
+    });
+  }
+
+  /** All conversations sorted by message count (descending). */
+  get sorted_by_count() {
+    if (this.sorted_count) {
+      return this.sorted_count;
+    }
+    return this.sorted_count = this.all.sort((a, b) => b.length - a.length);
   }
 
   /** Iterates all over conversations. */

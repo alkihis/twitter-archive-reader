@@ -5,20 +5,16 @@ export interface BasicArchiveInfo {
   /** Contains informations about the user who created archive */
   user: TwitterUserDetails,
   /** Archive informations: Creation date and tweet count. */
-  archive: {
+  archive?: {
     /** Reliable only if `archive.is_gdpr === false`. */
     created_at: string,
     tweets: number
   },
 }
 
-export interface ArchiveSave {
-  tweets: ArrayBuffer;
-  dms: ArrayBuffer;
-  info: ArchiveSyntheticInfo;
-  mutes: string[];
-  blocks: string[];
-  screen_name_history: GPDRScreenNameHistory[];
+export interface TwitterArchiveLoadOptions {
+  load_images_in_zip?: boolean,
+  build_ad_archive?: boolean,
 }
 
 export interface ArchiveSyntheticInfo {
@@ -32,15 +28,15 @@ export interface ArchiveSyntheticInfo {
   dm_count: number;
 }
 
-/** Raw informations stored in GDPR, extracted for a simpler use.
+/** 
+ * Raw informations stored in GDPR, extracted for a simpler use.
  * 
- * This includes list of followers, followings, favorites, mutes, blocks,
- * registered and subscribed lists, history of screen names, and Twitter moments.
+ * This includes list of followers, followings, mutes, blocks,
+ * registered and subscribed lists, and Twitter moments.
  */
-export interface ExtendedGDPRInfo {
+export interface ExtendedInfoContainer {
   followers: Set<string>;
   followings: Set<string>;
-  favorites: Set<string>;
   mutes: Set<string>;
   blocks: Set<string>;
   lists: {
@@ -48,10 +44,6 @@ export interface ExtendedGDPRInfo {
     member_of: string[];
     subscribed: string[];
   };
-  personalization: InnerGDPRPersonalization;
-  screen_name_history: GPDRScreenNameHistory[];
-  protected_history: GPDRProtectedHistory[];
-  age_info: InnerGDPRAgeInfo;
   moments: GDPRMoment[];
 }
 
@@ -228,10 +220,16 @@ export type GDPRFollowers = {
 }[];
 
 export type GDPRFavorites = {
-  like: {
-    tweetId: string;
-  }
+  like: PartialFavorite
 }[];
+
+export interface PartialFavorite {
+  tweetId: string;
+  /** Text of the favorited tweet. Defined only if archive creation > around June 2019. */
+  fullText?: string;
+  /** URL to the tweet. Defined only if archive creation > around June 2019. */
+  expandedUrl?: string;
+}
 
 export type GDPRMutes = {
   muting: {
@@ -254,15 +252,91 @@ export interface InnerGDPRAgeInfo {
     age: string[];
     birthDate: string;
   },
-  inferredAgeInfo: {
+  inferredAgeInfo?: {
     age: string[];
     birthDate: string;
   }
 }
 
+export interface UserAgeInfo {
+  /** Can be a single age or a interval of age */
+  age: number | [number, number];
+  birthDate: string;
+}
+
+export interface UserFullAgeInfo extends UserAgeInfo {
+  inferred?: UserAgeInfo;
+}
+
+export interface ConnectedApplication {
+  organization: {
+    /** App organization name */
+    name: string;
+    /** App organization URL */
+    url?: string;
+    /** App organization privacy policy URL */
+    privacyPolicyUrl?: string;
+  }
+  /** App name */
+  name: string;
+  /** App description */
+  description: string;
+  /** Date of application access approval */
+  approvedAt: Date;
+  /** OAuth permissions */
+  permissions: ("read" | "write")[];
+  /** Application ID */
+  id: string;
+  /** ?? Don't know what this thing refers to. Maybe the user who created the app (not sure at all). */
+  userId?: string;
+}
+
+export interface UserEmailAddressChange {
+  changedAt: Date;
+  changedTo: string;
+  changedFrom?: string;
+}
+
+export interface IpAudit {
+  createdAt: Date;
+  loginIp: string;
+}
+
+export interface PushDevice {
+  deviceVersion: string;
+  deviceType: string;
+  token?: string;
+  /** WARNING: For now (2020-01-01), this date format is "YYYY.MM.DD". This can be changed... */
+  updatedDate: string;
+  /** WARNING: For now (2020-01-01), this date format is "YYYY.MM.DD". This can be changed... */
+  createdDate: string;
+}
+
+export interface MessagingDevice {
+  deviceType: string;
+  carrier: string;
+  /** Phone number, prefix by +<country number> */
+  phoneNumber: string;
+  /** WARNING: For now (2020-01-01), this date format is "YYYY.MM.DD". This can be changed... */
+  createdDate: string;
+}
+
 export type GDPRPersonalizaion = {
   p13nData: InnerGDPRPersonalization;
 }[];
+
+export interface UserPersonalization {
+  demographics: {
+    languages: string[];
+    gender: string;
+  };
+  interests: {
+    names: string[];
+    partnerInterests: unknown[];
+    advertisers: string[];
+    shows: string[];
+  }
+}
 
 export interface InnerGDPRPersonalization {
   demographics: {
@@ -282,20 +356,29 @@ export interface InnerGDPRPersonalization {
     partnerInterests: unknown[];
     audienceAndAdvertisers: {
       numAudiences: string;
-      advertisers: unknown[];
+      advertisers: string[];
     };
     shows: string[];
   };
   locationHistory: unknown[];
+  inferredAgeInfo?: {
+    age: string[];
+    birthDate: string;
+  };
 }
 
 export interface GPDRScreenNameHistory {
   accountId: string;
-  screenNameChange: {
-    changedAt: string;
-    changedFrom: string;
-    changedTo: string;
-  }
+  screenNameChange: ScreenNameChange;
+}
+
+export interface ScreenNameChange {
+  /** When user changed its @ */
+  changedAt: string;
+  /** @ before the change */
+  changedFrom: string;
+  /** @ after the change */
+  changedTo: string;
 }
 
 export interface GPDRProtectedHistory {
@@ -501,4 +584,210 @@ export interface TwitterUserDetails {
   id: string;
   created_at: string;
   profile_image_url_https?: string;
+}
+
+
+// ----------
+// Ad Archive
+// ----------
+
+/* ENGAGEMENTS AND IMPRESSIONS */
+/* --------------------------- */
+
+// ad-engagements.js
+export interface RawAdEngagementObject {
+  ad: {
+    adsUserData: {
+      adEngagements: {
+        engagements: AdEngagement[];
+      }
+    }
+  }
+}
+export type AdEngagementFile = RawAdEngagementObject[];
+
+// ad-impressions.js
+export interface RawAdImpressionObject {
+  ad: {
+    adsUserData: {
+      adImpressions: {
+        impressions: AdImpression[];
+      }
+    }
+  }
+}
+export type AdImpressionFile = RawAdImpressionObject[];
+
+export interface AdImpression {
+  deviceInfo: AdDeviceInfo;
+  /** Type list might not be exhaustive. */
+  displayLocation: "TimelineHome" | "ProfileAccountsSidebar" | "SearchTweets" | "OrganicVideo" | "ProfileTweets" | "ClusterFollow";
+  /** Is rarely undefined. */
+  promotedTweetInfo?: AdPromotedTweet;
+  promotedTrendInfo?: AdPromotedTrend;
+  advertiserInfo: AdAdvertiserInfo;
+  publisherInfo?: AdPublisherInfo;
+  matchedTargetingCriteria: AdMatchedCriteria[];
+  rtbCreativeMediaInfo?: AdCreativeMediaInfo;
+  /**
+   * Time, but in special format: `YYYY-MM-DD HH:mm:ss`
+   * 
+   * V8 (Chrome/Node) might parse it correctly with `Date()`, 
+   * but Firefox or Safari will fail (you need to convert it to a ISO date by adding timezone).
+   */
+  impressionTime: string;
+}
+
+export interface AdCreativeMediaInfo {
+  /** Type list might not be exhaustive. */
+  mediaType: "LinearPreroll";
+}
+
+export interface AdPromotedTweet {
+  tweetId: string;
+  tweetText: string;
+  urls: string[];
+  mediaUrls: string[];
+}
+
+export interface AdPromotedTrend {
+  trendId: string;
+  name: string;
+  description: string;
+}
+
+export interface AdAdvertiserInfo {
+  advertiserName: string;
+  /** Warning: Contains the @ ! */
+  screenName: string;
+}
+
+export interface AdPublisherInfo {
+  publisherName: string;
+  /** With starting @ */
+  screenName: string;
+}
+
+export interface AdMatchedCriteria {
+  targetingType: "Follower look-alikes" | "Age" | "Locations" | "Platforms" | "Gender" | "Keywords" | 
+  "Retargeting campaign engager" | "Retargeting engagement type" | "Conversation topics" | "Events" | 
+  "Interests";
+  /**
+   * Format is determined from `.targetingType`:
+   * 
+   * `Follower look-alikes`: One screen name (with the @) `"@<screenName>"`
+   * 
+   * `Age`: Age range `"<number> to <number>"`
+   * 
+   * `Locations`: string location. Could be country or town, free format
+   * 
+   * `Platforms`: User device platform, ex: `"Android"`
+   * 
+   * `Gender`: Ex. `"Male"`.
+   * 
+   * `Keywords`: Free text.
+   * 
+   * `Retargeting campaign engager`: Target campaign ID, odd format: `"Retargeting campaign engager: <number>"`
+   * 
+   * `Retargeting engagement type`: Type ID, odd format: `"Retargeting engagement type: <number>"`
+   * 
+   * `Conversation topics`: free text
+   * 
+   * `Events`: free text
+   * 
+   * `Interests`: free text
+   */
+  targetingValue: string;
+}
+
+export interface AdEngagementAttribute {
+  /**
+   * Time, but in special format: `YYYY-MM-DD HH:mm:ss`
+   * 
+   * V8 (Chrome/Node) might parse it correctly with `Date()`, 
+   * but Firefox or Safari will fail (you need to convert it to a ISO date by adding timezone).
+   */
+  engagementTime: string;
+  engagementType: "VideoSession" | "VideoContentPlaybackStart" | "VideoContentMrcView" | 
+    "VideoContent6secView" | "VideoContentPlaybackComplete" | "VideoContentPlayback95" | 
+    "VideoContentPlayback75" | "VideoContentPlayback50" | "VideoContentPlayback25" |
+    "VideoAdPlaybackStart" | "VideoAdPlayback50" | "VideoAdMrcView" | "VideoAd1secView" |
+    "VideoAdPlayback25" | "VideoAdPlayback75" | "VideoAdPlayback95" | "VideoContent1secView" |
+    "VideoContentViewV2" | "VideoAdViewV2" | "VideoAdView" | "VideoAdViewThreshold" |
+    "PollCardVote" | "Detail";
+}
+
+/**
+ * Each engagement contains a single impression, and contains multiples engagements types.
+ */
+export interface AdEngagement {
+  impressionAttributes: AdImpression;
+  engagementAttributes: AdEngagementAttribute[];
+}
+
+export interface AdDeviceInfo {
+  osType: string;
+  deviceId: string;
+}
+
+
+/* CONVERSIONS */
+/* ----------- */
+
+// ad-mobile-conversions-attributed.js
+export interface RawAdMobileConversionsObject {
+  ad: {
+    adsUserData: {
+      attributedMobileAppConversions: {
+        conversions: AdMobileConversion[];
+      }
+    }
+  }
+}
+export type AdMobileConversionsFile = RawAdMobileConversionsObject[];
+
+export interface AdMobileConversion {
+  /** Ex: `"ReEngage"`, `"PageView"`... */
+  attributedConversionType: string;
+  mobilePlatform: string;
+  conversionEvent: string;
+  applicationName: string;
+  conversionValue: string;
+  /**
+   * Time, but in special format: `YYYY-MM-DD HH:mm:ss`
+   * 
+   * V8 (Chrome/Node) might parse it correctly with `Date()`, 
+   * but Firefox or Safari will fail (you need to convert it to a ISO date by adding timezone).
+   */
+  conversionTime: string;
+}
+
+// ad-online-conversions-attributed.js
+export interface RawAdOnlineConversionsObject {
+  ad: {
+    adsUserData: {
+      attributedOnlineConversions: {
+        conversions: AdOnlineConversion[];
+      }
+    }
+  }
+}
+export type AdOnlineConversionsFile = RawAdOnlineConversionsObject[];
+
+export interface AdOnlineConversion {
+  /** Ex: `"ReEngage"`, `"PageView"`... */
+  attributedConversionType: string;
+  eventType: string;
+  conversionPlatform: string;
+  conversionUrl: string;
+  advertiserInfo: AdAdvertiserInfo;
+  conversionValue: string;
+  /**
+   * Time, but in special format: `YYYY-MM-DD HH:mm:ss`
+   * 
+   * V8 (Chrome/Node) might parse it correctly with `Date()`, 
+   * but Firefox or Safari will fail (you need to convert it to a ISO date by adding timezone).
+   */
+  conversionTime: string;
+  additionalParameters: any;
 }
