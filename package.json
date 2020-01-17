@@ -18,6 +18,9 @@
     "jszip": "^3.2.2",
     "twitter-d": "^0.4.0"
   },
+  "files": [
+    "js/*"
+  ],
   "devDependencies": {
     "@types/jest": "^24.9.0",
     "@types/js-md5": "^0.4.2",
