@@ -422,12 +422,7 @@ export class TweetArchive {
     if (tweet.created_at_d && tweet.created_at_d instanceof Date) {
       return tweet.created_at_d;
     }
-    try {
-      return tweet.created_at_d = TweetArchive.parseTwitterDate(tweet.created_at);
-    } catch (e) {
-      console.log(tweet);
-      throw e;
-    }
+    return tweet.created_at_d = TweetArchive.parseTwitterDate(tweet.created_at);
   }
 
   /**
