@@ -2,3 +2,4 @@
 node_modules
 test_dir
 js/test.js
+js/test/*

@@ -367,6 +367,10 @@ export class TweetArchive {
       throw new Error("User cache hasn't be filled. Init it with .__initUserCache().");
     }
 
+    if ('tweet' in tweet) {
+      return this.convertToPartial(tweet.tweet);
+    }
+
     (tweet as unknown as PartialTweet).user = this.user_cache;
     (tweet as unknown as PartialTweet).text = tweet.full_text;
 
@@ -418,7 +422,12 @@ export class TweetArchive {
     if (tweet.created_at_d && tweet.created_at_d instanceof Date) {
       return tweet.created_at_d;
     }
-    return tweet.created_at_d = TweetArchive.parseTwitterDate(tweet.created_at);
+    try {
+      return tweet.created_at_d = TweetArchive.parseTwitterDate(tweet.created_at);
+    } catch (e) {
+      console.log(tweet);
+      throw e;
+    }
   }
 
   /**

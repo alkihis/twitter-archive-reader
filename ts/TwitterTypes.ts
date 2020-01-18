@@ -91,6 +91,7 @@ export interface MediaGDPREntity {
 
 /** A single tweet in a GPDR archive. */
 export interface PartialTweetGDPR {
+  tweet?: PartialTweetGDPR;
   source: string;
   retweeted: boolean;
   entities: {
