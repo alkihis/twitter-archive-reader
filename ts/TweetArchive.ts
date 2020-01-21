@@ -695,32 +695,38 @@ export class TweetFinder {
     const validators: ((tweet: PartialTweet) => boolean)[] = [];
 
     // Iterating over validators
-    for (const { keyword, validator, separator } of this.validators) {
+    for (const { keyword, validator, separator: raw_separators } of this.validators) {
       // Looking for keyword
-      const kw_reg = new RegExp(keyword + (separator ? separator : ":") + '(\\S+)');
+      const separators = Array.isArray(raw_separators) ? 
+        (raw_separators.length ? raw_separators : [":"]) : 
+        (raw_separators ? [raw_separators] : [":"]);
 
-      let res: RegExpMatchArray = kw_reg.exec(query);
-
-      // If match found
-      while (res && res[1]) {
-        // Deleting the keyword:value of the query
-        query = query.replace(new RegExp(kw_reg), '').trim();
-        let v: ValidatorExecFunction;
-
-        // Generate the validator
-        try {
-          v = validator(res[1]);
-        } catch (e) {}
-
-        if (!v) {
-          throw new Error(keyword + ": Invalid query");
+      for (const separator of separators) {
+        const kw_reg = new RegExp(keyword + (separator ? separator : ":") + '(\\S+)');
+  
+        let res: RegExpMatchArray = kw_reg.exec(query);
+  
+        // If match found
+        while (res && res[1]) {
+          // Deleting the keyword:value of the query
+          query = query.replace(new RegExp(kw_reg), '').trim();
+          let v: ValidatorExecFunction;
+  
+          // Generate the validator
+          try {
+            v = validator(res[1], separator);
+          } catch (e) {}
+  
+          if (!v) {
+            throw new Error(keyword + ": Invalid query");
+          }
+          
+          // Store the validator
+          validators.push(v);
+  
+          // Re-execute the regex (if same keyword presents multiple times)
+          res = kw_reg.exec(query);
         }
-        
-        // Store the validator
-        validators.push(v);
-
-        // Re-execute the regex (if same keyword presents multiple times)
-        res = kw_reg.exec(query);
       }
     }
 
@@ -825,7 +831,7 @@ export interface TweetSearchValidator {
    * }
    * ```
    */
-  validator: (user_query: string) => ValidatorExecFunction;
+  validator: (user_query: string, separator: string) => ValidatorExecFunction;
   /**
    * Separator between keyword and user input.
    * 
@@ -833,7 +839,7 @@ export interface TweetSearchValidator {
    * 
    * Note that spaces are NOT allowed between keyword and separator, and between user input and separator.
    */
-  separator?: string;
+  separator?: string | string[];
 }
 
 export type ValidatorExecFunction = (tweet: PartialTweet) => boolean;
