@@ -695,9 +695,9 @@ export class TweetFinder {
     const validators: ((tweet: PartialTweet) => boolean)[] = [];
 
     // Iterating over validators
-    for (const { keyword, validator } of this.validators) {
+    for (const { keyword, validator, separator } of this.validators) {
       // Looking for keyword
-      const kw_reg = new RegExp(keyword + ':(\\S+)');
+      const kw_reg = new RegExp(keyword + (separator ? separator : ":") + '(\\S+)');
 
       let res: RegExpMatchArray = kw_reg.exec(query);
 
@@ -826,6 +826,14 @@ export interface TweetSearchValidator {
    * ```
    */
   validator: (user_query: string) => ValidatorExecFunction;
+  /**
+   * Separator between keyword and user input.
+   * 
+   * By default, separator is `:`.
+   * 
+   * Note that spaces are NOT allowed between keyword and separator, and between user input and separator.
+   */
+  separator?: string;
 }
 
 export type ValidatorExecFunction = (tweet: PartialTweet) => boolean;
