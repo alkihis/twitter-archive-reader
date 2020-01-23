@@ -770,6 +770,7 @@ export class TweetFinder {
           }
         }
         else {
+          // No query string, tweet is OK.
           results.push(t);
         }
       }

@@ -32,8 +32,39 @@ This package is usable inside a browser or in Node.js.
 
 Full documentation (version 4.x.x) is available on [GitHub Wiki](https://github.com/alkihis/twitter-archive-reader/wiki). Take a look !
 
+### Archive support
 
-#### Old documentation
+- **Classic archives** are supported in every version of this module
+  - Since **1.0.0**:
+    - Tweet read
+    - Basic user info read
+- **GDPR archives** basic support since 1.0.0:
+  - Since **1.0.0**:
+    - Tweet read
+    - DM read
+    - File size must be < 2 GB
+  - Since **1.2.0**:
+    - Favorites
+    - Mutes
+    - Blocks
+  - Since **1.3.0**:
+    - DM images
+  - Since **1.4.1**:
+    - Support DM images nested in ZIP files (GDPR archives 1.1)
+  - Since **2.0.0**: 
+    - GDPR archives are streamed: file size is no longer a limit.
+    - Screen name history
+  - Since **4.0.0**:
+    - Extended favorites
+    - Personalization data
+    - Email addresses
+    - Connected application
+    - Many other user data
+    - Ad data
+  - Since **4.0.7**:
+    - Support GDPR 1.2 archives (created since January 2020)
+
+### Old documentation
 
 Wiki for 2.x.x is available [here](./wiki_2_00/Home.md).
 
