@@ -1,6 +1,6 @@
 {
   "name": "twitter-archive-reader",
-  "version": "4.1.0",
+  "version": "4.1.1",
   "description": "",
   "main": "js/index.js",
   "scripts": {
