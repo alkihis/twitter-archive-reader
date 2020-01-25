@@ -10,5 +10,6 @@ export * from './ArchiveSaver';
 export * from './FavoriteArchive';
 export * from './UserData';
 export * from './AdArchive';
+export * from './exported_helpers';
 
 export default TwitterArchive;

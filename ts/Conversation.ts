@@ -1,7 +1,7 @@
-import { GDPRConversation, DirectMessage, LinkedDirectMessage } from "./TwitterTypes";
-import { supportsBigInt } from "./helpers";
+import { GDPRConversation, LinkedDirectMessage, DirectMessageEventContainer, DirectMessageEvent, DirectMessageEventsContainer } from "./TwitterTypes";
+import { supportsBigInt, dateOfDMEvent } from "./helpers";
 import bigInt from 'big-integer';
-import TweetArchive from "./TweetArchive";
+import { parseTwitterDate } from "./exported_helpers";
 
 /** Register the number of messages in each year, month and day, and let you access those messages. */
 interface ConversationIndex {
@@ -56,7 +56,7 @@ abstract class ConversationBase {
     this._index[msg.id] = msg;
 
     if (!msg.createdAtDate) {
-      msg.createdAtDate = TweetArchive.parseTwitterDate(msg.createdAt);
+      msg.createdAtDate = parseTwitterDate(msg.createdAt);
     }
 
     const [day, month, year] = [
@@ -389,11 +389,13 @@ abstract class ConversationBase {
  */
 export class Conversation extends ConversationBase {
   protected info: FullConversationInfo;
-  protected unindexed: DirectMessage[] = [];
+  protected unindexed: DirectMessageEventContainer[] = [];
 
   /** Quick access to first and last DMs */
   protected _first: LinkedDirectMessage = null;
   protected _last: LinkedDirectMessage = null;
+
+  protected _names: string[] = [];
 
   /** 
    * Create a new Conversation instance, from raw GDPR conversation. 
@@ -416,16 +418,17 @@ export class Conversation extends ConversationBase {
    * After you've imported all parts, you **must** call **.indexate()** to see messages !
    */
   add(conv: GDPRConversation) {
-    // TODO optimize
     if (conv.dmConversation.conversationId !== this.info.id) {
       throw new Error("You must add into a existing conversation a conversation with the same ID");
     }
     
-    this.unindexed.push(
-      ...conv.dmConversation.messages
-        .map(e => e.welcomeMessageCreate ? e.welcomeMessageCreate : e.messageCreate)
-        .filter(e => e) // Supprime les possibles undefined (clé messageXXX non connue)
-    );
+    // Can't replace the array: conversations may be splitted into parts
+    this.unindexed.push(...conv.dmConversation.messages);
+  }
+
+  /** `true` if a conversation is indexed. If `false`, a call to `.indexate()` is required. */
+  get indexed() {
+    return this.unindexed.length === 0;
   }
 
   /** 
@@ -437,58 +440,155 @@ export class Conversation extends ConversationBase {
   indexate() {
     const participants = new Set<string>();
 
-    // Récupération des messages et tri par le plus vieux (ID le plus bas)
-    let msgs: DirectMessage[] | LinkedDirectMessage[];
-    
-    if (supportsBigInt()) {
-      msgs = this.unindexed
-        .concat(this.all) // Ajoute le set de messages actuel (réindexe tout)
-        .sort((a, b) => Number(BigInt(a.id) - BigInt(b.id)));
+    // Add every message and every event to "unindexed"
+    const old_events: DirectMessageEventContainer[] = [];
+    let first = true;
+
+    function copyEveryEvent(events: DirectMessageEventsContainer) {
+      if (!events)
+        return;
+
+      for (const [key, vals] of Object.entries(events)) {
+        for (const val of vals) {
+          old_events.push({ [key]: val });
+        }
+      }
     }
-    else {
-      msgs = this.unindexed
-        .concat(this.all) // Ajoute le set de messages actuel (réindexe tout)
-        .sort((a, b) => (bigInt(a.id).minus(bigInt(b.id))).toJSNumber());
+
+    for (const msg of this.all) {
+      if (first) {
+        // copy the previous events of the first message
+        first = false;
+        if (msg.events)
+          copyEveryEvent(msg.events.before);
+      }
+      // after that, we copy only the after-events
+      if (msg.events)
+        copyEveryEvent(msg.events.after);
+
+      delete msg.events;
+      // Add the message to events
+      old_events.push({ messageCreate: msg });
     }
+
+    // Get all events, sorted by the OLDEST date the first. (asc order)
+    // Because we want to explore messages from beginning to the end
+    const events: DirectMessageEventContainer[] = this.unindexed
+      .concat(old_events)
+      .sort((a, b) => dateOfDMEvent(Object.values(a)[0]).getTime() - dateOfDMEvent(Object.values(b)[0]).getTime());
+
+    // Every event is now sorted.
 
     this.unindexed = [];
-
     this.unregisterAll();
 
     // Indexation (ajout d'une clé next et previous)
     let previous_message: LinkedDirectMessage | null = null;
-    if (msgs.length) {
-      this._first = msgs[0] as LinkedDirectMessage;
-      this._last = msgs[msgs.length - 1] as LinkedDirectMessage;
-    }
 
-    for (const actual_msg of msgs) {
-      const swallow = actual_msg as LinkedDirectMessage;
-
-      if (!swallow.senderId)
-        continue;
-
-      swallow.previous = previous_message;
-      swallow.next = null;
-      swallow.createdAtDate = new Date(swallow.createdAt);
-
-      if (previous_message) {
-        previous_message.next = swallow;
+    if (events.length) {
+      const first_event = events.find(e => e.messageCreate || e.welcomeMessageCreate);
+      if (first_event) {
+        this._first = Object.values(first_event)[0] as LinkedDirectMessage;
       }
-
-      previous_message = swallow;
-
-      // Enregistrement participants
-      if (swallow.recipientId && swallow.recipientId !== "0")
-        participants.add(swallow.recipientId);
-
-      participants.add(swallow.senderId);
-
-      // Enregistrement dans l'index
-      this.register(swallow);
     }
 
-    // Enregistrement infos
+    /** Events registred between two direct messages read. */
+    let previous_events: DirectMessageEventsContainer = undefined;
+
+    for (const event of events) {
+      if (event.messageCreate || event.welcomeMessageCreate) {
+        // This is a msg, we register it !
+        const actual_msg = (event.messageCreate || event.welcomeMessageCreate) as LinkedDirectMessage;
+  
+        if (!actual_msg.senderId)
+          continue;
+  
+        actual_msg.previous = previous_message;
+        actual_msg.next = null;
+  
+        if (previous_message) {
+          previous_message.next = actual_msg;
+        }
+  
+        previous_message = actual_msg;
+  
+        // Enregistrement participants
+        if (actual_msg.recipientId && actual_msg.recipientId !== "0")
+          participants.add(actual_msg.recipientId);
+  
+        participants.add(actual_msg.senderId);
+  
+        // Enregistrement dans l'index
+        this.register(actual_msg);
+
+        // If we already have events register before this message
+        if (previous_events) {
+          actual_msg.events = {
+            before: previous_events
+          };
+          // We de-initialize events
+          previous_events = undefined;
+        }
+      }
+      else {
+        // This is an event
+
+        // We initialize event container if needed, 
+        // otherwise we use current object.
+        previous_events = previous_events || {};
+
+        // We register the "next events" of the previous message if needed
+        if (previous_message) {
+          if (!previous_message.events) {
+            previous_message.events = {};
+          }
+          if (!previous_message.events.after) {
+            previous_message.events.after = previous_events;
+          }
+        }
+
+        if (event.conversationNameUpdate) {
+          if (previous_events.conversationNameUpdate) {
+            previous_events.conversationNameUpdate.push(event.conversationNameUpdate);
+          }
+          else {
+            previous_events.conversationNameUpdate = [event.conversationNameUpdate];
+          }
+          this._names.push(event.conversationNameUpdate.name);
+        }
+        else if (event.joinConversation) {
+          if (previous_events.joinConversation) {
+            previous_events.joinConversation.push(event.joinConversation);
+          }
+          else {
+            previous_events.joinConversation = [event.joinConversation];
+          }
+        }
+        else if (event.participantsJoin) {
+          if (previous_events.participantsJoin) {
+            previous_events.participantsJoin.push(event.participantsJoin);
+          }
+          else {
+            previous_events.participantsJoin = [event.participantsJoin];
+          }
+        }
+        else if (event.participantsLeave) {
+          if (previous_events.participantsLeave) {
+            previous_events.participantsLeave.push(event.participantsLeave);
+          }
+          else {
+            previous_events.participantsLeave = [event.participantsLeave];
+          }
+        }
+        else {
+          console.log(event);
+        }
+      }
+    }
+
+    // EDGE CASE: If the conversation contains NO message, events will be inaccessible.
+
+    // Registering participants
     this.info.participants = participants;
   }
 
@@ -502,7 +602,24 @@ export class Conversation extends ConversationBase {
   }
 
   get last() {
+    if (!this._last) {
+      const msg = this.all;
+      this._last = msg[msg.length - 1];
+    }
+
     return this._last;
+  }
+
+  /** Conversation custom name, if somebody has set it. Could be `undefined`. */
+  get name() {
+    if (!this._names.length)
+      return undefined;
+    return this._names[this._names.length - 1];
+  }
+
+  /** All the custom names given to this conversation. */
+  get names() {
+    return this._names;
   }
 }
 

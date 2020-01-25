@@ -163,17 +163,39 @@ export type ProfileGDPR = [{
 
 export type DMFile = GDPRConversation[];
 
+export interface DirectMessageEventContainer {
+  messageCreate?: DirectMessage;
+  welcomeMessageCreate?: DirectMessage;
+  joinConversation?: JoinConversation;
+  conversationNameUpdate?: ConversationNameUpdate;
+  participantsJoin?: ParticipantJoin;
+  participantsLeave?: ParticipantLeave;
+}
+
+export interface DirectMessageEventsContainer {
+  joinConversation?: JoinConversation[];
+  conversationNameUpdate?: ConversationNameUpdate[];
+  participantsJoin?: ParticipantJoin[];
+  participantsLeave?: ParticipantLeave[];
+}
+
+export type DirectMessageEventType = keyof DirectMessageEventContainer;
+
 export interface GDPRConversation {
   dmConversation: {
     conversationId: string;
-    messages: {
-      messageCreate?: DirectMessage;
-      welcomeMessageCreate?: DirectMessage;
-    }[];
+    messages: DirectMessageEventContainer[];
   }
 }
 
-export interface DirectMessage {
+export interface DirectMessageEvent {
+  /** When this happends */
+  createdAt: string;
+  /** Set when date is parsed. This serves as a cache. */
+  createdAtDate?: Date;
+}
+
+export interface DirectMessage extends DirectMessageEvent {
   /** Person who get the DM (Twitter user ID). */
   recipientId: string;
   /** Content of the DM. */
@@ -190,12 +212,6 @@ export interface DirectMessage {
   senderId: string;
   /** Message ID. */
   id: string;
-  /** Stringified date of message creation. 
-   * If the DM is a `LinkedDirectMessage`, 
-   * please use **.createdAtDate** property to get the date,
-   * it's already correctly parsed. 
-   */
-  createdAt: string;
 }
 
 export interface LinkedDirectMessage extends DirectMessage {
@@ -206,6 +222,42 @@ export interface LinkedDirectMessage extends DirectMessage {
   createdAtDate: Date;
   /** Conversation linked to the message. This property is set if the message is in a `GlobalConversation` object. */
   conversation?: Conversation;
+  /** Events fired before and after this direct message. 
+   * Events can be conversation name change, a new participant... */
+  events?: {
+    before?: DirectMessageEventsContainer;
+    after?: DirectMessageEventsContainer;
+  };
+}
+
+/** Event fired when someone invite people to a conversation */
+export interface ParticipantJoin extends DirectMessageEvent {
+  /** Which person (user ID) invited someone to the conversation */
+  initiatingUserId: string;
+  /** Concerned persons by this event */
+  userIds: string[];
+}
+
+/** Event fired when someone leave conversation. */
+export interface ParticipantLeave extends DirectMessageEvent { 
+  /** Concerned persons by this event */
+  userIds: string[];
+}
+
+/** Event fired when you are invited inside a group conversation. */
+export interface JoinConversation extends DirectMessageEvent {
+  /** Which person (user ID) invited you to the conversation */
+  initiatingUserId: string;
+  /** Set of user IDs present in the conversation at the time of the event. */
+  participantsSnapshot: string[];
+}
+
+/** Event fired when the name of the conversation changes. */
+export interface ConversationNameUpdate extends DirectMessageEvent {
+  /** Which person (user ID) changed conversation name */
+  initiatingUserId: string;
+  /** The new conversation name. */
+  name: string;
 }
 
 export type GDPRFollowings = {

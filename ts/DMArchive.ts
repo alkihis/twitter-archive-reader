@@ -31,8 +31,8 @@ export class DMArchive {
       }
     }
 
-    // Index all convs
-    for (const conv of this.all) {
+    // Index all convs that need it
+    for (const conv of this.all.filter(conv => !conv.indexed)) {
       conv.indexate();
     }
   }

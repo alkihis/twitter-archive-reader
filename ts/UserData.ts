@@ -1,7 +1,6 @@
 import { BaseArchive } from "./StreamArchive";
 import { ScreenNameChange, GPDRProtectedHistory, InnerGDPRPersonalization, GDPRAgeInfo, GPDRScreenNameHistory, UserFullAgeInfo, ConnectedApplication, UserEmailAddressChange, IpAudit, PushDevice, MessagingDevice, UserPersonalization, TwitterUserDetails } from "./TwitterTypes";
-import TweetArchive from "./TweetArchive";
-import { parseTwitterDate } from "./Archive";
+import { parseTwitterDate } from "./exported_helpers";
 
 export interface UserLoadObject {
   phone_number?: string;
@@ -203,7 +202,7 @@ export class UserData {
 
         let d: Date;
         if (app.approvedAt) {
-          d = TweetArchive.parseTwitterDate(app.approvedAt);
+          d = parseTwitterDate(app.approvedAt);
         }
         else { // Old RGPD archives have approvedAtMsec, with stringified timestamp
           d = new Date(Number(app.approvedAtMsec));

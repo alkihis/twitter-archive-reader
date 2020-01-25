@@ -25,16 +25,6 @@ function getExtendedContainerBase() : ExtendedInfoContainer {
   };
 }
 
-
-/**
- * Parse a raw Twitter date, like from a `dm.createdAt`.
- * 
- * For a tweet, please use `TweetArchive.dateFromTweet(tweet)` instead, it's optimized !
- * 
- * For a `LinkedDirectMessage`, use property `.createdAtDate` !
- */
-export const parseTwitterDate = TweetArchive.parseTwitterDate;
-
 export type ArchiveReadState = "idle" | "reading" | "indexing" | "tweet_read" | "user_read" | "dm_read" | "extended_read" | "ready";
 export type ArchiveDMImagesFormation = "none" | "inside" | "zipped";
 
@@ -65,12 +55,14 @@ export type ArchiveDMImagesFormation = "none" | "inside" | "zipped";
  * 
  * User detailled data (screen name history, email address) is in `.user` property.
  */
-export class TwitterArchive extends EventEmitter {
+export class TwitterArchive {
   protected _ready: Promise<void> = Promise.resolve();
   protected archive: BaseArchive<any>;
 
   /** Current archive load state. */
   public state: ArchiveReadState = "idle";
+  /** Where events about archive read are emitted. */
+  public readonly events = new EventEmitter;
 
   protected statuses = new TweetArchive;
   protected dms: DMArchive;
@@ -124,7 +116,6 @@ export class TwitterArchive extends EventEmitter {
       build_ad_archive: false,
     }
   ) {
-    super();
     this.extended_info_container = getExtendedContainerBase();
 
     if (options.load_images_in_zip !== undefined) {
@@ -148,7 +139,7 @@ export class TwitterArchive extends EventEmitter {
           // Detect archive type
           this._is_gdpr = this.archive.search(/^tweets\.csv$/).length === 0;
 
-          this.emit('zipready');
+          this.events.emit('zipready');
   
           // Initialisation de l'archive Twitter
           if (this.is_gdpr) {
@@ -159,10 +150,10 @@ export class TwitterArchive extends EventEmitter {
           }
         })
         .then(() => {
-          this.emit('ready');
+          this.events.emit('ready');
         })
         .catch(e => {
-          this.emit('error', { type: 'error', detail: e });
+          this.events.emit('error', { type: 'error', detail: e });
           return Promise.reject(e);
         });
     }
@@ -177,7 +168,7 @@ export class TwitterArchive extends EventEmitter {
     } catch (e) { }
 
     // This is not accurate, but this is for compatibility reasons
-    this.emit('userinfosready');
+    this.events.emit('userinfosready');
   
     this.state = "tweet_read";
 
@@ -197,7 +188,7 @@ export class TwitterArchive extends EventEmitter {
       i++;
     }
 
-    this.emit('tweetsread');
+    this.events.emit('tweetsread');
 
     // this._info is initialized here
     await this.loadArchivePart({
@@ -206,7 +197,7 @@ export class TwitterArchive extends EventEmitter {
       tweets
     });
 
-    this.emit('indexready');
+    this.events.emit('indexready');
 
 
     // ---------------
@@ -214,7 +205,7 @@ export class TwitterArchive extends EventEmitter {
     // ---------------
 
     this.state = "dm_read";
-    this.emit('willreaddm');
+    this.events.emit('willreaddm');
     
     // Init DMs
     const conv_files = ['direct-message.js', 'direct-message-group.js'];
@@ -272,7 +263,7 @@ export class TwitterArchive extends EventEmitter {
     }
 
     this.state = "extended_read";
-    this.emit('willreadextended');
+    this.events.emit('willreadextended');
 
     await this.initExtendedGDPR();
 
@@ -374,7 +365,7 @@ export class TwitterArchive extends EventEmitter {
       user: await js_dir.get('user_details.js'),
     });
 
-    this.emit('userinfosready');
+    this.events.emit('userinfosready');
 
     const files_to_read = index.map(e => e.file_name);
 
@@ -390,13 +381,13 @@ export class TwitterArchive extends EventEmitter {
     // Tri les tweets par ID (le plus récent, plus grand en premier)
     tweets = TweetArchive.sortTweets(tweets);
 
-    this.emit('tweetsread');
+    this.events.emit('tweetsread');
 
     this.state = "indexing";
     // Build index (read tweets)
     this.statuses.add(tweets);
 
-    this.emit('indexready');
+    this.events.emit('indexready');
     this.state = "ready";
   }
 

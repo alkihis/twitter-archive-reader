@@ -13,7 +13,7 @@ commander
   .option('-3, --test-three', "Test 3")
   .option('-4, --test-four', "Test 4")
   .option('-5, --test-five', "Test 5")
-  .option('-u, --unit', 'Start unit tests')
+  .option('-6, --test-six', 'Test 6')
 .parse(process.argv);
 
 const write = (name: string, data: any) => {
@@ -204,8 +204,16 @@ const test_5 = async () => {
   }, null, 2));
 };
 
-const test_unit = async () => {
-  const archive = new TwitterArchive("")
+const test_6 = async () => {
+  const archive = new TwitterArchive(commander.file);
+  await archive.ready();
+
+  const conv = archive.messages.get('994634813503168512');
+  const msg = conv.single('994634813503168516');
+
+  if (msg) {
+    console.log(msg.events, msg.createdAtDate);
+  }
 };
 
 if (commander.testOne) {
@@ -223,6 +231,6 @@ if (commander.testFour) {
 if (commander.testFive) {
   test_5();
 }
-if (commander.unit) {
-  test_unit();
+if (commander.testSix) {
+  test_6();
 }
