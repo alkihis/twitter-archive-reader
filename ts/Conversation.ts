@@ -1,7 +1,7 @@
 import { GDPRConversation, LinkedDirectMessage, DirectMessageEventContainer, DirectMessageEvent, DirectMessageEventsContainer } from "./TwitterTypes";
 import { supportsBigInt, dateOfDMEvent } from "./helpers";
 import bigInt from 'big-integer';
-import { parseTwitterDate } from "./exported_helpers";
+import { parseTwitterDate, getEventsFromMessages } from "./exported_helpers";
 
 /** Register the number of messages in each year, month and day, and let you access those messages. */
 interface ConversationIndex {
@@ -381,6 +381,18 @@ abstract class ConversationBase {
     const all = this.all;
 
     return all[all.length - 1];
+  }
+  
+  /** 
+   * Get all the events related to this conversation, sorted by date, from oldest to newest. 
+   * 
+   * By default, this does not include messages, only other events, like conversation join or
+   * name change.
+   * 
+   * To include messages, use `true` as first parameter.
+   */
+  *events(include_messages = false) {
+    yield* getEventsFromMessages(this.all, include_messages);
   }
 }
 
