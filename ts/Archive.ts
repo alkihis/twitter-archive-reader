@@ -1030,8 +1030,23 @@ export class TwitterArchive {
     return "none";
   }
 
-  /**
-   * Events defined
+  /*
+   * Events defined (compatibility)
    */
+  /** 
+   * @deprecated
+   * For compatibility only. Use `.events.on()` instead. 
+   */
+  addEventListener(event: string, listener: (...args: any[]) => void) {
+    this.events.on(event, listener);
+  }
+
+  /** 
+   * @deprecated
+   * For compatibility only. Use `.events.off()` instead. 
+   */
+  removeEventListener(event: string, listener: (...args: any[]) => void) {
+    this.events.off(event, listener);
+  }
 }
 
