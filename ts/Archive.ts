@@ -1,7 +1,7 @@
 import { AcceptedZipSources, Archive, BaseArchive, constructArchive } from './StreamArchive';
 import { BasicArchiveInfo, PartialTweetGDPR, PartialTweet, AccountGDPR, ProfileGDPR, ClassicTweetIndex, ClassicPayloadDetails, TwitterUserDetails, DMFile, GDPRFollowings, GDPRFollowers, GDPRFavorites, GDPRMutes, GDPRBlocks, GDPRMoment, GDPRMomentFile, DirectMessage, ArchiveSyntheticInfo, PartialFavorite, ExtendedInfoContainer, TwitterArchiveLoadOptions } from './TwitterTypes';
 import DMArchive from './DMArchive';
-import { EventTarget, defineEventAttribute } from 'event-target-shim';
+import { EventEmitter } from 'events';
 import md5 from 'js-md5';
 import TweetArchive from './TweetArchive';
 import { FavoriteArchive } from './FavoriteArchive';
@@ -25,40 +25,9 @@ function getExtendedContainerBase() : ExtendedInfoContainer {
   };
 }
 
-
-/**
- * Parse a raw Twitter date, like from a `dm.createdAt`.
- * 
- * For a tweet, please use `TweetArchive.dateFromTweet(tweet)` instead, it's optimized !
- * 
- * For a `LinkedDirectMessage`, use property `.createdAtDate` !
- */
-export const parseTwitterDate = TweetArchive.parseTwitterDate;
-
 export type ArchiveReadState = "idle" | "reading" | "indexing" | "tweet_read" | "user_read" | "dm_read" | "extended_read" | "ready";
 export type ArchiveDMImagesFormation = "none" | "inside" | "zipped";
 
-type TwitterArchiveEvents = {
-  zipready: CustomEvent<void>;
-  userinfosready: CustomEvent<void>;
-  tweetsread: CustomEvent<void>;
-  indexready: CustomEvent<void>;
-  willreaddm: CustomEvent<void>;
-  willreadextended: CustomEvent<void>;
-  ready: CustomEvent<void>;
-  error: CustomEvent<any>;
-};
-
-type TwitterArchiveOnEvents = {
-  onzipready: CustomEvent<void>;
-  onuserinfosready: CustomEvent<void>;
-  ontweetsread: CustomEvent<void>;
-  onindexready: CustomEvent<void>;
-  onwillreaddm: CustomEvent<void>;
-  onwillreadextended: CustomEvent<void>;
-  onready: CustomEvent<void>;
-  onerror: CustomEvent<any>;
-};
 
 /**
  * Represents a full Twitter Archive. Support GDPR and classic archive.
@@ -86,12 +55,14 @@ type TwitterArchiveOnEvents = {
  * 
  * User detailled data (screen name history, email address) is in `.user` property.
  */
-export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArchiveOnEvents> {
+export class TwitterArchive {
   protected _ready: Promise<void> = Promise.resolve();
   protected archive: BaseArchive<any>;
 
   /** Current archive load state. */
   public state: ArchiveReadState = "idle";
+  /** Where events about archive read are emitted. */
+  public readonly events = new EventEmitter;
 
   protected statuses = new TweetArchive;
   protected dms: DMArchive;
@@ -145,7 +116,6 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       build_ad_archive: false,
     }
   ) {
-    super();
     this.extended_info_container = getExtendedContainerBase();
 
     if (options.load_images_in_zip !== undefined) {
@@ -169,7 +139,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
           // Detect archive type
           this._is_gdpr = this.archive.search(/^tweets\.csv$/).length === 0;
 
-          this.dispatchEvent({ type: 'zipready' });
+          this.events.emit('zipready');
   
           // Initialisation de l'archive Twitter
           if (this.is_gdpr) {
@@ -180,10 +150,10 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
           }
         })
         .then(() => {
-          this.dispatchEvent({ type: 'ready' });
+          this.events.emit('ready');
         })
         .catch(e => {
-          this.dispatchEvent({ type: 'error', detail: e });
+          this.events.emit('error', { type: 'error', detail: e });
           return Promise.reject(e);
         });
     }
@@ -198,7 +168,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     } catch (e) { }
 
     // This is not accurate, but this is for compatibility reasons
-    this.dispatchEvent({ type: 'userinfosready' });
+    this.events.emit('userinfosready');
   
     this.state = "tweet_read";
 
@@ -218,7 +188,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       i++;
     }
 
-    this.dispatchEvent({ type: 'tweetsread' });
+    this.events.emit('tweetsread');
 
     // this._info is initialized here
     await this.loadArchivePart({
@@ -227,7 +197,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       tweets
     });
 
-    this.dispatchEvent({ type: 'indexready' });
+    this.events.emit('indexready');
 
 
     // ---------------
@@ -235,7 +205,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     // ---------------
 
     this.state = "dm_read";
-    this.dispatchEvent({ type: 'willreaddm' });
+    this.events.emit('willreaddm');
     
     // Init DMs
     const conv_files = ['direct-message.js', 'direct-message-group.js'];
@@ -293,7 +263,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     }
 
     this.state = "extended_read";
-    this.dispatchEvent({ type: 'willreadextended' });
+    this.events.emit('willreadextended');
 
     await this.initExtendedGDPR();
 
@@ -395,7 +365,7 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
       user: await js_dir.get('user_details.js'),
     });
 
-    this.dispatchEvent({ type: 'userinfosready' });
+    this.events.emit('userinfosready');
 
     const files_to_read = index.map(e => e.file_name);
 
@@ -411,13 +381,13 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
     // Tri les tweets par ID (le plus récent, plus grand en premier)
     tweets = TweetArchive.sortTweets(tweets);
 
-    this.dispatchEvent({ type: 'tweetsread' });
+    this.events.emit('tweetsread');
 
     this.state = "indexing";
     // Build index (read tweets)
     this.statuses.add(tweets);
 
-    this.dispatchEvent({ type: 'indexready' });
+    this.events.emit('indexready');
     this.state = "ready";
   }
 
@@ -1059,14 +1029,24 @@ export class TwitterArchive extends EventTarget<TwitterArchiveEvents, TwitterArc
 
     return "none";
   }
+
+  /*
+   * Events defined (compatibility)
+   */
+  /** 
+   * @deprecated
+   * For compatibility only. Use `.events.on()` instead. 
+   */
+  addEventListener(event: string, listener: (...args: any[]) => void) {
+    this.events.on(event, listener);
+  }
+
+  /** 
+   * @deprecated
+   * For compatibility only. Use `.events.off()` instead. 
+   */
+  removeEventListener(event: string, listener: (...args: any[]) => void) {
+    this.events.off(event, listener);
+  }
 }
 
-// Define onevents
-defineEventAttribute(TwitterArchive.prototype, "zipready");
-defineEventAttribute(TwitterArchive.prototype, "userinfosready");
-defineEventAttribute(TwitterArchive.prototype, "tweetsread");
-defineEventAttribute(TwitterArchive.prototype, "indexready");
-defineEventAttribute(TwitterArchive.prototype, "willreaddm");
-defineEventAttribute(TwitterArchive.prototype, "willreadextended");
-defineEventAttribute(TwitterArchive.prototype, "ready");
-defineEventAttribute(TwitterArchive.prototype, "error");

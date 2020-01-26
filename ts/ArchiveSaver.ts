@@ -1,24 +1,47 @@
 import TwitterArchive from "./index";
-import { GDPRConversation, DMFile, ScreenNameChange, GPDRScreenNameHistory, ArchiveSyntheticInfo, PartialFavorite, PartialTweet, GDPRMoment, AdImpression, AdEngagement, AdMobileConversion, AdOnlineConversion } from "./TwitterTypes";
+import { GDPRConversation, DMFile, ScreenNameChange, GPDRScreenNameHistory, ArchiveSyntheticInfo, PartialFavorite, PartialTweet, GDPRMoment, AdImpression, AdEngagement, AdMobileConversion, AdOnlineConversion, DirectMessageEventContainer, DirectMessageEventsContainer } from "./TwitterTypes";
 import Conversation from "./Conversation";
 import JSZip from 'jszip';
 import { UserLoadObject } from "./UserData";
 
 function convertConversationToGDPRConversation(conversation: Conversation) : GDPRConversation {
+  let first = true;
+  const msgs: DirectMessageEventContainer[] = [];
+
+  function addEvents(e: DirectMessageEventsContainer) {
+    for (const [key, vals] of Object.entries(e)) {
+      for (const val of vals) {
+        msgs.push({ [key]: val });
+      }
+    }
+  }
+
+  for (const msg of conversation.all) {
+    if (first) {
+      first = false;
+      if (msg.events && msg.events.before) {
+        addEvents(msg.events.before)
+      }
+    }
+  
+    msgs.push({ messageCreate: {
+      recipientId: msg.recipientId,
+      createdAt: msg.createdAt,
+      mediaUrls: msg.mediaUrls,
+      text: msg.text,
+      senderId: msg.senderId,
+      id: msg.id
+    }});
+
+    if (msg.events && msg.events.after) {
+      addEvents(msg.events.after);
+    }
+  }
+
   return {
     dmConversation: {
       conversationId: conversation.id,
-      messages: conversation.all
-        .map(message => ({
-          messageCreate: {
-            recipientId: message.recipientId,
-            createdAt: message.createdAt,
-            mediaUrls: message.mediaUrls,
-            text: message.text,
-            senderId: message.senderId,
-            id: message.id
-          }
-        }))
+      messages: msgs
     }
   };
 }
