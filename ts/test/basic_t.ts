@@ -25,7 +25,7 @@ const test_1 = async () => {
   const archive = new TwitterArchive(commander.file);
   await archive.ready();
 
-  await archive.loadArchivePart({ current_dm_images: true });
+  await archive.loadArchivePart();
   console.log("Archive ok");
 
   // Test dm
@@ -33,7 +33,7 @@ const test_1 = async () => {
     // @ts-ignore
     // console.log(archive.dm_img_archive);
     try {
-      const blob = await archive.dmImage("818102592802848773-BrcGVlp3.jpg", false, true) as ArrayBuffer;
+      const blob = await archive.medias.fromDmDirectory("818102592802848773-BrcGVlp3.jpg", false, true) as ArrayBuffer;
       writeFileSync('test_dir/mon_img.jpg', Buffer.from(blob));
     } catch {}
   }

@@ -6,7 +6,7 @@ import ArchiveSaver from '../ArchiveSaver';
 jest.setTimeout(9999999);
 
 const UNIT_TEST_FILE = path.join(__dirname, '../../../Documents/Archives Twitter/GDPR-2019-09-16-ALKIHIS.zip');
-const archive = new TwitterArchive(UNIT_TEST_FILE, { build_ad_archive: true, load_images_in_zip: true });
+const archive = new TwitterArchive(UNIT_TEST_FILE, { build_ad_archive: true });
 
 test('archive init', async () => {
   await archive.ready();
@@ -147,17 +147,17 @@ test('image dm', async () => {
 
   if (!archive.is_dm_images_available) {
     // this is never true
-    await archive.loadArchivePart({ current_dm_images: true });
+    await archive.loadArchivePart();
   }
   archive.releaseZip();
 
-  const image = await archive.dmImage("818102592802848773-BrcGVlp3.jpg", false, true) as ArrayBuffer;
+  const image = await archive.medias.fromDmDirectory("818102592802848773-BrcGVlp3.jpg", false, true) as ArrayBuffer;
   expect(image.byteLength).toBe(47371);
 
-  const group_img = await archive.dmImage("890153850757427204-zZjQV7v4.jpg", true, true) as ArrayBuffer;
+  const group_img = await archive.medias.fromDmDirectory("890153850757427204-zZjQV7v4.jpg", true, true) as ArrayBuffer;
   expect(group_img.byteLength).toBe(38360);
 
-  const images_of = await archive.dmImagesOf("1137291040317218820", true) as ArrayBuffer[];
+  const images_of = await archive.medias.ofDm(archive.messages.single("1137291040317218820"), true) as ArrayBuffer[];
   expect(images_of.length).toBe(1);
   expect(images_of[0].byteLength).toBe(105634);
 });

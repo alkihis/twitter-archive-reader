@@ -13,7 +13,6 @@ export interface BasicArchiveInfo {
 }
 
 export interface TwitterArchiveLoadOptions {
-  load_images_in_zip?: boolean,
   build_ad_archive?: boolean,
 }
 
@@ -362,9 +361,13 @@ export interface PushDevice {
   deviceVersion: string;
   deviceType: string;
   token?: string;
-  /** WARNING: For now (2020-01-01), this date format is "YYYY.MM.DD". This can be changed... */
+  /** WARNING: For now (2020-01-01), this date format is "YYYY.MM.DD". This can evolve.
+   * Use `UserData.parseDeviceDate()` to parse this type of date.
+   */
   updatedDate: string;
-  /** WARNING: For now (2020-01-01), this date format is "YYYY.MM.DD". This can be changed... */
+  /** WARNING: For now (2020-01-01), this date format is "YYYY.MM.DD". This can evolve.
+   * Use `UserData.parseDeviceDate()` to parse this type of date.
+   */
   createdDate: string;
 }
 
@@ -373,7 +376,9 @@ export interface MessagingDevice {
   carrier: string;
   /** Phone number, prefix by +<country number> */
   phoneNumber: string;
-  /** WARNING: For now (2020-01-01), this date format is "YYYY.MM.DD". This can be changed... */
+  /** WARNING: For now (2020-01-01), this date format is "YYYY.MM.DD". This can evolve.
+   * Use `UserData.parseDeviceDate()` to parse this type of date.
+   */
   createdDate: string;
 }
 
@@ -437,10 +442,12 @@ export interface ScreenNameChange {
   changedTo: string;
 }
 
-export interface GPDRProtectedHistory {
+export interface GDPRProtectedHistory {
   protectedAt: string;
   action: "Protect" | "Unprotect";
 }
+/** @deprecated This is a typo. Please do not use it anymore. */
+export type GPDRProtectedHistory = GDPRProtectedHistory;
 
 /** MOMENTS */
 export type GDPRMomentFile = {
@@ -633,13 +640,24 @@ export type ClassicTweetIndex = {
 }[];
 
 export interface TwitterUserDetails {
+  /** User @ */
   screen_name: string;
+  /** Location registered on profile */
   location: string;
+  /** Twitter Name (display name) */
   full_name: string;
+  /** Biography */
   bio: string;
+  /** User ID */
   id: string;
+  /** Account creation date (stringified). Should be parsed with `.parseTwitterDate()`. */
   created_at: string;
+  /** Profile image. Available if `archive.is_gpdr === true`. */
   profile_image_url_https?: string;
+  /** URL registered on profile. Available if `archive.is_gpdr === true`. */
+  url?: string;
+  /** Profile banner. Available if `archive.is_gpdr === true` and if archive owner had a banner. */
+  profile_banner_url?: string;
 }
 
 

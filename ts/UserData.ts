@@ -1,5 +1,5 @@
 import { BaseArchive } from "./StreamArchive";
-import { ScreenNameChange, GPDRProtectedHistory, InnerGDPRPersonalization, GDPRAgeInfo, GPDRScreenNameHistory, UserFullAgeInfo, ConnectedApplication, UserEmailAddressChange, IpAudit, PushDevice, MessagingDevice, UserPersonalization, TwitterUserDetails } from "./TwitterTypes";
+import { ScreenNameChange, GDPRProtectedHistory, InnerGDPRPersonalization, GDPRAgeInfo, GPDRScreenNameHistory, UserFullAgeInfo, ConnectedApplication, UserEmailAddressChange, IpAudit, PushDevice, MessagingDevice, UserPersonalization, TwitterUserDetails } from "./TwitterTypes";
 import { parseTwitterDate } from "./exported_helpers";
 
 export interface UserLoadObject {
@@ -7,7 +7,7 @@ export interface UserLoadObject {
   verified?: boolean;
   personalization?: UserPersonalization,
   screen_name_history?: ScreenNameChange[],
-  protected_history?: GPDRProtectedHistory[],
+  protected_history?: GDPRProtectedHistory[],
   age_info?: UserFullAgeInfo;
   timezone?: string;
   applications?: ConnectedApplication[],
@@ -20,7 +20,7 @@ export class UserData {
   protected archive: BaseArchive<any>;
 
   protected _sn_history: ScreenNameChange[] = [];
-  protected _lock_history: GPDRProtectedHistory[] = [];
+  protected _lock_history: GDPRProtectedHistory[] = [];
   protected _age: UserFullAgeInfo;
   protected _creation_ip: string;
   protected _timezone: string;
@@ -174,7 +174,7 @@ export class UserData {
 
   protected async initProtectedHistory() {
     try {
-      const f_phistory = await this.archive.get('protected-history.js') as { protectedHistory: GPDRProtectedHistory }[];
+      const f_phistory = await this.archive.get('protected-history.js') as { protectedHistory: GDPRProtectedHistory }[];
       for (const e of f_phistory) {
         this._lock_history.push(e.protectedHistory);
       }
@@ -517,11 +517,20 @@ export class UserData {
   get profile_img_url() {
     return this._basic_info.profile_image_url_https;
   }
-  
 
-  /** ------- */
-  /** HELPERS */
-  /** ------- */
+  /** Profile banner. Available if `archive.is_gpdr === true` and if archive owner had a banner. */
+  get profile_banner_url() {
+    return this._basic_info.profile_banner_url;
+  }
+  
+  /** URL registered on profile. Available if `archive.is_gpdr === true`. */
+  get url() {
+    return this._basic_info.url;
+  }
+
+  /* ------- */
+  /* HELPERS */
+  /* ------- */
 
   protected static parseAge(age: string[]) : number | [number, number] {
     const a = age[0];
@@ -533,6 +542,24 @@ export class UserData {
       return Number(age[0]);
     }
     return 20;
+  }
+
+  /**
+   * Parse a date inside a `PushDevice` or a `MessagingDevice` object.
+   * 
+   * Should not be used for any other type of object !
+   */
+  static parseDeviceDate(date: string) {
+    try {
+      const d = new Date(date);
+
+      // Chrome can parse YYYY.MM.DD correctly...
+      if (!isNaN(d.getTime())) {
+        return d;
+      }
+    } catch (e) { }
+
+    return new Date(date.replace(/\./g, '-'));
   }
 }
 

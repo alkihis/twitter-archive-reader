@@ -429,6 +429,8 @@ export class TweetArchive {
    * Parse a raw Twitter date, from a `dm.createdAt` or `tweet.created_at`.
    * 
    * For a tweet, please use `dateFromTweet(tweet)` instead, it's optimized !
+   * 
+   * For dates in ad data (everthing that comes from `AdArchive`), use instead `AdArchive.parseAdDate()` !
    */
   static parseTwitterDate(date: string) : Date {
     try {
