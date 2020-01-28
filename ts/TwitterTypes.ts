@@ -362,11 +362,11 @@ export interface PushDevice {
   deviceType: string;
   token?: string;
   /** WARNING: For now (2020-01-01), this date format is "YYYY.MM.DD". This can evolve.
-   * Use `UserData.parseDeviceDate()` to parse this type of date.
+   * Use `TwitterHelpers.parseDeviceDate()` to parse this type of date.
    */
   updatedDate: string;
   /** WARNING: For now (2020-01-01), this date format is "YYYY.MM.DD". This can evolve.
-   * Use `UserData.parseDeviceDate()` to parse this type of date.
+   * Use `TwitterHelpers.parseDeviceDate()` to parse this type of date.
    */
   createdDate: string;
 }
@@ -377,7 +377,7 @@ export interface MessagingDevice {
   /** Phone number, prefix by +<country number> */
   phoneNumber: string;
   /** WARNING: For now (2020-01-01), this date format is "YYYY.MM.DD". This can evolve.
-   * Use `UserData.parseDeviceDate()` to parse this type of date.
+   * Use `TwitterHelpers.parseDeviceDate()` to parse this type of date.
    */
   createdDate: string;
 }
@@ -558,7 +558,7 @@ export interface PartialTweet {
   in_reply_to_status_id_str?: string;
   /** 
    * Tweet creation date. To get the parsed date, 
-   * use `dateFromTweet()` function with the tweet in parameter. 
+   * use `TwitterHelpers.dateFromTweet()` function with the tweet in parameter. 
    */
   created_at: string;
   created_at_d?: Date;
@@ -650,7 +650,7 @@ export interface TwitterUserDetails {
   bio: string;
   /** User ID */
   id: string;
-  /** Account creation date (stringified). Should be parsed with `.parseTwitterDate()`. */
+  /** Account creation date (stringified). Should be parsed with `TwitterHelpers.parseTwitterDate()`. */
   created_at: string;
   /** Profile image. Available if `archive.is_gpdr === true`. */
   profile_image_url_https?: string;
