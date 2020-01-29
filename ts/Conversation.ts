@@ -86,7 +86,7 @@ abstract class ConversationBase {
   }
 
   /** Get direct messages from a specific month. */
-  month(month: string, year: string) : SubConversation {
+  month(month: string | number, year: string | number) : SubConversation {
     if (year in this.index_by_date && month in this.index_by_date[year]) {
       const messages = [].concat(...Object.values(this.index_by_date[year][month]).map(e => Object.values(e)));
       
@@ -189,7 +189,7 @@ abstract class ConversationBase {
   between(since: Date, until: Date): SubConversation;
   /** Get all the direct messages between two specific messages (ids). */
   between(since_id: string, until_id: string): SubConversation;
-  between(since: Date | string, until: Date | string) {
+  between<T = string | Date>(since: T, until: T) {
     if (typeof since === 'string' && typeof until === 'string') {
       return this.betweenIds(since, until);
     }
@@ -245,10 +245,18 @@ abstract class ConversationBase {
     return this._index[id];
   }
 
-  /** Get conversation from a specific day (default to current day) */
-  day(day?: Date) {
+  /** 
+   * Get conversation from a specific day (default to current day) 
+   * 
+   * @param day The day to search in. Can be a `Date` or a `string`-ified date.
+   * If this param is not specified, {day} will be coerced to today.
+   */
+  day(day?: Date | string) {
     if (!day) {
       day = new Date;
+    }
+    else if (typeof day === 'string') {
+      day = new Date(day);
     }
 
     const year = day.getFullYear(), month = day.getMonth() + 1, date = day.getDate();
@@ -264,10 +272,17 @@ abstract class ConversationBase {
     return new SubConversation([], this.info.me);
   }
 
-  /** Get conversation of the same day as **day**, but also in previous years. */
-  fromThatDay(day?: Date) {
+  /** 
+   * Get conversation of the same day as {day}, but also in previous years. 
+   * 
+   * {day} can be omitted (refers to today), be a `Date` object, or be a `string`-ified date.
+   */
+  fromThatDay(day?: Date | string) {
     if (!day) {
       day = new Date;
+    }
+    else if (typeof day === 'string') {
+      day = new Date(day);
     }
 
     const month = day.getMonth() + 1, date = day.getDate();

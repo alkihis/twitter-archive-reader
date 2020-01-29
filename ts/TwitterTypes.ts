@@ -578,7 +578,10 @@ export interface PartialTweet {
 
   /** Defined if archive type is GDPR. */
   retweeted?: boolean;
-  /** Defined if archive type is GDPR. */
+  /** 
+   * Defined if archive type is GDPR. 
+   * This **NOT** accurate, Twitter set it inproperly in archives. 
+   */
   display_text_range?: [string, string];
   /** Defined if archive type is GDPR. */
   truncated?: boolean;
@@ -592,7 +595,7 @@ export interface PartialTweetMediaEntity {
   expanded_url: string;
   indices: [number, number];
   url: string;
-  /** URL TO USE TO SHOW PICTURE */
+  /** Use this URL to show pictures. */
   media_url_https: string;
   /** USE media_url_https INSTEAD */
   media_url: string;

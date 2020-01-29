@@ -108,7 +108,14 @@ export class TweetArchive {
   }
 
   /** Get tweets in a specific time interval. */
-  between(since: Date, until: Date) {
+  between(since: Date | string, until: Date | string) {
+    if (typeof since === 'string') {
+      since = new Date(since);
+    } 
+    if (typeof until === 'string') {
+      until = new Date(until);
+    }
+
     if (since.getTime() > until.getTime()) {
       throw new Error("Since can't be superior to until");
     }

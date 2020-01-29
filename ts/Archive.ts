@@ -395,9 +395,11 @@ export class TwitterArchive {
   }
 
   /** 
-   * `true` if `medias.*Image()` functions are accessible.
+   * `true` if `medias.get()` function is accessible.
    * 
-   * `false` if your archive does not supports images.
+   * `false` if your archive does not supports medias.
+   * 
+   * @deprecated use `.medias.has_medias` instead.
    */
   get is_dm_images_available() {
     if (!this._is_gdpr) {
@@ -406,7 +408,14 @@ export class TwitterArchive {
     return this._medias.has_medias;
   }
 
-  /** Archive creation date. Not accurate in GDPR archive (will be the current date). */
+  /** 
+   * Archive creation date. 
+   * 
+   * **Warning**: This is accurate only for classic archives (< 2018, tweet only). 
+   * 
+   * In GDPR archives, this will be the current date. 
+   * 
+   */
   get generation_date() {
     return parseTwitterDate(this._created_at);
   }
