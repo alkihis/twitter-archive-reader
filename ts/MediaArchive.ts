@@ -3,6 +3,7 @@ import { PartialTweet, DirectMessage, MediaGDPREntity, PartialTweetMediaEntity }
 import UserData from "./UserData";
 
 export type ArchiveDMImagesFormation = "none" | "inside" | "zipped";
+type ExisitingArchives = "dm_single" | "dm_group" | "tweet" | "moment" | "profile";
 
 export enum MediaArchiveType {
   SingleDM = "single-dm", 
@@ -47,42 +48,27 @@ export class MediaArchive {
   async get(from: MediaArchiveType, name: string, as_array_buffer?: boolean) {
     switch (from) {
       case MediaArchiveType.SingleDM: {
-        if (!this.dm_single) {
-          this.dm_single = new SingleMediaArchive(this.archive, MediaArchive.DM_SINGLE_FOLDER);
-        }
-        await this.dm_single.ready;
+        await this.initOrAwaitArchive("dm_single", MediaArchive.DM_SINGLE_FOLDER);
 
         return this.dm_single.file(name, as_array_buffer);
       }
       case MediaArchiveType.GroupDM: {
-        if (!this.dm_group) {
-          this.dm_group = new SingleMediaArchive(this.archive, MediaArchive.DM_GROUP_FOLDER);
-        }
-        await this.dm_group.ready;
+        await this.initOrAwaitArchive("dm_group", MediaArchive.DM_GROUP_FOLDER);
 
         return this.dm_group.file(name, as_array_buffer);
       }
       case MediaArchiveType.Tweet: {
-        if (!this.tweet) {
-          this.tweet = new SingleMediaArchive(this.archive, MediaArchive.TWEET_FOLDER);
-        }
-        await this.tweet.ready;
+        await this.initOrAwaitArchive("tweet", MediaArchive.TWEET_FOLDER);
 
         return this.tweet.file(name, as_array_buffer);
       }
       case MediaArchiveType.Moment: {
-        if (!this.moment) {
-          this.moment = new SingleMediaArchive(this.archive, MediaArchive.MOMENT_FOLDER);
-        }
-        await this.moment.ready;
+        await this.initOrAwaitArchive("moment", MediaArchive.MOMENT_FOLDER);
 
         return this.moment.file(name, as_array_buffer);
       }
       case MediaArchiveType.Profile: {
-        if (!this.profile) {
-          this.profile = new SingleMediaArchive(this.archive, MediaArchive.PROFILE_FOLDER);
-        }
-        await this.profile.ready;
+        await this.initOrAwaitArchive("profile", MediaArchive.PROFILE_FOLDER);
 
         return this.profile.file(name, as_array_buffer);
       }
@@ -99,42 +85,27 @@ export class MediaArchive {
   async list(of_archive: MediaArchiveType) {
     switch (of_archive) {
       case MediaArchiveType.SingleDM: {
-        if (!this.dm_single) {
-          this.dm_single = new SingleMediaArchive(this.archive, MediaArchive.DM_SINGLE_FOLDER);
-        }
-        await this.dm_single.ready;
+        await this.initOrAwaitArchive("dm_single", MediaArchive.DM_SINGLE_FOLDER);
 
         return this.dm_single.files;
       }
       case MediaArchiveType.GroupDM: {
-        if (!this.dm_group) {
-          this.dm_group = new SingleMediaArchive(this.archive, MediaArchive.DM_GROUP_FOLDER);
-        }
-        await this.dm_group.ready;
+        await this.initOrAwaitArchive("dm_group", MediaArchive.DM_GROUP_FOLDER);
 
         return this.dm_group.files;
       }
       case MediaArchiveType.Tweet: {
-        if (!this.tweet) {
-          this.tweet = new SingleMediaArchive(this.archive, MediaArchive.TWEET_FOLDER);
-        }
-        await this.tweet.ready;
+        await this.initOrAwaitArchive("tweet", MediaArchive.TWEET_FOLDER);
 
         return this.tweet.files;
       }
       case MediaArchiveType.Moment: {
-        if (!this.moment) {
-          this.moment = new SingleMediaArchive(this.archive, MediaArchive.MOMENT_FOLDER);
-        }
-        await this.moment.ready;
+        await this.initOrAwaitArchive("moment", MediaArchive.MOMENT_FOLDER);
 
         return this.moment.files;
       }
       case MediaArchiveType.Profile: {
-        if (!this.profile) {
-          this.profile = new SingleMediaArchive(this.archive, MediaArchive.PROFILE_FOLDER);
-        }
-        await this.profile.ready;
+        await this.initOrAwaitArchive("profile", MediaArchive.PROFILE_FOLDER);
 
         return this.profile.files;
       }
@@ -218,7 +189,7 @@ export class MediaArchive {
    * @throws If not valid media found, promise is rejected.
    * 
    * ```ts
-   * const tweet = archive.tweets[0];
+   * const tweet = archive.tweets.all[0];
    * 
    * if (tweet.extended_entities || tweet.entities) {
    *    // Always try to use extended entities instead of classic entities
@@ -365,6 +336,13 @@ export class MediaArchive {
     }
   }
 
+  protected initOrAwaitArchive(archive_type: ExisitingArchives, init_folder: string) {
+    if (!this[archive_type]) {
+      this[archive_type] = new SingleMediaArchive(this.archive, init_folder);
+    }
+    return this[archive_type].ready;
+  }
+
 
   /*
    * HELPERS
@@ -479,7 +457,7 @@ export class SingleMediaArchive {
   async sideload(archive: ConstructibleArchives) {
     this._archive = archive;
     this._ok = false;
-    await archive.ready();
+    await (this._ready = archive.ready());
     this._ok = true;
   }
 

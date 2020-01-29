@@ -96,7 +96,7 @@ export class TwitterArchive {
   protected _tweets = new TweetArchive;
   protected _messages: DMArchive;
   protected _favorites = new FavoriteArchive;
-  protected extended_info_container: ExtendedInfoContainer;
+  protected extended_info_container = getExtendedContainerBase();
   protected _user = new UserData;
   protected _ads = new AdArchive;
   protected _medias = new MediaArchive(undefined);
@@ -141,8 +141,6 @@ export class TwitterArchive {
       throw new TypeError("File input can't be undefined. " +
        "To initialize an archive without any data, give null to Twitter Archive constructor.");
     }
-
-    this.extended_info_container = getExtendedContainerBase();
 
     if (file === null) {
       this.state = "ready";
@@ -698,7 +696,7 @@ export class TwitterArchive {
     }
     if (parts.user) {
       this._user.loadPart({
-        summary: parts.user
+        summary: { ...this._user.summary, ...parts.user }
       });
     }
     if (parts.payload) {
@@ -726,10 +724,6 @@ export class TwitterArchive {
    * ZIP can still be loaded in `archive.medias`, you can use its own `.releaseZip()` method.
    */
   releaseZip() {
-    if (!this.is_zip_loaded) {
-      return true;
-    }
-
     this.archive = undefined;
     return true;
   }
@@ -814,25 +808,6 @@ export class TwitterArchive {
    */
   get hash() {
     return TwitterArchive.hash(this);
-  }
-
-  /*
-   * Events defined (compatibility)
-   */
-  /** 
-   * @deprecated
-   * For compatibility only. Use `.events.on()` instead. 
-   */
-  addEventListener(event: string, listener: (...args: any[]) => void) {
-    this.events.on(event, listener);
-  }
-
-  /** 
-   * @deprecated
-   * For compatibility only. Use `.events.off()` instead. 
-   */
-  removeEventListener(event: string, listener: (...args: any[]) => void) {
-    this.events.off(event, listener);
   }
 }
 

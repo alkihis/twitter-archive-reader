@@ -228,3 +228,5 @@ If other folders are present in the archive, they aren't accessible.
 ## Classic archives
 
 TODO
+
+Also todo: helpers documentation, refresh wiki on github, list changes and migration guide => todo check which things changed
