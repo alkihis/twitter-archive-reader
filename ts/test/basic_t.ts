@@ -205,15 +205,27 @@ const test_5 = async () => {
 };
 
 const test_6 = async () => {
+  const timer = new Timer;
+  Timer.default_format = "s";
   const archive = new TwitterArchive(commander.file);
   await archive.ready();
 
-  const conv = archive.messages.get('994634813503168512');
-  const msg = conv.single('994634813503168516');
+  // const files_profile = await archive.medias.list(MediaArchiveType.Profile);
+  // console.log("files:", files_profile);
 
-  if (msg) {
-    console.log(msg.events, msg.createdAtDate);
-  }
+  const profile_name = archive.user.profile_img_url.split('/').pop();
+  const header_name = archive.user.profile_banner_url.split('/').pop();
+  console.log("files:", profile_name, header_name);
+
+  const profile = await archive.medias.fromProfileDirectory(profile_name) as ArrayBuffer;
+  const header = await archive.medias.fromProfileDirectory(header_name) as ArrayBuffer;
+
+  writeFileSync('test_dir/profile_picture.jpg', Buffer.from(profile));
+  writeFileSync('test_dir/header.jpg', Buffer.from(header));
+
+  console.log("Total time elapsed to extract profile and header files:", timer.elapsed);
+
+  // TODO tweet data
 };
 
 if (commander.testOne) {

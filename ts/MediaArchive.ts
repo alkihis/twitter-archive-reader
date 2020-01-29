@@ -4,7 +4,11 @@ import { PartialTweet, DirectMessage, MediaGDPREntity } from "./TwitterTypes";
 export type ArchiveDMImagesFormation = "none" | "inside" | "zipped";
 
 export enum MediaArchiveType {
-  SingleDM, GroupDM, Moment, Tweet, Profile,
+  SingleDM = "single-dm", 
+  GroupDM = "group-dm", 
+  Moment = "moment", 
+  Tweet = "tweet", 
+  Profile = "profile",
 }
 
 export class MediaArchive {
@@ -80,6 +84,58 @@ export class MediaArchive {
         await this.profile.ready;
 
         return this.profile.file(name, as_array_buffer);
+      }
+    }
+
+    throw new Error("Unsupported media type.");
+  }
+
+  /**
+  * List files available on a specific media archive.
+  * 
+  * @param of_archive Media archive
+  */
+  async list(of_archive: MediaArchiveType) {
+    switch (of_archive) {
+      case MediaArchiveType.SingleDM: {
+        if (!this.dm_single) {
+          this.dm_single = new SingleMediaArchive(this.archive, MediaArchive.DM_SINGLE_FOLDER);
+        }
+        await this.dm_single.ready;
+
+        return this.dm_single.files;
+      }
+      case MediaArchiveType.GroupDM: {
+        if (!this.dm_group) {
+          this.dm_group = new SingleMediaArchive(this.archive, MediaArchive.DM_GROUP_FOLDER);
+        }
+        await this.dm_group.ready;
+
+        return this.dm_group.files;
+      }
+      case MediaArchiveType.Tweet: {
+        if (!this.tweet) {
+          this.tweet = new SingleMediaArchive(this.archive, MediaArchive.TWEET_FOLDER);
+        }
+        await this.tweet.ready;
+
+        return this.tweet.files;
+      }
+      case MediaArchiveType.Moment: {
+        if (!this.moment) {
+          this.moment = new SingleMediaArchive(this.archive, MediaArchive.MOMENT_FOLDER);
+        }
+        await this.moment.ready;
+
+        return this.moment.files;
+      }
+      case MediaArchiveType.Profile: {
+        if (!this.profile) {
+          this.profile = new SingleMediaArchive(this.archive, MediaArchive.PROFILE_FOLDER);
+        }
+        await this.profile.ready;
+
+        return this.profile.files;
       }
     }
 
@@ -383,6 +439,10 @@ export class SingleMediaArchive {
 
   get ready() {
     return this._ready;
+  }
+
+  get files() {
+    return Object.keys(this._archive.ls(true)).filter(e => e);
   }
 
   async file<T = true>(name: string, as_array_buffer: T): Promise<ArrayBuffer>;

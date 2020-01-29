@@ -122,18 +122,6 @@ export class TwitterArchive {
    * If you want to build an archive instance **without** a file, you can pass `null` here.
    * You must then load parts of the archive with `.loadArchivePart()` or `.loadClassicArchivePart()` !
    *
-   * @param options.load_images_in_zip 
-   * In Twitter GDPR archives v2, tweet and dm images are in ZIP archives inside the ZIP.
-   * If `true`, TwitterArchive will extract its content in RAM to allow the usage of images.
-   * If `false`, DMs images will be unavailable.
-   * If `undefined`, Twitter will extract in RAM in browser mode, and leave the ZIP untouched in Node.js.
-   * 
-   * If you want to save memory, set this parameter to `false`, 
-   * and before using `.dmImage()` methods, check if you need to load DM images ZIP 
-   * with `.requires_dm_image_load`.
-   * 
-   * Then, if you need to, load the DM image ZIP present in the archive using `.loadArchivePart({ current_dm_images: true })`. 
-   * 
    * @param options.build_ad_archive
    * `true` if ad data should be parsed and loaded.
    * 
@@ -171,13 +159,13 @@ export class TwitterArchive {
           // Detect archive type
           this._is_gdpr = this.archive.search(/^tweets\.csv$/).length === 0;
 
-          // Init mediaarchive
+          // Init media archive
           this._medias = new MediaArchive(this.archive);
 
           this.events.emit('zipready');
           this.events.emit('read', { step: 'zipready' });
   
-          // Initialisation de l'archive Twitter
+          // Init the archive data (read tweets and DMs)
           if (this.is_gdpr) {
             return this.initGDPR(options.build_ad_archive === true);
           }
@@ -564,7 +552,7 @@ export class TwitterArchive {
   } 
 
   /**
-   * Access to medias stored in this archive, like
+   * Access to medias stored in this archive, like dm images, tweet medias and profile pictures.
    */
   get medias() {
     return this._medias;
