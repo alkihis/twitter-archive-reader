@@ -543,24 +543,6 @@ export class UserData {
     }
     return 20;
   }
-
-  /**
-   * Parse a date inside a `PushDevice` or a `MessagingDevice` object.
-   * 
-   * Should not be used for any other type of object !
-   */
-  static parseDeviceDate(date: string) {
-    try {
-      const d = new Date(date);
-
-      // Chrome can parse YYYY.MM.DD correctly...
-      if (!isNaN(d.getTime())) {
-        return d;
-      }
-    } catch (e) { }
-
-    return new Date(date.replace(/\./g, '-'));
-  }
 }
 
 export default UserData;

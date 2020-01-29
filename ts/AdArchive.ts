@@ -122,16 +122,6 @@ export class AdArchive {
 
     return impressions;
   }
-
-
-  // Helpers
-  static parseAdDate(date: string) : Date {
-    return new Date(date.split(" ", 2).join("T") + ".000Z");
-  }
 }
 
-/**
- * Parse a date located inside a time property of ad engagement / impression.
- */
-export const parseAdDate = AdArchive.parseAdDate;
 export default AdArchive;

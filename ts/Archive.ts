@@ -1,4 +1,4 @@
-import { AcceptedZipSources, Archive, BaseArchive, constructArchive } from './StreamArchive';
+import { AcceptedZipSources, BaseArchive, constructArchive } from './StreamArchive';
 import { BasicArchiveInfo, PartialTweetGDPR, PartialTweet, AccountGDPR, ProfileGDPR, ClassicTweetIndex, ClassicPayloadDetails, TwitterUserDetails, DMFile, GDPRFollowings, GDPRFollowers, GDPRFavorites, GDPRMutes, GDPRBlocks, GDPRMoment, GDPRMomentFile, DirectMessage, ArchiveSyntheticInfo, PartialFavorite, ExtendedInfoContainer, TwitterArchiveLoadOptions } from './TwitterTypes';
 import DMArchive from './DMArchive';
 import { EventEmitter } from 'events';
@@ -8,6 +8,7 @@ import { FavoriteArchive } from './FavoriteArchive';
 import UserData from './UserData';
 import AdArchive from './AdArchive';
 import MediaArchive from './MediaArchive';
+import { parseTwitterDate, dateFromTweet, sortTweets } from './exported_helpers';
 
 
 // Base variables, unexported
@@ -364,7 +365,7 @@ export class TwitterArchive {
     let tweets: PartialTweet[] = [].concat(...await Promise.all(tweet_file_promises));
 
     // Tri les tweets par ID (le plus récent, plus grand en premier)
-    tweets = TweetArchive.sortTweets(tweets);
+    tweets = sortTweets(tweets);
 
     this.events.emit('tweetsread');
     this.events.emit('read', { step: 'tweetsread' });
@@ -407,7 +408,7 @@ export class TwitterArchive {
 
   /** Archive creation date. Not accurate in GDPR archive (will be the current date). */
   get generation_date() {
-    return TweetArchive.parseTwitterDate(this._created_at);
+    return parseTwitterDate(this._created_at);
   }
 
   /** 
@@ -684,7 +685,7 @@ export class TwitterArchive {
     this._is_gdpr = false;
 
     if (parts.tweets) {
-      this._tweets.add(TweetArchive.sortTweets(parts.tweets));
+      this._tweets.add(sortTweets(parts.tweets));
     }
     if (parts.user) {
       this._user.loadPart({
@@ -763,7 +764,7 @@ export class TwitterArchive {
   
       let last_date = 0;
       for (const tweet of Object.values(tweets)) {
-        const cur_date = TweetArchive.dateFromTweet(tweet).getTime();
+        const cur_date = dateFromTweet(tweet).getTime();
         if (cur_date > last_date) {
           last_date = cur_date;
         }

@@ -1,8 +1,13 @@
 import { PartialTweet, TweetIndex, PartialTweetGDPR, PartialTweetUser } from "./TwitterTypes";
-import bigInt from 'big-integer';
-import { supportsBigInt } from './helpers';
+import { dateFromTweet, sortTweets, isWithMedia, isWithVideo } from "./exported_helpers";
 
-//// TWEETARCHIVE
+/**
+ * Contains every tweet related to an archive.
+ * 
+ * This object is automatically built when you load an archive inside `TwitterArchive` constructor,
+ * or when tweets are loaded through `TwitterArchive.loadArchivePart()` / 
+ * `TwitterArchive.loadClassicArchivePart()` methods.
+ */
 export class TweetArchive {
   protected by_id: TweetIndex = {};
   protected years: { [year: string]: { [month: string]: TweetIndex } } = {};
@@ -18,10 +23,13 @@ export class TweetArchive {
 
   /**
    * Add tweets to this archive.
+   * This method should not be called by end-programmer.
+   * 
+   * Prefer usage of `TwitterArchive.loadClassicArchivePart()` method.
    */
   add(tweets: PartialTweet[]) {
     for (const tweet of tweets) {
-      const date = TweetArchive.dateFromTweet(tweet);
+      const date = dateFromTweet(tweet);
   
       const month = String(date.getMonth() + 1);
       const year = String(date.getFullYear());
@@ -43,11 +51,14 @@ export class TweetArchive {
 
   /**
    * Add unconverted GDPR tweets to this archive.
+   * This method should not be called by end-programmer.
+   * 
+   * Prefer usage of `TwitterArchive.loadArchivePart()` method.
    */
   addGDPR(tweets: PartialTweetGDPR[]) {
     for (const original of tweets) {
       const tweet = this.convertToPartial(original);
-      const date = TweetArchive.dateFromTweet(tweet);
+      const date = dateFromTweet(tweet);
   
       const month = String(date.getMonth() + 1);
       const year = String(date.getFullYear());
@@ -91,7 +102,7 @@ export class TweetArchive {
 
     // TODO optimize
     return this.all.filter(t => {
-      const d = TweetArchive.dateFromTweet(t);
+      const d = dateFromTweet(t);
       return d.getMonth() === now_m && d.getDate() === now_d;
     });
   }
@@ -139,7 +150,7 @@ export class TweetArchive {
       const m = this.month(month, year);
 
       for (const t of m) {
-        const d = TweetArchive.dateFromTweet(t);
+        const d = dateFromTweet(t);
 
         if (d.getTime() >= since.getTime()) {
           if (d.getFullYear() < end_year || d.getMonth() < end_month || d.getDate() <= end_day) {
@@ -308,7 +319,7 @@ export class TweetArchive {
    */
   *sortedIterator(order: "asc" | "desc" = "desc") : Generator<PartialTweet, void, undefined> {
     for (const [, , tweets] of this.arrayMonthIterator(order)) {
-      yield* TweetArchive.sortTweets(tweets, order);
+      yield* sortTweets(tweets, order);
     }
   }
 
@@ -407,91 +418,6 @@ export class TweetArchive {
 
     return tweet as unknown as PartialTweet;
   }
-
-  /**
-   * True if given tweet is coming from a GDPR archive.
-   * 
-   * Tweets getted by available getters are NOT GDPR tweets, they've been converted !
-   */
-  static isGDPRTweet(tweet: PartialTweetGDPR | PartialTweet) : tweet is PartialTweetGDPR {
-    return 'retweet_count' in tweet;
-  }
-
-  /** Return the `Date` object affiliated to **tweet**. */
-  static dateFromTweet(tweet: PartialTweet) : Date {
-    if (tweet.created_at_d && tweet.created_at_d instanceof Date) {
-      return tweet.created_at_d;
-    }
-    return tweet.created_at_d = TweetArchive.parseTwitterDate(tweet.created_at);
-  }
-
-  /**
-   * Parse a raw Twitter date, from a `dm.createdAt` or `tweet.created_at`.
-   * 
-   * For a tweet, please use `dateFromTweet(tweet)` instead, it's optimized !
-   * 
-   * For dates in ad data (everthing that comes from `AdArchive`), use instead `AdArchive.parseAdDate()` !
-   */
-  static parseTwitterDate(date: string) : Date {
-    try {
-      const d = new Date(date);
-
-      if (isNaN(d.getTime())) {
-        throw "";
-      }
-      else {
-        return d;
-      }
-    } catch (e) {
-      return new Date(date.replace(/\s(.+)\s.+/, 'T$1.000Z'));
-    }
-  }
-
-  /** 
-   * Return true if **tweet** contains media(s).
-   * 
-   * This includes photos, videos or animated GIF.
-   */
-  static isWithMedia(tweet: PartialTweet) {
-    return tweet.entities.media.length > 0;
-  }
-
-  /**
-   * Return true if **tweet** contains a video or one animated GIF.
-   * 
-   * Twitter's GIF are mp4 encoded.
-   */
-  static isWithVideo(tweet: PartialTweet) {
-    if (tweet.extended_entities) {
-      if (tweet.extended_entities.media) {
-        return tweet.extended_entities.media.some(m => m.type !== "photo");
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * Sort tweets by ID (descending order by default).
-   */
-  static sortTweets(tweets: PartialTweet[], order: "asc" | "desc" = "desc") {
-    let sort_fn: (a: PartialTweet, b: PartialTweet) => number;
-
-    if (supportsBigInt()) {
-      if (order === "asc")
-        sort_fn = (a, b) => Number(BigInt(a.id_str) - BigInt(b.id_str));
-      else
-        sort_fn = (a, b) => Number(BigInt(b.id_str) - BigInt(a.id_str));
-    }
-    else {
-      if (order === "asc")
-        sort_fn = (a, b) => (bigInt(a.id_str).minus(bigInt(b.id_str))).toJSNumber();
-      else
-        sort_fn = (a, b) => (bigInt(b.id_str).minus(bigInt(a.id_str))).toJSNumber();
-    }
-
-    return tweets.sort(sort_fn);
-  }
 }
 
 export default TweetArchive;
@@ -536,7 +462,7 @@ const INITIAL_VALIDATORS: TweetSearchValidator[] = [
       
       // Check if query is ok
       if (date) {
-        return tweet => TweetArchive.dateFromTweet(tweet).getTime() >= date.getTime();
+        return tweet => dateFromTweet(tweet).getTime() >= date.getTime();
       }
     }
   },
@@ -549,7 +475,7 @@ const INITIAL_VALIDATORS: TweetSearchValidator[] = [
       // Check if query is ok
       if (date) {
         date.setDate(date.getDate() + 1);
-        return tweet => TweetArchive.dateFromTweet(tweet).getTime() < date.getTime();
+        return tweet => dateFromTweet(tweet).getTime() < date.getTime();
       }
     }
   },
@@ -606,8 +532,8 @@ const INITIAL_VALIDATORS: TweetSearchValidator[] = [
 const INITIAL_STATIC: { [staticName: string]: TweetSearchStaticValidator } = {
   retweets_only: tweet => !!tweet.retweeted_status,
   no_retweets: tweet => !tweet.retweeted_status,
-  medias_only: TweetArchive.isWithMedia,
-  videos_only: TweetArchive.isWithVideo,
+  medias_only: isWithMedia,
+  videos_only: isWithVideo,
 };
 
 export class TweetFinder {
