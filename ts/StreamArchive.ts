@@ -11,6 +11,7 @@ import StreamZip, { ZipEntry } from './StreamZip';
  * JSZip | Archive: Existing archives
  */
 export type AcceptedZipSources = string | number[] | Uint8Array | ArrayBuffer | Blob | JSZip | Archive;
+export type ConstructibleArchives = BaseArchive<ZipEntry> | BaseArchive<JSZip.JSZipObject>;
 
 export interface BaseArchive<T> {
   ready: () => Promise<void>;
@@ -36,7 +37,7 @@ export interface BaseArchive<T> {
   fromFile: (name: string | T) => Promise<Archive>;
 }
 
-export function constructArchive(archive: AcceptedZipSources) : BaseArchive<any> {
+export function constructArchive(archive: AcceptedZipSources) : ConstructibleArchives {
   if (
     typeof archive === 'string' ||
     (typeof Blob !== 'undefined' && archive instanceof Blob)

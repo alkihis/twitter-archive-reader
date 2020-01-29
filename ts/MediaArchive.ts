@@ -1,5 +1,6 @@
-import { BaseArchive, AcceptedZipSources, constructArchive } from "./StreamArchive";
-import { PartialTweet, DirectMessage, MediaGDPREntity } from "./TwitterTypes";
+import { AcceptedZipSources, constructArchive, ConstructibleArchives } from "./StreamArchive";
+import { PartialTweet, DirectMessage, MediaGDPREntity, PartialTweetMediaEntity } from "./TwitterTypes";
+import UserData from "./UserData";
 
 export type ArchiveDMImagesFormation = "none" | "inside" | "zipped";
 
@@ -26,7 +27,7 @@ export class MediaArchive {
 
   protected _store_type: ArchiveDMImagesFormation = "none";
 
-  constructor(protected archive: BaseArchive<any>) { 
+  constructor(protected archive: ConstructibleArchives) { 
     if (this.archive)
       this._store_type = MediaArchive.autoDetectStoreType(this.archive);
   }
@@ -180,23 +181,12 @@ export class MediaArchive {
     const [, , , , id, , image] = url.split('/');
 
     if (id && image) {
-      return this.fromDmDirectory(id + "-" + image, is_group, as_array_buffer)
+      if (is_group)
+        return this.get(MediaArchiveType.GroupDM, id + "-" + image, as_array_buffer);
+      else
+        return this.get(MediaArchiveType.SingleDM, id + "-" + image, as_array_buffer);
     }
     return Promise.reject("URL is invalid");
-  }
-
-  /** 
-   * Extract a direct message image from GDPR archive (exact filename required). 
-   * 
-   * @param name Media filename 
-   */
-  async fromDmDirectory(name: string, is_group: boolean = false, as_array_buffer?: boolean) : Promise<Blob | ArrayBuffer> {
-    if (is_group) {
-      return this.get(MediaArchiveType.GroupDM, name, as_array_buffer);
-    }
-    else {
-      return this.get(MediaArchiveType.SingleDM, name, as_array_buffer);
-    }
   }
 
 
@@ -224,9 +214,24 @@ export class MediaArchive {
 
   /**
    * Extract related tweet video or picture from a media entity.
+   * 
+   * @throws If not valid media found, promise is rejected.
+   * 
+   * ```ts
+   * const tweet = archive.tweets[0];
+   * 
+   * if (tweet.extended_entities || tweet.entities) {
+   *    // Always try to use extended entities instead of classic entities
+   *    const m_entities = (tweet.extended_entities || tweet.entities).media;
+   * 
+   *    if (m_entities && m_entities.length) {
+   *      const media_file = archive.medias.fromTweetMediaEntity(m_entities[0]);
+   *    }
+   * }
+   * ```
    */
-  async fromTweetMediaEntity(media_entity: MediaGDPREntity, as_array_buffer?: boolean) {
-    if (media_entity.video_info) {
+  async fromTweetMediaEntity(media_entity: MediaGDPREntity | PartialTweetMediaEntity, as_array_buffer?: boolean) {
+    if ('video_info' in media_entity) {
       // This is a gif or a video
       // Find the best variant
       const mp4s = media_entity.video_info.variants.filter(v => v.content_type === "video/mp4").filter(v => v.bitrate);
@@ -237,7 +242,7 @@ export class MediaArchive {
         const url = better.url.split('/').pop();
         const url_without_qs = url.split('?')[0];
         if (url_without_qs) {
-          return this.fromTweetDirectory(url_without_qs, as_array_buffer);
+          return this.get(MediaArchiveType.Tweet, url_without_qs, as_array_buffer);
         }
       }
     }
@@ -245,18 +250,9 @@ export class MediaArchive {
     const url = media_entity.media_url_https.split('/').pop();
     const url_without_qs = url.split('?')[0];
     if (url_without_qs) {
-      return this.fromTweetDirectory(url_without_qs, as_array_buffer);
+      return this.get(MediaArchiveType.Tweet, url_without_qs, as_array_buffer);
     }
     throw new Error("No valid file in this media entity.");
-  }
-
-  /** 
-   * Extract a tweet image from GDPR archive (exact filename required).
-   * 
-   * @param name Media filename 
-   */
-  async fromTweetDirectory(name: string, as_array_buffer?: boolean) : Promise<Blob | ArrayBuffer> {
-    return this.get(MediaArchiveType.Tweet, name, as_array_buffer);
   }
 
 
@@ -264,23 +260,36 @@ export class MediaArchive {
   // - Profile -
   // -----------
 
-  /** 
-   * Extract a profile image from GDPR archive (exact filename required). 
+  /**
+   * Get the profile banner of given user.
    * 
-   * To get the exact name of the file, take the `profile_img_url` or `profile_banner_url`, and split by `/`. Take the last part.
+   * The first parameter should generally be `archive.user`.
    * 
-   * ```ts
-   * const img_name = archive.user.profile_img_url.split('/').pop();
-   * 
-   * if (img_name) {
-   *  const img = await archive.medias.fromProfileDirectory(img_name);
-   * }
-   * ```
-   * 
-   * @param name Media filename 
+   * If user has no banner, this method returns `Promise<void>`.
    */
-  async fromProfileDirectory(name: string, as_array_buffer?: boolean) : Promise<Blob | ArrayBuffer> {
-    return this.get(MediaArchiveType.Profile, name, as_array_buffer);
+  async getProfileBannerOf(user: UserData, as_array_buffer?: boolean) : Promise<Blob | ArrayBuffer> {
+    if (user.profile_banner_url) {
+      const img_name = user.profile_banner_url.split('/').pop();
+      if (img_name) {
+        return this.get(MediaArchiveType.Profile, img_name, as_array_buffer);
+      }
+    }
+  }
+
+  /**
+   * Get the profile picture of given user.
+   * 
+   * The first parameter should generally be `archive.user`.
+   * 
+   * If user has no profile picture, this method returns `Promise<void>`.
+   */
+  async getProfilePictureOf(user: UserData, as_array_buffer?: boolean) : Promise<Blob | ArrayBuffer> {
+    if (user.profile_img_url) {
+      const img_name = user.profile_img_url.split('/').pop();
+      if (img_name) {
+        return this.get(MediaArchiveType.Profile, img_name, as_array_buffer);
+      }
+    }
   }
 
 
@@ -292,6 +301,8 @@ export class MediaArchive {
    * Extract a moment header image from GDPR archive (exact filename required). 
    * 
    * In order to have tweets medias inside the moments (duplicated by Twitter in the archive, use `.ofTweet(tweet)`).
+   * 
+   * Shortcut of `.get(MediaArchiveType.Moment, name, as_array_buffer)`, prefer using this instead.
    * 
    * @param name Media filename 
    */
@@ -359,7 +370,7 @@ export class MediaArchive {
    * HELPERS
    */
 
-  protected static autoDetectStoreType(archive: BaseArchive<any>) : ArchiveDMImagesFormation {
+  protected static autoDetectStoreType(archive: ConstructibleArchives) : ArchiveDMImagesFormation {
     if (archive.searchDir(/direct_message_media/).length) {
       const folder = archive.dir('direct_message_media');
       const query = folder.search(/\.zip$/);
@@ -400,11 +411,11 @@ export class MediaArchive {
 export default MediaArchive;
 
 export class SingleMediaArchive {
-  protected _archive: BaseArchive<any> | undefined;
+  protected _archive: ConstructibleArchives | undefined;
   protected _ready: Promise<void>;
   protected _ok = false;
 
-  constructor(full_archive: BaseArchive<any> | null, dir_name: string) {
+  constructor(full_archive: ConstructibleArchives | null, dir_name: string) {
     if (full_archive === null) {
       this._ready = Promise.resolve();
       this._ok = true;
@@ -414,18 +425,18 @@ export class SingleMediaArchive {
         throw new Error("Archive is not loaded. This is required to load new medias.");
       }
 
-      this._ready = Promise.resolve().then(async () => {
+      this._ready = (async () => {
         const folder = full_archive.dir(dir_name);
         const query = folder.search(/\.zip$/);
         if (query.length) {
-          this._archive = await folder.fromFile(query[0]);
+          this._archive = await folder.fromFile(query[0] as any);
           await this._archive.ready();
         }
         else {
           this._archive = full_archive.dir(dir_name);
         }
         this._ok = true;
-      });
+      })();
     }
   }
 
@@ -459,15 +470,17 @@ export class SingleMediaArchive {
         as_array_buffer = SingleMediaArchive.autoDetectIfArrayBuffer();
       }
 
-      return this._archive.read(results[0], as_array_buffer ? "arraybuffer" : "blob");
+      return this._archive.read(results[0] as any, as_array_buffer ? "arraybuffer" : "blob");
     }
 
     throw new Error("File not found");
   }
   
-  async sideload(archive: BaseArchive<any>) {
+  async sideload(archive: ConstructibleArchives) {
     this._archive = archive;
+    this._ok = false;
     await archive.ready();
+    this._ok = true;
   }
 
   protected static autoDetectIfArrayBuffer() {

@@ -1,6 +1,7 @@
 import path from 'path';
 import TwitterArchive from '..';
 import ArchiveSaver from '../ArchiveSaver';
+import { MediaArchiveType } from '../MediaArchive';
 
 // Archive load / save could take a long time
 jest.setTimeout(9999999);
@@ -94,5 +95,5 @@ test('direct messages', async () => {
 test('image dm', async () => {
   await archive.ready();
 
-  expect(archive.medias.fromDmDirectory("818102592802848773-BrcGVlp3.jpg")).rejects.toThrow();
+  expect(archive.medias.get(MediaArchiveType.SingleDM, "818102592802848773-BrcGVlp3.jpg")).rejects.toThrow();
 });

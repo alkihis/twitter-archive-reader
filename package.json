@@ -15,7 +15,8 @@
     "events": "^3.1.0",
     "js-md5": "^0.7.3",
     "jszip": "^3.2.2",
-    "twitter-d": "^0.4.0"
+    "twitter-d": "^0.4.0",
+    "@types/jszip": "^3.1.7"
   },
   "files": [
     "js/*"
@@ -23,7 +24,6 @@
   "devDependencies": {
     "@types/jest": "^24.9.0",
     "@types/js-md5": "^0.4.2",
-    "@types/jszip": "^3.1.7",
     "commander": "^4.1.0",
     "jest": "^24.9.0",
     "timerize": "^1.0.3"

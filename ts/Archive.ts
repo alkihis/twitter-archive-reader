@@ -1,4 +1,4 @@
-import { AcceptedZipSources, BaseArchive, constructArchive } from './StreamArchive';
+import { AcceptedZipSources, BaseArchive, constructArchive, ConstructibleArchives } from './StreamArchive';
 import { BasicArchiveInfo, PartialTweetGDPR, PartialTweet, AccountGDPR, ProfileGDPR, ClassicTweetIndex, ClassicPayloadDetails, TwitterUserDetails, DMFile, GDPRFollowings, GDPRFollowers, GDPRFavorites, GDPRMutes, GDPRBlocks, GDPRMoment, GDPRMomentFile, DirectMessage, ArchiveSyntheticInfo, PartialFavorite, ExtendedInfoContainer, TwitterArchiveLoadOptions } from './TwitterTypes';
 import DMArchive from './DMArchive';
 import { EventEmitter } from 'events';
@@ -86,7 +86,7 @@ export type ArchiveReadStep = "zipready" | "userinfosready" | "tweetsread" | "in
  */
 export class TwitterArchive {
   protected _ready: Promise<void> = Promise.resolve();
-  protected archive: BaseArchive<any>;
+  protected archive: ConstructibleArchives;
 
   /** Current archive load state. */
   public state: ArchiveReadState = "idle";
@@ -437,7 +437,7 @@ export class TwitterArchive {
    * 
    * Returns twitter_archive.
    */
-  get raw() : BaseArchive<any> {
+  get raw() : ConstructibleArchives {
     return this.archive;
   }
 

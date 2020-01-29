@@ -184,7 +184,47 @@ This part will link GDPR archive directories data to `twitter-archive-reader`.
 
 Folders in GDPR archives store **media data**, like tweet images, videos, direct messages and profile medias.
 
-Only `direct_message_group_media` and `direct_message_media` are available in this package.
+You can access medias with the `MediaArchive` instance, located on the `.medias` property of Twitter Archive Reader.
+Some methods available on this object are made to facilitate access to tweet and DM medias. Those methods are
+described in the **Dealing with medias** part of the wiki, please refer to it in order to learn more about them.
+
+### Warning 
+In archives made between **June 2019** and **December 2019**, media files were zipped inside the archive.
+In this case, `twitter-archive-reader` must extract the ZIP from the original archive to read its content.
+
+This cause a huge overhead when first accessing selected media archive, and may be fatal for RAM-limited systems with very big archives.
+
+### Mapping between folders and `MediaArchiveType` enumeration
+
+An enumeration (`MediaArchiveType`) is available to reference each supported folder by `MediaArchive`.
+Enumeration items are used with `.get()` and `.list()` methods.
+
+```ts
+enum MediaArchiveType {
+  SingleDM, GroupDM, Moment, Tweet, Profile
+}
+```
+
+You can import it as a component `twitter-archive-reader` package.
+```ts
+import { MediaArchiveType } from 'twitter-archive-reader';
+```
+
+Here's the folder list to enum reference.
+
+- `direct_message_media`: **MediaArchiveType.SingleDM**
+
+- `direct_message_group_media`: **MediaArchiveType.GroupDM**
+
+- `tweet_media`: **MediaArchiveType.Tweet**
+
+- `profile_media`: **MediaArchiveType.Profile**
+  
+- `moments_media`: **MediaArchiveType.Moment**
+
+If other folders are present in the archive, they aren't accessible.
 
 
 ## Classic archives
+
+

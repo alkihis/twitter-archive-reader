@@ -5,6 +5,7 @@ import { inspect } from 'util';
 import Timer from 'timerize';
 import ArchiveSaver from '../ArchiveSaver';
 import { TweetSearcher } from '../TweetArchive';
+import { MediaArchiveType } from '../MediaArchive';
 
 commander
   .option('-f, --file <zipFile>', "Archive ZIP to load")
@@ -33,7 +34,7 @@ const test_1 = async () => {
     // @ts-ignore
     // console.log(archive.dm_img_archive);
     try {
-      const blob = await archive.medias.fromDmDirectory("818102592802848773-BrcGVlp3.jpg", false, true) as ArrayBuffer;
+      const blob = await archive.medias.get(MediaArchiveType.SingleDM, "818102592802848773-BrcGVlp3.jpg", true) as ArrayBuffer;
       writeFileSync('test_dir/mon_img.jpg', Buffer.from(blob));
     } catch {}
   }
@@ -210,15 +211,20 @@ const test_6 = async () => {
   const archive = new TwitterArchive(commander.file);
   await archive.ready();
 
-  // const files_profile = await archive.medias.list(MediaArchiveType.Profile);
-  // console.log("files:", files_profile);
+  const profile = await archive.medias.getProfilePictureOf(archive.user) as ArrayBuffer;
+  const header = await archive.medias.getProfileBannerOf(archive.user) as ArrayBuffer;
 
-  const profile_name = archive.user.profile_img_url.split('/').pop();
-  const header_name = archive.user.profile_banner_url.split('/').pop();
-  console.log("files:", profile_name, header_name);
+  // Find a tweet with a media defined
+  const tweet = archive.tweets.all.find(t => t.extended_entities && t.extended_entities.media);
 
-  const profile = await archive.medias.fromProfileDirectory(profile_name) as ArrayBuffer;
-  const header = await archive.medias.fromProfileDirectory(header_name) as ArrayBuffer;
+  if (tweet) {
+    const medias = await archive.medias.ofTweet(tweet);
+
+    // From a specific media
+    const media_1 = tweet.extended_entities.media[0];
+    const media_1_bin = await archive.medias.fromTweetMediaEntity(media_1);
+  }
+
 
   writeFileSync('test_dir/profile_picture.jpg', Buffer.from(profile));
   writeFileSync('test_dir/header.jpg', Buffer.from(header));

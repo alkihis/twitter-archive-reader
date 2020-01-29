@@ -90,6 +90,7 @@ export interface MediaGDPREntity {
 
 /** A single tweet in a GPDR archive. */
 export interface PartialTweetGDPR {
+  /** Occurs during parsing time. */
   tweet?: PartialTweetGDPR;
   source: string;
   retweeted: boolean;
@@ -574,6 +575,35 @@ export interface PartialTweet {
   extended_entities?: {
     media?: MediaGDPREntity[];
   }
+
+  /** Defined if archive type is GDPR. */
+  retweeted?: boolean;
+  /** Defined if archive type is GDPR. */
+  display_text_range?: [string, string];
+  /** Defined if archive type is GDPR. */
+  truncated?: boolean;
+  /** Defined if archive type is GDPR. */
+  favorited?: boolean;
+  /** Defined if archive type is GDPR. */
+  full_text?: string;
+}
+
+export interface PartialTweetMediaEntity {
+  expanded_url: string;
+  indices: [number, number];
+  url: string;
+  /** URL TO USE TO SHOW PICTURE */
+  media_url_https: string;
+  /** USE media_url_https INSTEAD */
+  media_url: string;
+  id_str: string;
+  sizes: {
+    h: number;
+    w: number;
+    resize: "fit" | "crop";
+  }[];
+  media_alt: string;
+  display_url: string;
 }
 
 export interface PartialTweetEntity {
@@ -583,23 +613,7 @@ export interface PartialTweetEntity {
     indices: [number, number];
     id_str: string;
   }[],
-  media: {
-    expanded_url: string;
-    indices: [number, number];
-    url: string;
-    /** URL TO USE TO SHOW PICTURE */
-    media_url_https: string;
-    /** USE media_url_https INSTEAD */
-    media_url: string;
-    id_str: string;
-    sizes: {
-      h: number;
-      w: number;
-      resize: "fit" | "crop";
-    }[];
-    media_alt: string;
-    display_url: string;
-  }[];
+  media: PartialTweetMediaEntity[];
   hashtags: {
     text: string;
     indices: [number, number];
@@ -708,6 +722,8 @@ export interface AdImpression {
    * 
    * V8 (Chrome/Node) might parse it correctly with `Date()`, 
    * but Firefox or Safari will fail (you need to convert it to a ISO date by adding timezone).
+   * 
+   * Parse it with `TwitterHelpers.parseAdDate()`.
    */
   impressionTime: string;
 }
@@ -780,6 +796,8 @@ export interface AdEngagementAttribute {
    * 
    * V8 (Chrome/Node) might parse it correctly with `Date()`, 
    * but Firefox or Safari will fail (you need to convert it to a ISO date by adding timezone).
+   * 
+   * Parse it with `TwitterHelpers.parseAdDate()`.
    */
   engagementTime: string;
   engagementType: "VideoSession" | "VideoContentPlaybackStart" | "VideoContentMrcView" | 

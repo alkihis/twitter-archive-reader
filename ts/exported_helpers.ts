@@ -45,11 +45,9 @@ export function* getEventsFromMessages(msgs: LinkedDirectMessage[], include_mess
 // ---------------
 
 /**
- * Parse a raw Twitter date, like from a `dm.createdAt`.
+ * Parse a raw date found in `AdImpression.impressionTime` or `AdEngagementAttribute.engagementTime`.
  * 
- * For a tweet, please use `TwitterHelpers.dateFromTweet(tweet)` instead, it's optimized !
- * 
- * For a `LinkedDirectMessage`, use property `.createdAtDate` !
+ * Should not be used to parse another Twitter Archive date.
  */
 export function parseAdDate(date: string) : Date {
   return new Date(date.split(" ", 2).join("T") + ".000Z");

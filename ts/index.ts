@@ -10,6 +10,7 @@ export * from './ArchiveSaver';
 export * from './FavoriteArchive';
 export * from './UserData';
 export * from './AdArchive';
+export * from './MediaArchive';
 
 import * as TwitterHelpers from './exported_helpers';
 export { TwitterHelpers };

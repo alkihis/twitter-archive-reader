@@ -2,8 +2,6 @@
 
 Here's a list of examples of basic operations to do with `twitter-archive-reader` package.
 
-The following examples presume Node.js is used, but are also applicable to browser-like environnements.
-
 This **complete** the documentation associated with each part, 
 this **isn't meant to be a comprehensive list of what the package can do !**
 
@@ -37,7 +35,16 @@ await archive.ready();
 const tweets = archive.tweets;
 
 // Take the 30ths first tweets and get their text
-tweets.all.slice(0, 30).map(t => t.text);
+const texts = tweets.all.slice(0, 30).map(t => t.text);
+
+// Extract real text (without the starting(s) @)
+texts.map(t => t.replace(/^(@\w+ ?)*/g, ''));
+```
+
+**Warning**:
+To extract tweet text without leading mentions, do not use `.display_text_range`: In GDPR archives, this property is unproperly set and `.display_text_range[0]` is always `"0"`.
+```ts
+archive.tweets.all.find(t => t.display_text_range[0] !== "0") // => undefined
 ```
 
 ### Count the number of retweets in archive
@@ -110,10 +117,12 @@ console.log(...conversations);
 ### Count the number of sended direct messages (by archive owner)
 ```ts
 archive.messages.all.reduce((acc, val) => 
-  acc + val.all.filter(msg => msg.senderId === archive.user.id).length
+  acc + val.all.reduce((acc, val) => 
+    acc + (val.senderId === archive.user.id ? 1 : 0)
+  , 0)
 , 0);
 
-// or, for a less compact way
+// or, in a less compact way
 let count = 0;
 for (const conversation of archive.messages) {
   for (const msg of conversation) {
@@ -171,12 +180,39 @@ console.log(`You used the following names: @${history.join(', @')}`);
 
 ## Find the most common advertisers the archive owner seen (90-day history)
 ```ts
+const impressions = archive.ads.impressions_by_advertiser;
 
+const five_most_common = Object.entries(impressions)
+  .sort((a, b) => b[1].length - a[1].length)
+  .slice(0, 5)
+  .map(e => e[0].slice(1)); // Get the screen name and trim the @
+
+console.log("Most common advertisers: ", five_most_common.join(', '));
 ```
 
 ## Group the advertise data by day of view
 ```ts
+import TwitterArchive, { AdImpression, TwitterHelpers } from 'twitter-archive-reader';
 
+const days_to_impressions: { [day: string]: AdImpression[] } = {};
+
+for (const impression of archive.ads.impressions) {
+  const date = TwitterHelpers.parseAdDate(impression.impressionTime)
+
+  const [day, month, year] = [
+    String(date.getDate()).padStart(2, "0"),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    date.getFullYear(),
+  ];
+
+  const date_string = `${year}-${month}-${day}`;
+  if (date_string in days_to_impressions) {
+    days_to_impressions[date_string].push(impression);
+  }
+  else {
+    days_to_impressions[date_string] = [impression];
+  }
+}
 ```
 
 
@@ -184,15 +220,42 @@ console.log(`You used the following names: @${history.join(', @')}`);
 
 ## Get medias related to a direct message
 ```ts
+const my_dm = archive.messages.single('dm_id');
 
+const medias_of_dm = await archive.medias.ofDm(my_dm);
+```
+
+## Get media related to a direct message, by a media URL
+```ts
+const my_dm = archive.messages.single('dm_id');
+
+if (my_dm.mediaUrls.length) {
+  const first_media = await archive.medias.fromDmMediaUrl(
+    my_dm.mediaUrls[0], 
+    false /* Is DM in a group conversation ? */
+  );
+}
 ```
 
 ## Get medias related to a tweet
 ```ts
+// Find a tweet with a media defined
+const tweet = archive.tweets.all.find(t => t.extended_entities && t.extended_entities.media);
 
+if (tweet) {
+  // All medias of the tweet
+  const medias = await archive.medias.ofTweet(tweet);
+
+  // From a specific media
+  const media_1 = tweet.extended_entities.media[0];
+  const media_1_bin = await archive.medias.fromTweetMediaEntity(media_1);
+}
 ```
 
 ## Get the user profile picture and banner as binary data
 ```ts
-
+const [profile, header] = await Promise.all([
+  archive.medias.getProfilePictureOf(archive.user),
+  archive.medias.getProfileBannerOf(archive.user)
+]);
 ```

@@ -1,6 +1,7 @@
 import path from 'path';
 import TwitterArchive from '..';
 import ArchiveSaver from '../ArchiveSaver';
+import { MediaArchiveType } from '../MediaArchive';
 
 // Archive load / save could take a long time
 jest.setTimeout(9999999);
@@ -151,10 +152,10 @@ test('image dm', async () => {
   }
   archive.releaseZip();
 
-  const image = await archive.medias.fromDmDirectory("818102592802848773-BrcGVlp3.jpg", false, true) as ArrayBuffer;
+  const image = await archive.medias.get(MediaArchiveType.SingleDM, "818102592802848773-BrcGVlp3.jpg", true) as ArrayBuffer;
   expect(image.byteLength).toBe(47371);
 
-  const group_img = await archive.medias.fromDmDirectory("890153850757427204-zZjQV7v4.jpg", true, true) as ArrayBuffer;
+  const group_img = await archive.medias.get(MediaArchiveType.GroupDM, "890153850757427204-zZjQV7v4.jpg", true) as ArrayBuffer;
   expect(group_img.byteLength).toBe(38360);
 
   const images_of = await archive.medias.ofDm(archive.messages.single("1137291040317218820"), true) as ArrayBuffer[];
