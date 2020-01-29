@@ -32,6 +32,10 @@ This package is usable inside a browser or in Node.js.
 
 Full documentation (version 4.x.x) is available on [GitHub Wiki](https://github.com/alkihis/twitter-archive-reader/wiki). Take a look !
 
+### Examples
+
+You can find a bunch of usage examples in [this file](./Examples.md).
+
 ### Archive support
 
 - **Classic archives** are supported in every version of this module
@@ -63,6 +67,12 @@ Full documentation (version 4.x.x) is available on [GitHub Wiki](https://github.
     - Ad data
   - Since **4.0.7**:
     - Support GDPR 1.2 archives (created since January 2020)
+
+
+### Linking archive files to `twitter-archive-reader` objects and properties
+
+You can find a link between files and directories inside raw Twitter archives to this package data structures [here](./Files_to_structures.md). This can help you if you've found a intersting property in some file and you want to explore it with `twitter-archive-reader` !
+
 
 ### Old documentation
 
