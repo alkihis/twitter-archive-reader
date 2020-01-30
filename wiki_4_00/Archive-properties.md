@@ -44,5 +44,5 @@ Utilities:
 
 ## Continue
 
-Next page is [User data](https://github.com/alkihis/twitter-archive-reader/wiki/User-data).
+Next page is [User data](./User-data).
 

@@ -176,6 +176,6 @@ You don't need to re-define them.
 
 ## Continue
 
-Next part is [Browsing Direct Message archive](https://github.com/alkihis/twitter-archive-reader/wiki/Browsing-Direct-Message-archive-(conversations))
+Next part is [Browsing Direct Message archive](./Browsing-Direct-Message-archive-(conversations))
 
 

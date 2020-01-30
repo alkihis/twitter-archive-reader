@@ -1,4 +1,4 @@
-This page suppose you already obtain a `Conversation` object, through the `DMArchive` instance (see [Browsing Direct Message archive](https://github.com/alkihis/twitter-archive-reader/wiki/Browsing-Direct-Message-archive-(conversations))).
+This page suppose you already obtain a `Conversation` object, through the `DMArchive` instance (see [Browsing Direct Message archive](./Browsing-Direct-Message-archive-(conversations))).
 
 `Conversation` object will be named, for convention, `conversation`.
 
@@ -133,9 +133,9 @@ interface DirectMessage {
 
 Interface `LinkedDirectMessage`, that validate DMs in `Conversation` objects, add a `.previous` and `.next` property, linking the following and previous DM in the current conversation.
 
-To get medias linked in one message, please see [Get a direct message media](https://github.com/alkihis/twitter-archive-reader/wiki/Get-a-direct-message-media).
+To get medias linked in one message, please see [Get a direct message media](./Get-a-direct-message-media).
 
 ## Continue
 
-Next part is [Get a direct message media](https://github.com/alkihis/twitter-archive-reader/wiki/Get-a-direct-message-media)
+Next part is [Get a direct message media](./Get-a-direct-message-media)
 
