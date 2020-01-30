@@ -45,7 +45,10 @@ export interface DirectMessageEvent {
 }
 
 export interface DirectMessage extends DirectMessageEvent {
-  /** Person who get the DM (Twitter user ID). */
+  /** 
+   * Person who get the DM (Twitter user ID). 
+   * In group conversations, this property isn't defined or is set to `"0"`.
+   */
   recipientId: string;
   /** Content of the DM. */
   text: string;

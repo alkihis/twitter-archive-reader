@@ -1,6 +1,6 @@
 import { supportsBigInt } from "./helpers";
 import bigInt from 'big-integer';
-import { LinkedDirectMessage, DirectMessageEventContainer, DirectMessageEventsContainer } from "./types/GDPRDMs";
+import { LinkedDirectMessage, DirectMessageEventContainer, DirectMessageEventsContainer, DirectMessageEvent } from "./types/GDPRDMs";
 import { PartialTweet } from "./types/ClassicTweets";
 import { PartialTweetGDPR } from "./types/GDPRTweets";
 
@@ -15,10 +15,15 @@ import { PartialTweetGDPR } from "./types/GDPRTweets";
  */
 export function* getEventsFromMessages(msgs: LinkedDirectMessage[], include_messages = false) : Generator<DirectMessageEventContainer, void, void> {
   function* addEvents(e: DirectMessageEventsContainer) {
-    for (const [key, vals] of Object.entries(e)) {
-      for (const val of vals) {
-        yield { [key]: val };
-      }
+    const all_events: [string, DirectMessageEvent][] = [];
+
+    for (const [key, events] of Object.entries(e)) {
+      all_events.push(...events.map((e: DirectMessageEvent) => [key, e]));
+    }
+
+    const sorted = all_events.sort((a, b) => a[1].createdAtDate.getTime() - b[1].createdAtDate.getTime());
+    for (const [type, ev] of sorted) {
+      yield { [type]: ev };
     }
   }
 
