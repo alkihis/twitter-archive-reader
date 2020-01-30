@@ -47,7 +47,7 @@ export class MediaArchive {
   * @param as_array_buffer True if return type is ArrayBuffer. Otherwise, Blob will be used.
   * By default, returns ArrayBuffer on Node.js and Blob when available.
   */
-  async get(from: MediaArchiveType, name: string, as_array_buffer?: boolean) {
+  async get(from: MediaArchiveType, name: string, as_array_buffer?: boolean) : Promise<Blob | ArrayBuffer> {
     switch (from) {
       case MediaArchiveType.SingleDM: {
         await this.initOrAwaitArchive("dm_single", MediaArchive.DM_SINGLE_FOLDER);
@@ -150,7 +150,7 @@ export class MediaArchive {
   /** 
    * Extract the related media file to a URL present in the `mediaUrls` array of a Direct Message.
    */
-  fromDmMediaUrl(url: string, is_group: boolean = false, as_array_buffer?: boolean) {
+  fromDmMediaUrl(url: string, is_group: boolean = false, as_array_buffer?: boolean) : Promise<Blob | ArrayBuffer> {
     const [, , , , id, , image] = url.split('/');
 
     if (id && image) {
@@ -203,7 +203,7 @@ export class MediaArchive {
    * }
    * ```
    */
-  async fromTweetMediaEntity(media_entity: MediaGDPREntity | PartialTweetMediaEntity, as_array_buffer?: boolean) {
+  async fromTweetMediaEntity(media_entity: MediaGDPREntity | PartialTweetMediaEntity, as_array_buffer?: boolean) : Promise<Blob | ArrayBuffer> {
     if ('video_info' in media_entity) {
       // This is a gif or a video
       // Find the best variant
