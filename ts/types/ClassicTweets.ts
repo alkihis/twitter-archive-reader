@@ -39,7 +39,10 @@ export interface PartialTweet {
   retweeted?: boolean;
   /** 
    * Defined if archive type is GDPR. 
-   * This **NOT** accurate, Twitter set it inproperly in archives. 
+   * Should usually define tweet text boundaries, without the leading(s) @.
+   * 
+   * This **NOT** accurate, Twitter set it inproperly in archives:
+   * First element of array is always `"0"`, which makes this property useless.
    */
   display_text_range?: [string, string];
   /** Defined if archive type is GDPR. */

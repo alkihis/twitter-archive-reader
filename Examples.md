@@ -1,3 +1,4 @@
+
 # Examples of usage of `twitter-archive-reader`
 
 Here's a list of examples of basic operations to do with `twitter-archive-reader` package.
@@ -7,9 +8,42 @@ this **isn't meant to be a comprehensive list of what the package can do !**
 
 This `import` statement will be printed every time a new thing need to be imported.
 
-## Initialization
+## Table of contents
 
-### Read an archive from a .zip file
+<!-- vscode-markdown-toc -->
+* [Initialization](#Initialization)
+	* [Read an archive from a .zip file](#Readanarchivefroma.zipfile)
+	* [Read an archive from a File input](#ReadanarchivefromaFileinput)
+* [Tweets](#Tweets)
+	* [Get text from some tweets](#Gettextfromsometweets)
+	* [Count the number of retweets in archive](#Countthenumberofretweetsinarchive)
+	* [Check if a tweet has a video or a GIF attached to it and get its URL](#CheckifatweethasavideooraGIFattachedtoitandgetitsURL)
+* [Direct messages](#Directmessages)
+	* [List all the direct message conversations available on the archive](#Listallthedirectmessageconversationsavailableonthearchive)
+	* [Count the number of sended direct messages (by archive owner)](#Countthenumberofsendeddirectmessagesbyarchiveowner)
+	* [Check for presence of group conversations](#Checkforpresenceofgroupconversations)
+* [User-related data](#User-relateddata)
+	* [Show basic informations about archive owner, like screen name, name and bio](#Showbasicinformationsaboutarchiveownerlikescreennamenameandbio)
+	* [Find account creation date and used IP](#FindaccountcreationdateandusedIP)
+	* [List the used screen names (@) over time](#Listtheusedscreennamesovertime)
+* [Ad-related data](#Ad-relateddata)
+	* [Find the most common advertisers the archive owner seen (90-day history)](#Findthemostcommonadvertisersthearchiveownerseen90-dayhistory)
+	* [Group the advertise data by day of view](#Grouptheadvertisedatabydayofview)
+* [Medias](#Medias)
+	* [Get medias related to a direct message](#Getmediasrelatedtoadirectmessage)
+	* [Get media related to a direct message, by a media URL](#GetmediarelatedtoadirectmessagebyamediaURL)
+	* [Get medias related to a tweet](#Getmediasrelatedtoatweet)
+	* [Get the user profile picture and banner as binary data](#Gettheuserprofilepictureandbannerasbinarydata)
+
+<!-- vscode-markdown-toc-config
+	numbering=false
+	autoSave=true
+	/vscode-markdown-toc-config -->
+<!-- /vscode-markdown-toc -->
+
+## <a name='Initialization'></a>Initialization
+
+### <a name='Readanarchivefroma.zipfile'></a>Read an archive from a .zip file
 ```ts
 import TwitterArchive from "twitter-archive-reader";
 
@@ -18,7 +52,7 @@ const archive = new TwitterArchive('filename.zip');
 await archive.ready();
 ```
 
-### Read an archive from a File input
+### <a name='ReadanarchivefromaFileinput'></a>Read an archive from a File input
 ```ts
 import TwitterArchive from "twitter-archive-reader";
 
@@ -28,9 +62,9 @@ const archive = new TwitterArchive(file_input.files[0]);
 await archive.ready();
 ```
 
-## Tweets
+## <a name='Tweets'></a>Tweets
 
-### Get text from some tweets
+### <a name='Gettextfromsometweets'></a>Get text from some tweets
 ```ts
 const tweets = archive.tweets;
 
@@ -47,7 +81,7 @@ To extract tweet text without leading mentions, do not use `.display_text_range`
 archive.tweets.all.find(t => t.display_text_range[0] !== "0") // => undefined
 ```
 
-### Count the number of retweets in archive
+### <a name='Countthenumberofretweetsinarchive'></a>Count the number of retweets in archive
 ```ts
 archive.tweets.all.reduce((acc, val) => {
   if (val.retweeted_status) {
@@ -58,7 +92,7 @@ archive.tweets.all.reduce((acc, val) => {
 }, 0);
 ```
 
-### Check if a tweet has a video or a GIF attached to it and get its URL
+### <a name='CheckifatweethasavideooraGIFattachedtoitandgetitsURL'></a>Check if a tweet has a video or a GIF attached to it and get its URL
 ```ts
 import TwitterArchive, { PartialTweet } from 'twitter-archive-reader';
 
@@ -99,9 +133,9 @@ getVideoUrlOfTweet(archive.tweets.single('tweet_id'));
 ```
 
 
-## Direct messages
+## <a name='Directmessages'></a>Direct messages
 
-### List all the direct message conversations available on the archive
+### <a name='Listallthedirectmessageconversationsavailableonthearchive'></a>List all the direct message conversations available on the archive
 ```ts
 const messages = archive.messages;
 
@@ -114,7 +148,7 @@ const conversations = messages.all.map(c =>
 console.log(...conversations);
 ```
 
-### Count the number of sended direct messages (by archive owner)
+### <a name='Countthenumberofsendeddirectmessagesbyarchiveowner'></a>Count the number of sended direct messages (by archive owner)
 ```ts
 archive.messages.all.reduce((acc, val) => 
   acc + val.all.reduce((acc, val) => 
@@ -133,7 +167,7 @@ for (const conversation of archive.messages) {
 }
 ```
 
-### Check for presence of group conversations
+### <a name='Checkforpresenceofgroupconversations'></a>Check for presence of group conversations
 ```ts
 if (archive.messages.groups.length) {
   console.log("This archive contains group conversations !");
@@ -141,9 +175,9 @@ if (archive.messages.groups.length) {
 ```
 
 
-## User-related data
+## <a name='User-relateddata'></a>User-related data
 
-### Show basic informations about archive owner, like screen name, name and bio
+### <a name='Showbasicinformationsaboutarchiveownerlikescreennamenameandbio'></a>Show basic informations about archive owner, like screen name, name and bio
 ```ts
 const user = archive.user;
 
@@ -157,7 +191,7 @@ console.log(`
 `);
 ```
 
-### Find account creation date and used IP
+### <a name='FindaccountcreationdateandusedIP'></a>Find account creation date and used IP
 ```ts
 console.log(`
   Creation date: ${archive.user.created_at},
@@ -165,7 +199,7 @@ console.log(`
 `);
 ```
 
-### List the used screen names (@) over time
+### <a name='Listtheusedscreennamesovertime'></a>List the used screen names (@) over time
 ```ts
 const history = [
   ...archive.user.screen_name_history.map(s => s.changedFrom),
@@ -176,9 +210,9 @@ console.log(`You used the following names: @${history.join(', @')}`);
 ```
 
 
-## Ad-related data
+## <a name='Ad-relateddata'></a>Ad-related data
 
-## Find the most common advertisers the archive owner seen (90-day history)
+### <a name='Findthemostcommonadvertisersthearchiveownerseen90-dayhistory'></a>Find the most common advertisers the archive owner seen (90-day history)
 ```ts
 const impressions = archive.ads.impressions_by_advertiser;
 
@@ -190,7 +224,7 @@ const five_most_common = Object.entries(impressions)
 console.log("Most common advertisers: ", five_most_common.join(', '));
 ```
 
-## Group the advertise data by day of view
+### <a name='Grouptheadvertisedatabydayofview'></a>Group the advertise data by day of view
 ```ts
 import TwitterArchive, { AdImpression, TwitterHelpers } from 'twitter-archive-reader';
 
@@ -216,16 +250,16 @@ for (const impression of archive.ads.impressions) {
 ```
 
 
-## Medias
+## <a name='Medias'></a>Medias
 
-## Get medias related to a direct message
+### <a name='Getmediasrelatedtoadirectmessage'></a>Get medias related to a direct message
 ```ts
 const my_dm = archive.messages.single('dm_id');
 
 const medias_of_dm = await archive.medias.ofDm(my_dm);
 ```
 
-## Get media related to a direct message, by a media URL
+### <a name='GetmediarelatedtoadirectmessagebyamediaURL'></a>Get media related to a direct message, by a media URL
 ```ts
 const my_dm = archive.messages.single('dm_id');
 
@@ -237,7 +271,7 @@ if (my_dm.mediaUrls.length) {
 }
 ```
 
-## Get medias related to a tweet
+### <a name='Getmediasrelatedtoatweet'></a>Get medias related to a tweet
 ```ts
 // Find a tweet with a media defined
 const tweet = archive.tweets.all.find(t => t.extended_entities && t.extended_entities.media);
@@ -252,7 +286,7 @@ if (tweet) {
 }
 ```
 
-## Get the user profile picture and banner as binary data
+### <a name='Gettheuserprofilepictureandbannerasbinarydata'></a>Get the user profile picture and banner as binary data
 ```ts
 const [profile, header] = await Promise.all([
   archive.medias.getProfilePictureOf(archive.user),
