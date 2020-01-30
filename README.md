@@ -82,6 +82,8 @@ Wiki for 2.x.x is available [here](./wiki_2_00/Home.md).
 
 Wiki for 3.x.x is available [here](./wiki_3_00/Home.md).
 
+Wiki for 4.x.x is available [here](./wiki_4_00/Home.md).
+
 ## Migrate from 2.x.x to 3.0.0
 
 Migration guide is available [here](https://github.com/alkihis/twitter-archive-reader/wiki/Migrate-to-3.0.0).
@@ -90,3 +92,7 @@ Migration guide is available [here](https://github.com/alkihis/twitter-archive-r
 ## Migrate from 3.x.x to 4.0.0
 
 Migration guide is available [here](https://github.com/alkihis/twitter-archive-reader/wiki/Migrate-to-4.0.0).
+
+## Migrate from 4.0.x to 5.0.0
+
+Migration guide is available [here](./wiki/Migrate-to-5.0.0).
