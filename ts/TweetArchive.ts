@@ -12,7 +12,7 @@ import { PartialTweetGDPR } from "./types/GDPRTweets";
  */
 export class TweetArchive {
   protected by_id: TweetIndex = {};
-  protected years: { [year: string]: { [month: string]: TweetIndex } } = {};
+  protected _index: { [year: string]: { [month: string]: TweetIndex } } = {};
 
   protected user_cache: PartialTweetUser;
 
@@ -37,16 +37,16 @@ export class TweetArchive {
       const year = String(date.getFullYear());
   
       // Creating month/year if not presents
-      if (!(year in this.years)) {
-        this.years[year] = {};
+      if (!(year in this._index)) {
+        this._index[year] = {};
       }
   
-      if (!(month in this.years[year])) {
-        this.years[year][month] = {};
+      if (!(month in this._index[year])) {
+        this._index[year][month] = {};
       }
   
       // Save tweet in index
-      this.years[year][month][tweet.id_str] = tweet;
+      this._index[year][month][tweet.id_str] = tweet;
       this.by_id[tweet.id_str] = tweet;
     }
   }
@@ -66,16 +66,16 @@ export class TweetArchive {
       const year = String(date.getFullYear());
   
       // Creating month/year if not presents
-      if (!(year in this.years)) {
-        this.years[year] = {};
+      if (!(year in this._index)) {
+        this._index[year] = {};
       }
   
-      if (!(month in this.years[year])) {
-        this.years[year][month] = {};
+      if (!(month in this._index[year])) {
+        this._index[year][month] = {};
       }
   
       // Save tweet in index
-      this.years[year][month][tweet.id_str] = tweet;
+      this._index[year][month][tweet.id_str] = tweet;
       this.by_id[tweet.id_str] = tweet;
     }
   }
@@ -87,26 +87,35 @@ export class TweetArchive {
 
   /** Extract tweets from a specific month. Months are indexed from 1. */
   month(month: string | number, year: string | number) : PartialTweet[] {
-    if (year in this.years) {
-      if (month in this.years[year]) {
-        return Object.values(this.years[year][month]);
+    if (year in this._index) {
+      if (month in this._index[year]) {
+        return Object.values(this._index[year][month]);
       }
     }
 
     return [];
   }
 
-  /** Find tweets made on the same day (= month, = day), but in all years. */
-  fromThatDay() : PartialTweet[] {
-    const now = new Date;
-    const now_m = now.getMonth();
-    const now_d = now.getDate();
+  /** Find tweets made on the same day as {start} (= month, = day), but in all years. {start} defaults to now. */
+  fromThatDay(start?: Date) : PartialTweet[] {
+    start = start instanceof Date ? start : new Date;
+    const now_m = start.getMonth();
+    const now_d = start.getDate();
 
-    // TODO optimize
-    return this.all.filter(t => {
-      const d = dateFromTweet(t);
-      return d.getMonth() === now_m && d.getDate() === now_d;
-    });
+    const tweets: PartialTweet[] = [];
+    for (const year in this._index) {
+      for (const month in this._index[year]) {
+        if (Number(month) === now_m + 1) {
+          // Month of interest
+          tweets.push(
+            ...Object.values(this._index[year][month])
+              .filter(t => dateFromTweet(t).getDate() === now_d)
+          );
+        }
+      }
+    }
+
+    return tweets;
   }
 
   /** Get tweets in a specific time interval. */
@@ -193,7 +202,7 @@ export class TweetArchive {
    * **<index>.years[2019][1]**
    */
   get index() {
-    return this.years;
+    return this._index;
   }
 
   /**
@@ -346,13 +355,13 @@ export class TweetArchive {
       sort_fn = (a, b) => Number(b) - Number(a);
     }
 
-    const sorted_years = Object.keys(this.years).sort(sort_fn);
+    const sorted_years = Object.keys(this._index).sort(sort_fn);
 
     for (const year of sorted_years) {
-      const sorted_months = Object.keys(this.years[year]).sort(sort_fn);
+      const sorted_months = Object.keys(this._index[year]).sort(sort_fn);
 
       for (const month of sorted_months) {
-        yield [year, month, Object.values(this.years[year][month])];
+        yield [year, month, Object.values(this._index[year][month])];
       }
     }
   }

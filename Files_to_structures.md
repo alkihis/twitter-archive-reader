@@ -272,4 +272,4 @@ To access tweets indexed per year and month, use `archive.tweets.index`, as prev
 You can also use `archive.tweets.month(month, year)`.
 
 
-Also todo: helpers documentation, refresh wiki on github, list changes and migration guide => todo check which things changed
+Also todo: refresh wiki on github
