@@ -1,7 +1,7 @@
-import { GDPRConversation, LinkedDirectMessage, DirectMessageEventContainer, DirectMessageEvent, DirectMessageEventsContainer } from "./TwitterTypes";
 import { supportsBigInt, dateOfDMEvent } from "./helpers";
 import bigInt from 'big-integer';
 import { parseTwitterDate, getEventsFromMessages } from "./exported_helpers";
+import { LinkedDirectMessage, DirectMessageEventContainer, GDPRConversation, DirectMessageEventsContainer } from "./types/GDPRDMs";
 
 /** Register the number of messages in each year, month and day, and let you access those messages. */
 interface ConversationIndex {

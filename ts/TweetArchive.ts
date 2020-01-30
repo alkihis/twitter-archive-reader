@@ -1,5 +1,7 @@
-import { PartialTweet, TweetIndex, PartialTweetGDPR, PartialTweetUser } from "./TwitterTypes";
 import { dateFromTweet, sortTweets, isWithMedia, isWithVideo } from "./exported_helpers";
+import { TweetIndex } from "./types/Internal";
+import { PartialTweetUser, PartialTweet } from "./types/ClassicTweets";
+import { PartialTweetGDPR } from "./types/GDPRTweets";
 
 /**
  * Contains every tweet related to an archive.
@@ -14,7 +16,7 @@ export class TweetArchive {
 
   protected user_cache: PartialTweetUser;
 
-  protected tweet_searcher: TweetFinder;
+  protected _finder: TweetFinder;
 
 
   /** ------------------ */
@@ -223,11 +225,11 @@ export class TweetArchive {
    * A global exported instance also exists and named `TweetSearcher`.
    */
   get finder() {
-    if (!this.tweet_searcher) {
-      this.tweet_searcher = new TweetFinder;
+    if (!this._finder) {
+      this._finder = new TweetFinder;
     }
 
-    return this.tweet_searcher;
+    return this._finder;
   }
 
   /**
@@ -278,10 +280,10 @@ export class TweetArchive {
    * 
    * Default activated properties are `text` and `user.screen_name`.
    * 
-   * @throws Format `{keyword}: Invalid query` if user input is invalid
+   * @throws {SyntaxError} Format `{keyword}: Invalid query` if user input is invalid
    * for a specific validator.
    * 
-   * @throws `Validator {name} does not exists` when a invalid static validator is used.
+   * @throws {ReferenceError} `Validator {name} does not exists` when a invalid static validator is used.
    */
   find(
     query: string, 
@@ -614,10 +616,10 @@ export class TweetFinder {
    * 
    * Default activated properties are `text` and `user.screen_name`.
    * 
-   * @throws Format `{keyword}: Invalid query` if user input is invalid
+   * @throws {SyntaxError} Format `{keyword}: Invalid query` if user input is invalid
    * for a specific validator.
    * 
-   * @throws `Validator {name} does not exists` when a invalid static validator is used.
+   * @throws {ReferenceError} `Validator {name} does not exists` when a invalid static validator is used.
    */
   search(
     tweets: Iterable<PartialTweet>, 
@@ -653,7 +655,7 @@ export class TweetFinder {
           } catch (e) {}
   
           if (!v) {
-            throw new Error(keyword + ": Invalid query");
+            throw new SyntaxError(keyword + ": Invalid query");
           }
           
           // Store the validator
@@ -671,7 +673,7 @@ export class TweetFinder {
         validators.push(this.static_validators[v]);
       }
       else {
-        throw new Error("Validator " + v + " does not exists");
+        throw new ReferenceError("Validator " + v + " does not exists");
       }
     }
 
@@ -725,7 +727,7 @@ export const TweetSearcher = new TweetFinder;
 
 export interface TweetSearchValidator {
   /** 
-   * Keyword (word used to identify you keyword, before the **:**.
+   * Keyword (word used to identify you keyword, before the **separator**.
    * Will be interpoled into search regex. 
    * Should **NOT** contain parenthesis !
    */
@@ -771,9 +773,11 @@ export interface TweetSearchValidator {
   /**
    * Separator between keyword and user input.
    * 
-   * By default, separator is `:`.
+   * Default separator is `:`.
    * 
    * Note that spaces are NOT allowed between keyword and separator, and between user input and separator.
+   * 
+   * You can specify multiple allowed separators with a `string[]`.
    */
   separator?: string | string[];
 }

@@ -1,6 +1,8 @@
 import { AcceptedZipSources, constructArchive, ConstructibleArchives } from "./StreamArchive";
-import { PartialTweet, DirectMessage, MediaGDPREntity, PartialTweetMediaEntity } from "./TwitterTypes";
 import UserData from "./UserData";
+import { DirectMessage } from "./types/GDPRDMs";
+import { PartialTweet, PartialTweetMediaEntity } from "./types/ClassicTweets";
+import { MediaGDPREntity } from "./types/GDPRTweets";
 
 export type ArchiveDMImagesFormation = "none" | "inside" | "zipped";
 type ExisitingArchives = "dm_single" | "dm_group" | "tweet" | "moment" | "profile";

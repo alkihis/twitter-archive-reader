@@ -1,8 +1,12 @@
 import TwitterArchive from "./index";
-import { GDPRConversation, DMFile, ScreenNameChange, GPDRScreenNameHistory, ArchiveSyntheticInfo, PartialFavorite, PartialTweet, GDPRMoment, AdImpression, AdEngagement, AdMobileConversion, AdOnlineConversion, DirectMessageEventContainer, DirectMessageEventsContainer } from "./TwitterTypes";
 import Conversation from "./Conversation";
 import JSZip from 'jszip';
 import { UserLoadObject } from "./UserData";
+import { GDPRConversation, DirectMessageEventContainer, DirectMessageEventsContainer, DMFile } from "./types/GDPRDMs";
+import { ScreenNameChange, GPDRScreenNameHistory } from "./types/GDPRUserInformations";
+import { ArchiveSyntheticInfo } from "./types/Internal";
+import { PartialFavorite } from "./types/GDPRExtended";
+import { GDPRMoment } from "./types/GDPRMoments";
 
 function convertConversationToGDPRConversation(conversation: Conversation) : GDPRConversation {
   let first = true;

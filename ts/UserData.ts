@@ -1,6 +1,7 @@
 import { BaseArchive } from "./StreamArchive";
-import { ScreenNameChange, GDPRProtectedHistory, InnerGDPRPersonalization, GDPRAgeInfo, GPDRScreenNameHistory, UserFullAgeInfo, ConnectedApplication, UserEmailAddressChange, IpAudit, PushDevice, MessagingDevice, UserPersonalization, TwitterUserDetails } from "./TwitterTypes";
 import { parseTwitterDate } from "./exported_helpers";
+import { UserPersonalization, ScreenNameChange, GDPRProtectedHistory, UserFullAgeInfo, ConnectedApplication, UserEmailAddressChange, IpAudit, PushDevice, MessagingDevice, InnerGDPRPersonalization, GDPRAgeInfo, GPDRScreenNameHistory } from "./types/GDPRUserInformations";
+import { TwitterUserDetails } from "./types/ClassicTweets";
 
 export interface UserLoadObject {
   phone_number?: string;

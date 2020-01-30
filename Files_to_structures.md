@@ -140,7 +140,7 @@ related to Periscope aren't parsed.
 ### `personalization.js`
 
 Personalization data is parsed and rearranged in `archive.user.personalization`.
-See `UserPersonalization` interface in `TwitterTypes.ts` for more details about how the data is rearranged.
+See `UserPersonalization` interface in `types/GDPRUserInformations.ts` for more details about how the data is rearranged.
 
 ### `phone-number.js`
 
@@ -227,6 +227,49 @@ If other folders are present in the archive, they aren't accessible.
 
 ## Classic archives
 
-TODO
+Classic archives are limited in informations.
+
+### `data/js/payload_details.js`
+
+- tweets: `archive.tweets.length`
+- created_at: `archive.generation_date`
+- lang: **X**
+
+### `data/js/tweet_index.js`
+
+For every item in tweet index array:
+
+File name and var name are unaccessible.
+All the related information to each year/month to tweet count is located in `archive.tweets.index`.
+
+```ts
+// Tweet count of 2019/08
+const index = archive.tweets.index;
+
+// Index is organized from years to months to tweets IDs
+if (2019 in index) {
+  if (8 in index[2019]) {
+    const tweet_count = Object.keys(index[2019][8]).length;
+  }
+}
+```
+
+### `data/js/user_details.js`
+
+- screen_name: `archive.user.screen_name`
+- location: `archive.user.location`
+- full_name: `archive.user.name`
+- bio: `archive.user.bio`
+- id: `archive.user.id`
+- created_at: `archive.user.created_at`
+
+
+### `data/js/tweets/*.js`
+
+Every `.js` file contains tweets, organized per month.
+To access tweets indexed per year and month, use `archive.tweets.index`, as previously shown.
+
+You can also use `archive.tweets.month(month, year)`.
+
 
 Also todo: helpers documentation, refresh wiki on github, list changes and migration guide => todo check which things changed

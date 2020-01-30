@@ -209,6 +209,7 @@ const test_6 = async () => {
   const timer = new Timer;
   Timer.default_format = "s";
   const archive = new TwitterArchive(commander.file);
+
   await archive.ready();
 
   const profile = await archive.medias.getProfilePictureOf(archive.user) as ArrayBuffer;
