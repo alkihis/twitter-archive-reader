@@ -231,8 +231,6 @@ const test_6 = async () => {
   writeFileSync('test_dir/header.jpg', Buffer.from(header));
 
   console.log("Total time elapsed to extract profile and header files:", timer.elapsed);
-
-  // TODO tweet data
 };
 
 if (commander.testOne) {
