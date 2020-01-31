@@ -4,6 +4,9 @@
 
 Explore easily tweets, direct messages, medias and more from Twitter archives.
 
+*This is a JavaScript/TypeScript package available on `npm` that provides useful data structures concieved to manipulate Twitter archives.*
+**If you're looking for a graphical tool to explore archives without programming, take a look to [Archive Explorer](https://archive-explorer.com).**
+
 ## Features
 
 ### For all types of archives
