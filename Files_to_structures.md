@@ -270,6 +270,3 @@ Every `.js` file contains tweets, organized per month.
 To access tweets indexed per year and month, use `archive.tweets.index`, as previously shown.
 
 You can also use `archive.tweets.month(month, year)`.
-
-
-Also todo: refresh wiki on github

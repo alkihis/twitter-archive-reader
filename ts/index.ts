@@ -1,6 +1,6 @@
-import { TwitterArchive } from './Archive';
+import { TwitterArchive } from './TwitterArchive';
 
-export * from './Archive';
+export * from './TwitterArchive';
 export * from './StreamArchive';
 export * from './Conversation';
 export * from './DMArchive';

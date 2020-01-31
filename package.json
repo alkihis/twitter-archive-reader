@@ -1,10 +1,11 @@
 {
   "name": "twitter-archive-reader",
-  "version": "5.0.1",
+  "version": "5.0.2",
   "description": "",
   "main": "js/index.js",
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "docs": "typedoc --out docs ts"
   },
   "author": "Louis Béranger",
   "license": "CC-BY-SA-4.0",

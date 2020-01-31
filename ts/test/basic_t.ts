@@ -1,5 +1,5 @@
 import commander from 'commander';
-import { TwitterArchive } from '../Archive';
+import { TwitterArchive } from '../TwitterArchive';
 import { writeFileSync } from 'fs';
 import { inspect } from 'util';
 import Timer from 'timerize';

@@ -40,7 +40,11 @@ You can find a bunch of usage examples in [this file](./Examples.md).
 
 You can find a [link between files and directories inside raw Twitter archives to this package data structures here](./Files_to_structures.md). This can help you if you've found a intersting property in some file and you want to explore it with `twitter-archive-reader` !
 
-### Archive support
+### Detailled type documentation
+
+If you want to find a type definition quickly, or get a detailled view of a data structure, [a automatically-generated documentation is available here](https://alkihis.fr/twitter-archive-reader).
+
+### About archive support
 
 - **Classic archives** are supported in every version of this module
   - Since **1.0.0**:
