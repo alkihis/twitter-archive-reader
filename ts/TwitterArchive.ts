@@ -16,6 +16,7 @@ import { ClassicTweetIndex, ClassicPayloadDetails } from './types/ClassicPayload
 import { PartialTweet, TwitterUserDetails } from './types/ClassicTweets';
 import { AccountGDPR, ProfileGDPR } from './types/GDPRAccount';
 import { DMFile } from './types/GDPRDMs';
+import { TweetFileError, DirectMessageParseError, ProfileFileError, AccountFileError } from './Errors';
 
 
 // Base variables, unexported
@@ -608,40 +609,74 @@ export class TwitterArchive {
 
     if (parts.account) {
       // Init informations
-      const account = parts.account[0].account;
-
-      this._user.loadPart({
-        summary: {
-          ...this._user.summary,
-          screen_name: account.username,
-          full_name: account.accountDisplayName,
-          id: account.accountId,
-          created_at: account.createdAt,
+      try {
+        const account = parts.account[0].account;
+  
+        this._user.loadPart({
+          summary: {
+            ...this._user.summary,
+            screen_name: account.username,
+            full_name: account.accountDisplayName,
+            id: account.accountId,
+            created_at: account.createdAt,
+          }
+        });
+      } catch (e) {
+        if (e instanceof Error) {
+          throw new AccountFileError(
+            `Unable to use account file: ${e.message}`,
+            parts.account,
+            e.stack
+          );
         }
-      });
+        throw e;
+      }
 
       // (re)init the tweet archive user cache
       this.initUserCache();
     }
     if (parts.profile) {
-      const profile = parts.profile[0].profile;
-
-      this._user.loadPart({
-        summary: {
-          ...this._user.summary,
-          location: profile.description.location,
-          bio: profile.description.bio,
-          profile_image_url_https: profile.avatarMediaUrl,
-          profile_banner_url: profile.headerMediaUrl,
-          url: profile.description.website,
+      try {
+        const profile = parts.profile[0].profile;
+        
+        this._user.loadPart({
+          summary: {
+            ...this._user.summary,
+            location: profile.description.location,
+            bio: profile.description.bio,
+            profile_image_url_https: profile.avatarMediaUrl,
+            profile_banner_url: profile.headerMediaUrl,
+            url: profile.description.website,
+          }
+        });
+      } catch (e) {
+        if (e instanceof Error) {
+          throw new ProfileFileError(
+            `Profile file is incorrect: ${e.message}`,
+            parts.profile,
+            e.stack
+          );
         }
-      });
+        throw e;
+      }
 
       // (re)init the tweet archive user cache
       this.initUserCache();
     }
     if (parts.tweets) {
-      this._tweets.addGDPR(parts.tweets);
+      try {
+        this._tweets.addGDPR(parts.tweets);
+      } catch (e) {
+        if (e instanceof Error) {
+          throw new TweetFileError(
+            `Unable to compute tweets: ${e.message}`,
+            parts.tweets[0],
+            e.stack
+          );
+        }
+
+        throw e;
+      }
     }
     if (parts.dms) {
       if (!this._messages) {
@@ -649,7 +684,42 @@ export class TwitterArchive {
       }
       
       for (const file of parts.dms) {
-        this._messages.add(file);
+        try {
+          this._messages.add(file);
+        } catch (e) {
+          if (e instanceof Error) {
+            let reason = "";
+            let extract: any;
+            if (!Array.isArray(file)) {
+              reason = "File is not an array.";
+              extract = file;
+            }
+            else {
+              if (file[0].dmConversation) {
+                const conv = file[0].dmConversation;
+                if (conv.messages) {
+                  extract = conv.messages[0];
+                  reason = "Missing property ?";
+                }
+                else {
+                  extract = conv;
+                  reason = "Unable to found messages.";
+                }
+              }
+              else {
+                reason = "Property DM conversation does not exists.";
+                extract = file[0];
+              }
+            }
+
+            throw new DirectMessageParseError(
+              `Unable to parse direct messages: ${e.message} (${reason})`,
+              extract,
+              e.stack
+            );
+          }
+          throw e;
+        }
       }
     }
     if (parts.current_ad_archive && this.is_zip_loaded) {
@@ -699,7 +769,19 @@ export class TwitterArchive {
     this._is_gdpr = false;
 
     if (parts.tweets) {
-      this._tweets.add(sortTweets(parts.tweets));
+      try {
+        this._tweets.add(sortTweets(parts.tweets));
+      } catch (e) {
+        if (e instanceof Error) {
+          throw new TweetFileError(
+            `Unable to compute tweets: ${e.message}`,
+            parts.tweets[0],
+            e.stack
+          );
+        }
+
+        throw e;
+      }
     }
     if (parts.user) {
       this._user.loadPart({
