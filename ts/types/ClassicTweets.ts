@@ -41,7 +41,7 @@ export interface PartialTweet {
    * Defined if archive type is GDPR. 
    * Should usually define tweet text boundaries, without the leading(s) @.
    * 
-   * This **NOT** accurate, Twitter set it inproperly in archives:
+   * This is **NOT** accurate, Twitter set it inproperly in archives:
    * First element of array is always `"0"`, which makes this property useless.
    */
   display_text_range?: [string, string];

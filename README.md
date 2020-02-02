@@ -2,7 +2,10 @@
 
 > Read data from classic Twitter archive and GDPR archive
 
-This module helps to read data from Twitter archives.
+Explore easily tweets, direct messages, medias and more from Twitter archives.
+
+*This is a JavaScript/TypeScript package available on `npm` that provides useful data structures concieved to manipulate Twitter archives.*
+**If you're looking for a graphical tool to explore archives without programming, take a look to [Archive Explorer](https://archive-explorer.com).**
 
 ## Features
 
@@ -16,9 +19,11 @@ This module helps to read data from Twitter archives.
 ### For GDPR archives
 
 - Access direct messages with query selectors (conversation, date, content, context around one message)
-- Access images linked to messages
+- Access images and videos stored in archive
 - List of favorites, blocks, mutes, followers and followings
 - Screen name history
+- Lots of user-related data like interests, age information and email addresses
+- Data from views and interactions with ads on Twitter website/mobile app
 - Twitter moments
 - Subscribed and created lists
 
@@ -26,11 +31,11 @@ This module helps to read data from Twitter archives.
 
 ## Usage
 
-This package is usable inside a browser or in Node.js.
+This package can be used inside a browser or in Node.js.
 
 ### Getting ready
 
-Full documentation (version 4.x.x) is available on [GitHub Wiki](./wiki). Take a look !
+Full documentation (version 5.x.x) is available on [GitHub Wiki](./wiki). Take a look !
 
 ### [Examples](./Examples.md)
 
