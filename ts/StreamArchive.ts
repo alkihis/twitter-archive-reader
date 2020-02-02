@@ -185,7 +185,18 @@ class StreamArchive implements BaseArchive<ZipEntry> {
       return fp.then(data => {
         if (type === "text") {
           const buffer_as_text = data.toString();
-          return JSON.parse(buffer_as_text.substr(buffer_as_text.indexOf('=') + 1).trimLeft());
+          try {
+            return JSON.parse(buffer_as_text.substr(buffer_as_text.indexOf('=') + 1).trimLeft());
+          } catch (e) {
+            if (e instanceof SyntaxError) {
+              throw new FileReadError(
+                `Unexpected SyntaxError at JSON.parse when reading a file (${file.name}): ${e.message}`,
+                file.name,
+                buffer_as_text
+              );
+            }
+            throw e;
+          }
         }
 
         const ab = new ArrayBuffer(data.length);
@@ -380,6 +391,21 @@ export class Archive implements BaseArchive<JSZip.JSZipObject> {
 
   get raw() {
     return this.archive;
+  }
+}
+
+/**
+ * Thrown when a file has an incorrect JSON syntax. Contains filename and file content.
+ */
+export class FileReadError extends SyntaxError {
+  constructor(message: string, public filename: string, public content: string) {
+    super(message);
+
+    // Maintenir dans la pile une trace adéquate de l'endroit où l'erreur a été déclenchée (disponible seulement en V8)
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, FileReadError);
+    }
+    this.name = 'FileReadError';
   }
 }
 
