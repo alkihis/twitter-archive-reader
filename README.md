@@ -27,7 +27,7 @@ Explore easily tweets, direct messages, medias and more from Twitter archives.
 - Twitter moments
 - Subscribed and created lists
 
-[What's a GDPR archive ?](./wiki#different-kinds-of-archives)
+[What's a GDPR archive ?](../../wiki#different-kinds-of-archives)
 
 ## Usage
 
@@ -35,7 +35,7 @@ This package can be used inside a browser or in Node.js.
 
 ### Getting ready
 
-Full documentation (version 5.x.x) is available on [GitHub Wiki](./wiki). Take a look !
+Full documentation (version 5.x.x) is available on [GitHub Wiki](../../wiki). Take a look !
 
 ### [Examples](./Examples.md)
 
@@ -95,13 +95,13 @@ Wiki for 4.x.x is available [here](./wiki_4_00/Home.md).
 
 ## Migrate from 2.x.x to 3.0.0
 
-Migration guide is available [here](./wiki/Migrate-to-3.0.0).
+Migration guide is available [here](../../wiki/Migrate-to-3.0.0).
 
 
 ## Migrate from 3.x.x to 4.0.0
 
-Migration guide is available [here](./wiki/Migrate-to-4.0.0).
+Migration guide is available [here](../../wiki/Migrate-to-4.0.0).
 
 ## Migrate from 4.0.x to 5.0.0
 
-Migration guide is available [here](./wiki/Migrate-to-5.0.0).
+Migration guide is available [here](../../wiki/Migrate-to-5.0.0).
