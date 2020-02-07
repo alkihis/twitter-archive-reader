@@ -190,6 +190,11 @@ export class TweetArchive {
     return null;
   }
 
+  /** Check if tweet {id_str} exists in this archive. */
+  has(id_str: string) {
+    return id_str in this.by_id;
+  }
+
 
   /** --------- */
   /** ACCESSORS */

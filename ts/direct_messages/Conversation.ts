@@ -48,12 +48,14 @@ interface FullConversationInfo extends ConversationInfo {
 abstract class ConversationBase {
   /** Handle infomations of this conversation like owner and participants. */
   protected info: ConversationInfo;
+  protected _length: number;
 
   protected _index: DirectMessageIndex = {};
   protected index_by_date: DirectMessageDateIndex = {};
 
   protected register(msg: LinkedDirectMessage) {
     this._index[msg.id] = msg;
+    this._length = undefined;
 
     if (!msg.createdAtDate) {
       msg.createdAtDate = parseTwitterDate(msg.createdAt);
@@ -83,6 +85,7 @@ abstract class ConversationBase {
   protected unregisterAll() {
     this._index = {},
     this.index_by_date = {};
+    this._length = undefined;
   }
 
   /** Get direct messages from a specific month. */
@@ -245,6 +248,11 @@ abstract class ConversationBase {
     return this._index[id];
   }
 
+  /** Check if message {id} exists in this conversation. */
+  has(id: string) {
+    return id in this._index;
+  }
+
   /** 
    * Get conversation from a specific day (default to current day) 
    * 
@@ -377,9 +385,16 @@ abstract class ConversationBase {
     return this.index_by_date;
   }
 
+  /** Map message IDs to messages objets. */
+  get id_index() {
+    return this._index;
+  }
+
   /** Number of messages in this conversation */
   get length() {
-    return this.all.length;
+    if (this._length)
+      return this._length;
+    return this._length = this.all.length;
   }
 
   get infos() {
