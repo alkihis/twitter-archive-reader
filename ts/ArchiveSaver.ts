@@ -1,7 +1,7 @@
 import TwitterArchive from "./index";
-import Conversation from "./Conversation";
+import Conversation from "./direct_messages/Conversation";
 import JSZip from 'jszip';
-import { UserLoadObject } from "./UserData";
+import { UserLoadObject } from "./user/UserData";
 import { GDPRConversation, DirectMessageEventContainer, DirectMessageEventsContainer, DMFile } from "./types/GDPRDMs";
 import { ScreenNameChange, GPDRScreenNameHistory } from "./types/GDPRUserInformations";
 import { ArchiveSyntheticInfo } from "./types/Internal";

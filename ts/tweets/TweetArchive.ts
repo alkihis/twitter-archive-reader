@@ -1,7 +1,7 @@
-import { dateFromTweet, sortTweets, isWithMedia, isWithVideo } from "./exported_helpers";
-import { TweetIndex } from "./types/Internal";
-import { PartialTweetUser, PartialTweet } from "./types/ClassicTweets";
-import { PartialTweetGDPR } from "./types/GDPRTweets";
+import { dateFromTweet, sortTweets, isWithMedia, isWithVideo } from "../utils/exported_helpers";
+import { TweetIndex } from "../types/Internal";
+import { PartialTweetUser, PartialTweet } from "../types/ClassicTweets";
+import { PartialTweetGDPR } from "../types/GDPRTweets";
 
 /**
  * Contains every tweet related to an archive.

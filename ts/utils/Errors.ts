@@ -69,3 +69,14 @@ export class AccountFileError extends TypeError {
     this.name = 'AccountFileError';
   }
 }
+
+export class FileNotFoundError extends ReferenceError {
+  constructor(message: string, public filename: string) {
+    super(message);
+
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, FileNotFoundError);
+    }
+    this.name = 'FileNotFoundError';
+  }
+}

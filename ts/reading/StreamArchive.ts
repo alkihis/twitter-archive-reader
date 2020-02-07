@@ -1,6 +1,7 @@
 import JSZip from 'jszip';
 import StreamZip, { ZipEntry } from './StreamZip';
-import { FileParseError } from './Errors';
+import { FileParseError, FileNotFoundError } from '../utils/Errors';
+import { EventEmitter } from 'events';
 
 /**
  * string: Filename. WILL USE STREAMING METHOD.
@@ -36,6 +37,7 @@ export interface BaseArchive<T> {
   ) => Promise<any>;
   ls: (current_dir_only?: boolean) => { [name: string]: T };
   fromFile: (name: string | T) => Promise<Archive>;
+  events: EventEmitter;
 }
 
 export function constructArchive(archive: AcceptedZipSources) : ConstructibleArchives {
@@ -58,6 +60,7 @@ class StreamArchive implements BaseArchive<ZipEntry> {
   protected _ready: Promise<void> = Promise.resolve();
   protected current_dir = "";
   protected entries: EntryDict = {};
+  public events = new EventEmitter;
 
   constructor(archive: Blob | string | StreamArchive) {
     if (archive instanceof StreamArchive) {
@@ -166,7 +169,8 @@ class StreamArchive implements BaseArchive<ZipEntry> {
     const f = this.entries[name];
 
     if (!f) {
-      throw new Error("File not found: " + name);
+      this.events.emit('read error', { filename: name });
+      throw new FileNotFoundError("File not found: " + name, name);
     }
 
     return this.read(f, type, parse_auto);
@@ -262,6 +266,7 @@ class StreamArchive implements BaseArchive<ZipEntry> {
 export class Archive implements BaseArchive<JSZip.JSZipObject> {
   protected _ready: Promise<void> = Promise.resolve();
   protected archive: JSZip;
+  public events = new EventEmitter;
 
   constructor(file: AcceptedZipSources) {
     if (file instanceof Archive) {
@@ -310,7 +315,8 @@ export class Archive implements BaseArchive<JSZip.JSZipObject> {
     const f = this.archive.file(name);
 
     if (!f) {
-      throw new Error("File not found: " + name);
+      this.events.emit('read error', { filename: name });
+      throw new FileNotFoundError("File not found: " + name, name);
     }
 
     return this.read(f, type, parse_auto);

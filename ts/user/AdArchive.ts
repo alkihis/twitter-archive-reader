@@ -1,5 +1,5 @@
-import { BaseArchive } from "./StreamArchive";
-import { AdImpression, AdEngagement, AdMobileConversion, AdOnlineConversion, AdImpressionFile, AdEngagementFile, AdMobileConversionsFile, AdOnlineConversionsFile } from "./types/GDPRAds";
+import { BaseArchive } from "../reading/StreamArchive";
+import { AdImpression, AdEngagement, AdMobileConversion, AdOnlineConversion, AdImpressionFile, AdEngagementFile, AdMobileConversionsFile, AdOnlineConversionsFile } from "../types/GDPRAds";
 
 /**
  * Twitter collected data about ads viewed and interacted with by the archive owner.

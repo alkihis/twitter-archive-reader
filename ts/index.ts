@@ -1,19 +1,19 @@
 import { TwitterArchive } from './TwitterArchive';
 
 export * from './TwitterArchive';
-export * from './StreamArchive';
-export * from './Conversation';
-export * from './DMArchive';
-export * from './TweetArchive';
+export * from './reading/StreamArchive';
+export * from './direct_messages/Conversation';
+export * from './direct_messages/DMArchive';
+export * from './tweets/TweetArchive';
 export * from './ArchiveSaver';
-export * from './FavoriteArchive';
-export * from './UserData';
-export * from './AdArchive';
+export * from './tweets/FavoriteArchive';
+export * from './user/UserData';
+export * from './user/AdArchive';
 export * from './MediaArchive';
-export * from './Errors';
+export * from './utils/Errors';
 
 // Helpers
-import * as TwitterHelpers from './exported_helpers';
+import * as TwitterHelpers from './utils/exported_helpers';
 export { TwitterHelpers };
 
 // Types

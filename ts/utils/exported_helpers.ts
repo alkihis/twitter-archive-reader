@@ -1,8 +1,8 @@
 import { supportsBigInt } from "./helpers";
 import bigInt from 'big-integer';
-import { LinkedDirectMessage, DirectMessageEventContainer, DirectMessageEventsContainer, DirectMessageEvent } from "./types/GDPRDMs";
-import { PartialTweet } from "./types/ClassicTweets";
-import { PartialTweetGDPR } from "./types/GDPRTweets";
+import { LinkedDirectMessage, DirectMessageEventContainer, DirectMessageEventsContainer, DirectMessageEvent } from "../types/GDPRDMs";
+import { PartialTweet } from "../types/ClassicTweets";
+import { PartialTweetGDPR } from "../types/GDPRTweets";
 
 // -------------------------
 // - ABOUT DIRECT MESSAGES -

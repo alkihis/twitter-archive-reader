@@ -4,7 +4,7 @@ import { writeFileSync } from 'fs';
 import { inspect } from 'util';
 import Timer from 'timerize';
 import ArchiveSaver from '../ArchiveSaver';
-import { TweetSearcher } from '../TweetArchive';
+import { TweetSearcher } from '../tweets/TweetArchive';
 import { MediaArchiveType } from '../MediaArchive';
 
 commander

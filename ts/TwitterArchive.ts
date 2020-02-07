@@ -1,13 +1,13 @@
-import { AcceptedZipSources, constructArchive, ConstructibleArchives } from './StreamArchive';
-import DMArchive from './DMArchive';
+import { AcceptedZipSources, constructArchive, ConstructibleArchives } from './reading/StreamArchive';
+import DMArchive from './direct_messages/DMArchive';
 import { EventEmitter } from 'events';
 import md5 from 'js-md5';
-import TweetArchive from './TweetArchive';
-import { FavoriteArchive } from './FavoriteArchive';
-import UserData from './UserData';
-import AdArchive from './AdArchive';
+import TweetArchive from './tweets/TweetArchive';
+import { FavoriteArchive } from './tweets/FavoriteArchive';
+import UserData from './user/UserData';
+import AdArchive from './user/AdArchive';
 import MediaArchive from './MediaArchive';
-import { parseTwitterDate, dateFromTweet, sortTweets } from './exported_helpers';
+import { parseTwitterDate, dateFromTweet, sortTweets } from './utils/exported_helpers';
 import { ExtendedInfoContainer, TwitterArchiveLoadOptions, BasicArchiveInfo, ArchiveSyntheticInfo } from './types/Internal';
 import { PartialTweetGDPR } from './types/GDPRTweets';
 import { GDPRFollowings, GDPRFollowers, GDPRFavorites, GDPRMutes, GDPRBlocks, PartialFavorite } from './types/GDPRExtended';
@@ -16,7 +16,7 @@ import { ClassicTweetIndex, ClassicPayloadDetails } from './types/ClassicPayload
 import { PartialTweet, TwitterUserDetails } from './types/ClassicTweets';
 import { AccountGDPR, ProfileGDPR } from './types/GDPRAccount';
 import { DMFile } from './types/GDPRDMs';
-import { TweetFileError, DirectMessageParseError, ProfileFileError, AccountFileError } from './Errors';
+import { TweetFileError, DirectMessageParseError, ProfileFileError, AccountFileError } from './utils/Errors';
 
 
 // Base variables, unexported

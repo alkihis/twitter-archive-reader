@@ -1,4 +1,4 @@
-import Conversation from "../Conversation";
+import Conversation from "../direct_messages/Conversation";
 
 /*
  * Conversation & DM File

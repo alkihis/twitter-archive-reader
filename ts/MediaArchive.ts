@@ -1,8 +1,9 @@
-import { AcceptedZipSources, constructArchive, ConstructibleArchives } from "./StreamArchive";
-import UserData from "./UserData";
+import { AcceptedZipSources, constructArchive, ConstructibleArchives } from "./reading/StreamArchive";
+import UserData from "./user/UserData";
 import { DirectMessage } from "./types/GDPRDMs";
 import { PartialTweet, PartialTweetMediaEntity } from "./types/ClassicTweets";
 import { MediaGDPREntity } from "./types/GDPRTweets";
+import { FileNotFoundError } from "./utils/Errors";
 
 export type ArchiveDMImagesFormation = "none" | "inside" | "zipped";
 type ExisitingArchives = "dm_single" | "dm_group" | "tweet" | "moment" | "profile";
@@ -453,7 +454,7 @@ export class SingleMediaArchive {
       return this._archive.read(results[0] as any, as_array_buffer ? "arraybuffer" : "blob");
     }
 
-    throw new Error("File not found");
+    throw new FileNotFoundError("File not found", name);
   }
   
   async sideload(archive: ConstructibleArchives) {

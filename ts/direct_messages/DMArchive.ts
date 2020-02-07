@@ -1,5 +1,5 @@
 import Conversation, { GlobalConversation } from "./Conversation";
-import { DMFile, DirectMessage } from "./types/GDPRDMs";
+import { DMFile, DirectMessage } from "../types/GDPRDMs";
 
 /**
  * Hold all the direct messages contained in a Twitter GDPR archive.

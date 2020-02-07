@@ -1,4 +1,4 @@
-import { PartialFavorite, GDPRFavorites } from "./types/GDPRExtended";
+import { PartialFavorite, GDPRFavorites } from "../types/GDPRExtended";
 
 export class FavoriteArchive {
   protected index: { [tweetId: string]: PartialFavorite } = {};
