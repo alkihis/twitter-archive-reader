@@ -235,11 +235,21 @@ export class TwitterArchive {
     this.events.emit('read', { step: 'willreaddm' });
     
     // Init DMs
-    const conv_files = ['direct-message.js', 'direct-message-group.js'];
+    const conv_files = [
+      'direct-message.js', 
+      'direct-messages.js', 
+      'direct-message-group.js',
+      'direct-messages-group.js',
+    ];
 
     i = 1;
     while (this.archive.has(`direct-message-part${i}.js`)) {
       conv_files.push(`direct-message-part${i}.js`);
+      i++;
+    }
+    i = 1;
+    while (this.archive.has(`direct-messages-part${i}.js`)) {
+      conv_files.push(`direct-messages-part${i}.js`);
       i++;
     }
 
