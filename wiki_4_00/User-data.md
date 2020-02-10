@@ -145,5 +145,5 @@ interface ScreenNameChange {
 
 ## Continue
 
-Next page is [Tweet access and manipulating tweets](./Tweet-access-and-manipulating-tweets).
+Next page is [Tweet access and manipulating tweets](./Tweet-access-and-manipulating-tweets.md).
 

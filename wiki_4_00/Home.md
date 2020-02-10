@@ -35,16 +35,16 @@ Module will use a fallback to `big-integer` npm module if `BigInt` does not exis
 
 First, we will see how initialize the main class of the module, how to explore tweets in it, then we will explore direct messages.
 
-1) [Installation & Instantiation](./Installation-&-Instantiation)
-2) [Archive Properties](./Archive-properties)
-3) [User data](./User-data)
+1) [Installation & Instantiation](./Installation-&-Instantiation.md)
+2) [Archive Properties](./Archive-properties.md)
+3) [User data](./User-data.md)
 4) Tweets
-  - [Tweet access and manipulating tweets](./Tweet-access-and-manipulating-tweets)
+  - [Tweet access and manipulating tweets](./Tweet-access-and-manipulating-tweets.md)
   - [Search into tweets](./Search-into-tweets)
 5) Direct Messages
-  - [Browsing Direct Message archive](./Browsing-Direct-Message-archive-(conversations))
-  - [Browsing a single DM conversation](./Browsing-a-single-DM-conversation)
-  - [Get a direct message media](./Get-a-direct-message-media)
+  - [Browsing Direct Message archive](./Browsing-Direct-Message-archive-(conversations).md)
+  - [Browsing a single DM conversation](./Browsing-a-single-DM-conversation.md)
+  - [Get a direct message media](./Get-a-direct-message-media.md)
 6) [Explore favorites](./Explore-favorites.md)
-7) [Explore ad data](./Explore-ad-data)
+7) [Explore ad data](./Explore-ad-data.md)
 

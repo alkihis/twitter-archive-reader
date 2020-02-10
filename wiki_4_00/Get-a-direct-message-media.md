@@ -44,5 +44,5 @@ const all_images = await archive.dmImagesOf(message, true);
 
 ## Continue
 
-Next part is [Explore favorites](./Explore-favorites).
+Next part is [Explore favorites](./Explore-favorites.md).
 

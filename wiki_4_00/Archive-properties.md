@@ -31,7 +31,7 @@ Some properties are restricted for the GDPR archive.
 
 Specific methods:
 
-For details, see [Get a direct message media](./Get-a-direct-message-media) part.
+For details, see [Get a direct message media](./Get-a-direct-message-media.md) part.
 
 - `.dmImage(name: string, is_group: boolean, as_array_buffer: boolean)`: Extract direct message file from its name (returns a `Promise<Blob | ArrayBuffer>`).
 - `.dmImageFromUrl(url: string, is_group: boolean, as_array_buffer: boolean)`: Extract direct message file from the Twitter media URL contained in `DirectMessage` object (returns a `Promise<Blob | ArrayBuffer>`).
@@ -44,5 +44,5 @@ Utilities:
 
 ## Continue
 
-Next page is [User data](./User-data).
+Next page is [User data](./User-data.md).
 

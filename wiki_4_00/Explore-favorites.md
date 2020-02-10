@@ -25,5 +25,5 @@ This object is iterable, and iterate over all registred `PartialFavorite`.
 
 ## Continue
 
-Next part is [Explore ad data](./Explore-ad-data)
+Next part is [Explore ad data](./Explore-ad-data.md)
 

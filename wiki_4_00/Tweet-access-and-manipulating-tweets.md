@@ -98,5 +98,5 @@ Static methods inside of `TweetArchive` class, to help you for manipulating twee
 
 ## Continue
 
-Next part is [Search into tweets](./Search-into-tweets). 
+Next part is [Search into tweets](./Search-into-tweets.md). 
 

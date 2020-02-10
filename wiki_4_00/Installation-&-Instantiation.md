@@ -156,4 +156,4 @@ Linked to `.ready()` promise (rejected).
 
 ## Continue
 
-Next part is [Archive Properties](./Archive-properties). 
+Next part is [Archive Properties](./Archive-properties.md). 
