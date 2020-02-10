@@ -165,6 +165,11 @@ export class TwitterArchive {
         .then(() => {
           // Detect archive type
           this._is_gdpr = this.archive.search(/^tweets\.csv$/).length === 0;
+        
+          // Listen for read error events on archives
+          this.archive.events.on('read error', ({ filename }: { filename: string }) => {
+            this.events.emit('archive file not found error', { filename });
+          });
 
           // Init media archive
           this._medias = new MediaArchive(this.archive);
