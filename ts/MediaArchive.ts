@@ -23,8 +23,8 @@ export class MediaArchive {
   protected profile: SingleMediaArchive | undefined;
   protected moment: SingleMediaArchive | undefined;
 
-  protected static readonly DM_SINGLE_FOLDER = "direct_message_media";
-  protected static readonly DM_GROUP_FOLDER = "direct_message_group_media";
+  protected static readonly DM_SINGLE_FOLDER = ["direct_message_media", "direct_messages_media"];
+  protected static readonly DM_GROUP_FOLDER = ["direct_message_group_media", "direct_messages_group_media"];
   protected static readonly TWEET_FOLDER = "tweet_media";
   protected static readonly PROFILE_FOLDER = "profile_media";
   protected static readonly MOMENT_FOLDER = "moments_media";
@@ -339,7 +339,7 @@ export class MediaArchive {
     }
   }
 
-  protected initOrAwaitArchive(archive_type: ExisitingArchives, init_folder: string) {
+  protected initOrAwaitArchive(archive_type: ExisitingArchives, init_folder: string | string[]) {
     if (!this[archive_type]) {
       this[archive_type] = new SingleMediaArchive(this.archive, init_folder);
     }
@@ -360,7 +360,23 @@ export class MediaArchive {
       }
       return "inside";
     }
+    if (archive.searchDir(/direct_messages_media/).length) {
+      const folder = archive.dir('direct_messages_media');
+      const query = folder.search(/\.zip$/);
+      if (query.length) {
+        return "zipped";
+      }
+      return "inside";
+    }
     if (archive.searchDir(/direct_message_group_media/).length) {
+      const folder = archive.dir('direct_message_group_media');
+      const query = folder.search(/\.zip$/);
+      if (query.length) {
+        return "zipped";
+      }
+      return "inside";
+    }
+    if (archive.searchDir(/direct_messages_group_media/).length) {
       const folder = archive.dir('direct_message_group_media');
       const query = folder.search(/\.zip$/);
       if (query.length) {
@@ -396,7 +412,7 @@ export class SingleMediaArchive {
   protected _ready: Promise<void>;
   protected _ok = false;
 
-  constructor(full_archive: ConstructibleArchives | null, dir_name: string) {
+  constructor(full_archive: ConstructibleArchives | null, dir_name: string | string[]) {
     if (full_archive === null) {
       this._ready = Promise.resolve();
       this._ok = true;
@@ -407,14 +423,30 @@ export class SingleMediaArchive {
       }
 
       this._ready = (async () => {
-        const folder = full_archive.dir(dir_name);
+        let real_dir_name = "";
+        if (Array.isArray(dir_name)) {
+          for (const dir of dir_name) {
+            if (full_archive.searchDir(new RegExp(dir)).length) {
+              real_dir_name = dir;
+            }
+          }
+
+          if (!real_dir_name) {
+            real_dir_name = dir_name[0];
+          }
+        }
+        else {
+          real_dir_name = dir_name;
+        }
+
+        const folder = full_archive.dir(real_dir_name);
         const query = folder.search(/\.zip$/);
         if (query.length) {
           this._archive = await folder.fromFile(query[0] as any);
           await this._archive.ready();
         }
         else {
-          this._archive = full_archive.dir(dir_name);
+          this._archive = folder;
         }
         this._ok = true;
       })();

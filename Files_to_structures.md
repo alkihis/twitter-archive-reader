@@ -69,6 +69,10 @@ This file is not parsed.
 
 Every `accountId` in this file is available in `archive.blocks` set.
 
+### `branch-links.js`
+
+This file is not parsed.
+
 ### `connected-application.js`
 
 Every `connectedApplication` in this file is merged into `archive.user.authorized_applications` array.
