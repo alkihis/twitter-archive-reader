@@ -14,8 +14,19 @@ interface TweetDateIndex { [year: string]: { [month: string]: TweetIndex } }
  * `TwitterArchive.loadClassicArchivePart()` methods.
  */
 export class TweetArchive {
-  protected by_id: TweetIndex = {};
-  protected _date_index: TweetDateIndex = {};
+  /** ID-indexed tweets; This is always filled. */
+  protected _index: TweetIndex = {};
+  /** 
+   * Year then month-indexed tweets; 
+   * This is not always generated,  
+   * use `.index` getter instead.
+   */
+  protected _date_index: TweetDateIndex;
+  /** 
+   * All tweets, in a single array; 
+   * This is not always generated,  
+   * use `.all` getter instead.
+   */
   protected _all: PartialTweet[];
 
   protected user_cache: PartialTweetUser;
@@ -38,7 +49,7 @@ export class TweetArchive {
     this._date_index = undefined;
 
     for (const tweet of tweets) {
-      this.by_id[tweet.id_str] = tweet;
+      this._index[tweet.id_str] = tweet;
     }
   }
 
@@ -54,7 +65,7 @@ export class TweetArchive {
 
     for (const original of tweets) {
       const tweet = this.convertToPartial(original);      
-      this.by_id[tweet.id_str] = tweet;
+      this._index[tweet.id_str] = tweet;
     }
   }
 
@@ -65,12 +76,35 @@ export class TweetArchive {
 
   /** Extract tweets from a specific month. Months are indexed from 1. */
   month(month: string | number, year: string | number) : PartialTweet[] {
-    const index = this.index;
-    
-    if (year in index) {
-      if (month in index[year]) {
-        return Object.values(index[year][month]);
+    if (this._date_index || Settings.ENABLE_CACHE) {
+      const index = this.index;
+      
+      if (year in index) {
+        if (month in index[year]) {
+          return Object.values(index[year][month]);
+        }
       }
+    }
+    else {
+      const tweets: PartialTweet[] = [];
+      const now_m = Number(month) - 1;
+      const now_y = Number(year);
+
+      for (const id in this._index) {
+        const tweet = this._index[id];
+        const date = dateFromTweet(tweet);
+
+        if (date.getMonth() !== now_m) {
+          continue;
+        }
+        if (date.getFullYear() !== now_y) {
+          continue;
+        }
+
+        tweets.push(tweet);
+      }
+
+      return tweets;
     }
 
     return [];
@@ -82,18 +116,41 @@ export class TweetArchive {
     const now_m = start.getMonth();
     const now_d = start.getDate();
 
-    const index = this.index;
-
     const tweets: PartialTweet[] = [];
-    for (const year in index) {
-      for (const month in index[year]) {
-        if (Number(month) === now_m + 1) {
-          // Month of interest
-          tweets.push(
-            ...Object.values(index[year][month])
-              .filter(t => dateFromTweet(t).getDate() === now_d)
-          );
+
+    if (this._date_index || Settings.ENABLE_CACHE) {
+      const index = this._date_index;
+  
+      for (const year in index) {
+        for (const month in index[year]) {
+          if (Number(month) === now_m + 1) {
+            // Month of interest
+            tweets.push(
+              ...Object.values(index[year][month])
+                .filter(t => dateFromTweet(t).getDate() === now_d)
+            );
+          }
         }
+      }
+    }
+    else {
+      const now_y = start.getFullYear();
+
+      for (const id in this._index) {
+        const tweet = this._index[id];
+        const date = dateFromTweet(tweet);
+
+        if (date.getDate() !== now_d) {
+          continue;
+        }
+        if (date.getMonth() !== now_m) {
+          continue;
+        }
+        if (date.getFullYear() !== now_y) {
+          continue;
+        }
+
+        tweets.push(tweet);
       }
     }
 
@@ -120,26 +177,21 @@ export class TweetArchive {
 
     remaining_months.push(firsts);
 
-    let tmp_date = new Date(since.getFullYear(), since.getMonth());
+    const tmp_date = new Date(since.getFullYear(), since.getMonth());
     tmp_date.setMonth(tmp_date.getMonth() + 1);
 
-    remaining_months.push(ends);
-
     // Calculating months that are between the two dates
-    while (true) {
-      if (tmp_date.getFullYear() > until.getFullYear()) {
-        break;
-      }
-      if (tmp_date.getFullYear() === until.getFullYear()) {
-        if (tmp_date.getMonth() >= until.getMonth()) {
-          break;
-        }
-      }
-
+    // WITHOUT the end month (already inserted)
+    while (
+      tmp_date.getFullYear() < until.getFullYear() ||
+      tmp_date.getMonth() < until.getMonth()
+    ) {
       remaining_months.push([String(tmp_date.getMonth() + 1), String(tmp_date.getFullYear())]);
 
       tmp_date.setMonth(tmp_date.getMonth() + 1);
     }
+
+    remaining_months.push(ends);
 
     const tweets: PartialTweet[] = [];
 
@@ -165,8 +217,8 @@ export class TweetArchive {
 
   /** Get a single tweet by ID. Returns `null` if tweet does not exists. */
   single(id_str: string) : PartialTweet | null {
-    if (id_str in this.by_id) {
-      return this.by_id[id_str];
+    if (id_str in this._index) {
+      return this._index[id_str];
     }
 
     return null;
@@ -174,90 +226,7 @@ export class TweetArchive {
 
   /** Check if tweet {id_str} exists in this archive. */
   has(id_str: string) {
-    return id_str in this.by_id;
-  }
-
-
-  /** --------- */
-  /** ACCESSORS */
-  /** --------- */
-
-  /**
-   * Index of tweets by years. 
-   * 
-   * Example, get index of tweets posted on 2019/01 : 
-   * **<index>.years[2019][1]**
-   */
-  get index() {
-    if (Settings.ENABLE_CACHE && this._date_index)
-      return this._date_index;
-    
-    const index: TweetDateIndex = {};
-
-    for (const tweet of this) {
-      const date = dateFromTweet(tweet);
-      const month = String(date.getMonth() + 1);
-      const year = String(date.getFullYear());
-
-      // Creating month/year if not presents
-      if (!(year in index)) {
-        index[year] = {};
-      }
-
-      if (!(month in index[year])) {
-        index[year][month] = {};
-      }
-
-      // Save tweet in index
-      index[year][month][tweet.id_str] = tweet;
-    }
-
-    if (Settings.ENABLE_CACHE)
-      return this._date_index = index;
-
-    return index;
-  }
-
-  /**
-   * Index of tweets by ID.
-   */
-  get id_index() {
-    return this.by_id;
-  }
-
-  /** Number of tweets in this archive. */
-  get length() {
-    return Object.keys(this.by_id).length;
-  }
-
-  /** 
-   * All tweets registered in this archive.
-   * 
-   * Remember that it's not assured that tweets are sorted.
-   * 
-   * To get ordered tweets, use `.sortedIterator()`.
-   */
-  get all() : PartialTweet[] {
-    if (Settings.ENABLE_CACHE) {
-      if (this._all)
-        return this._all;
-  
-      return this._all = Object.values(this.by_id);
-    }
-    return Object.values(this.by_id);
-  }
-
-  /**
-   * Returns the local `TweetFinder` instance assigned to this `TweetArchive`.
-   * 
-   * A global exported instance also exists and named `TweetSearcher`.
-   */
-  get finder() {
-    if (!this._finder) {
-      this._finder = new TweetFinder;
-    }
-
-    return this._finder;
+    return id_str in this._index;
   }
 
   /**
@@ -320,6 +289,89 @@ export class TweetArchive {
     search_in: string[] = ["text", "user.screen_name"]
   ) {
     return this.finder.search(this, query, is_regex, static_validators, search_in);
+  }
+
+
+  /** --------- */
+  /** ACCESSORS */
+  /** --------- */
+
+  /**
+   * Index of tweets by years. 
+   * 
+   * Example, get index of tweets posted on 2019/01 : 
+   * **<index>.years[2019][1]**
+   */
+  get index() {
+    if (Settings.ENABLE_CACHE && this._date_index)
+      return this._date_index;
+    
+    const index: TweetDateIndex = {};
+
+    for (const tweet of this) {
+      const date = dateFromTweet(tweet);
+      const month = String(date.getMonth() + 1);
+      const year = String(date.getFullYear());
+
+      // Creating month/year if not presents
+      if (!(year in index)) {
+        index[year] = {};
+      }
+
+      if (!(month in index[year])) {
+        index[year][month] = {};
+      }
+
+      // Save tweet in index
+      index[year][month][tweet.id_str] = tweet;
+    }
+
+    if (Settings.ENABLE_CACHE)
+      return this._date_index = index;
+
+    return index;
+  }
+
+  /**
+   * Index of tweets by ID.
+   */
+  get id_index() {
+    return this._index;
+  }
+
+  /** Number of tweets in this archive. */
+  get length() {
+    return this.all.length;
+  }
+
+  /** 
+   * All tweets registered in this archive.
+   * 
+   * Remember that it's not assured that tweets are sorted.
+   * 
+   * To get ordered tweets, use `.sortedIterator()`.
+   */
+  get all() : PartialTweet[] {
+    if (Settings.ENABLE_CACHE) {
+      if (this._all)
+        return this._all;
+  
+      return this._all = Object.values(this._index);
+    }
+    return Object.values(this._index);
+  }
+
+  /**
+   * Returns the local `TweetFinder` instance assigned to this `TweetArchive`.
+   * 
+   * A global exported instance also exists and named `TweetSearcher`.
+   */
+  get finder() {
+    if (!this._finder) {
+      this._finder = new TweetFinder;
+    }
+
+    return this._finder;
   }
 
   /** --------- */
