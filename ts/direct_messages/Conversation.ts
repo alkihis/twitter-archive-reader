@@ -23,7 +23,7 @@ interface ConversationIndex {
       }
     }
   }
-};
+}
 
 interface DirectMessageIndex {
   [id: string]: LinkedDirectMessage
@@ -57,6 +57,9 @@ abstract class ConversationBase {
 
   protected register(msg: LinkedDirectMessage) {
     this._index[msg.id] = msg;
+    if (!msg.createdAtDate) {
+      msg.createdAtDate = parseTwitterDate(msg.createdAt);
+    }
     this._length = undefined;
     this._all = undefined;
     this._index_by_date = undefined;
@@ -377,10 +380,6 @@ abstract class ConversationBase {
     const index: DirectMessageDateIndex = {};
 
     for (const msg of this) {
-      if (!msg.createdAtDate) {
-        msg.createdAtDate = parseTwitterDate(msg.createdAt);
-      }
-  
       const [day, month, year] = [
         msg.createdAtDate.getDate(), 
         msg.createdAtDate.getMonth() + 1, 

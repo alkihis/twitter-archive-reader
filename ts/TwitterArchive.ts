@@ -373,7 +373,10 @@ export class TwitterArchive {
     } catch (e) { }
 
     // Moments
-    const moments: GDPRMoment[] = (await this.archive.get('moment.js') as GDPRMomentFile).map(e => e.moment);
+    let moments: GDPRMoment[];
+    try {
+      moments = (await this.archive.get('moment.js') as GDPRMomentFile).map(e => e.moment);
+    } catch (e) { }
 
     this.extended_info_container = {
       moments,

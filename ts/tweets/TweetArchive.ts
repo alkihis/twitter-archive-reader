@@ -4,6 +4,8 @@ import { PartialTweetUser, PartialTweet } from "../types/ClassicTweets";
 import { PartialTweetGDPR } from "../types/GDPRTweets";
 import Settings from "../utils/Settings";
 
+interface TweetDateIndex { [year: string]: { [month: string]: TweetIndex } }
+
 /**
  * Contains every tweet related to an archive.
  * 
@@ -13,7 +15,7 @@ import Settings from "../utils/Settings";
  */
 export class TweetArchive {
   protected by_id: TweetIndex = {};
-  protected _index: { [year: string]: { [month: string]: TweetIndex } } = {};
+  protected _date_index: TweetDateIndex = {};
   protected _all: PartialTweet[];
 
   protected user_cache: PartialTweetUser;
@@ -33,24 +35,9 @@ export class TweetArchive {
    */
   add(tweets: PartialTweet[]) {
     this._all = undefined;
+    this._date_index = undefined;
 
     for (const tweet of tweets) {
-      const date = dateFromTweet(tweet);
-  
-      const month = String(date.getMonth() + 1);
-      const year = String(date.getFullYear());
-  
-      // Creating month/year if not presents
-      if (!(year in this._index)) {
-        this._index[year] = {};
-      }
-  
-      if (!(month in this._index[year])) {
-        this._index[year][month] = {};
-      }
-  
-      // Save tweet in index
-      this._index[year][month][tweet.id_str] = tweet;
       this.by_id[tweet.id_str] = tweet;
     }
   }
@@ -63,25 +50,10 @@ export class TweetArchive {
    */
   addGDPR(tweets: PartialTweetGDPR[]) {
     this._all = undefined;
+    this._date_index = undefined;
 
     for (const original of tweets) {
-      const tweet = this.convertToPartial(original);
-      const date = dateFromTweet(tweet);
-  
-      const month = String(date.getMonth() + 1);
-      const year = String(date.getFullYear());
-  
-      // Creating month/year if not presents
-      if (!(year in this._index)) {
-        this._index[year] = {};
-      }
-  
-      if (!(month in this._index[year])) {
-        this._index[year][month] = {};
-      }
-  
-      // Save tweet in index
-      this._index[year][month][tweet.id_str] = tweet;
+      const tweet = this.convertToPartial(original);      
       this.by_id[tweet.id_str] = tweet;
     }
   }
@@ -93,9 +65,11 @@ export class TweetArchive {
 
   /** Extract tweets from a specific month. Months are indexed from 1. */
   month(month: string | number, year: string | number) : PartialTweet[] {
-    if (year in this._index) {
-      if (month in this._index[year]) {
-        return Object.values(this._index[year][month]);
+    const index = this.index;
+    
+    if (year in index) {
+      if (month in index[year]) {
+        return Object.values(index[year][month]);
       }
     }
 
@@ -108,13 +82,15 @@ export class TweetArchive {
     const now_m = start.getMonth();
     const now_d = start.getDate();
 
+    const index = this.index;
+
     const tweets: PartialTweet[] = [];
-    for (const year in this._index) {
-      for (const month in this._index[year]) {
+    for (const year in index) {
+      for (const month in index[year]) {
         if (Number(month) === now_m + 1) {
           // Month of interest
           tweets.push(
-            ...Object.values(this._index[year][month])
+            ...Object.values(index[year][month])
               .filter(t => dateFromTweet(t).getDate() === now_d)
           );
         }
@@ -213,7 +189,33 @@ export class TweetArchive {
    * **<index>.years[2019][1]**
    */
   get index() {
-    return this._index;
+    if (Settings.ENABLE_CACHE && this._date_index)
+      return this._date_index;
+    
+    const index: TweetDateIndex = {};
+
+    for (const tweet of this) {
+      const date = dateFromTweet(tweet);
+      const month = String(date.getMonth() + 1);
+      const year = String(date.getFullYear());
+
+      // Creating month/year if not presents
+      if (!(year in index)) {
+        index[year] = {};
+      }
+
+      if (!(month in index[year])) {
+        index[year][month] = {};
+      }
+
+      // Save tweet in index
+      index[year][month][tweet.id_str] = tweet;
+    }
+
+    if (Settings.ENABLE_CACHE)
+      return this._date_index = index;
+
+    return index;
   }
 
   /**
@@ -372,13 +374,15 @@ export class TweetArchive {
       sort_fn = (a, b) => Number(b) - Number(a);
     }
 
-    const sorted_years = Object.keys(this._index).sort(sort_fn);
+    const index = this.index;
+
+    const sorted_years = Object.keys(index).sort(sort_fn);
 
     for (const year of sorted_years) {
-      const sorted_months = Object.keys(this._index[year]).sort(sort_fn);
+      const sorted_months = Object.keys(index[year]).sort(sort_fn);
 
       for (const month of sorted_months) {
-        yield [year, month, Object.values(this._index[year][month])];
+        yield [year, month, Object.values(index[year][month])];
       }
     }
   }
