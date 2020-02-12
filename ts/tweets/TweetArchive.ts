@@ -2,6 +2,7 @@ import { dateFromTweet, sortTweets, isWithMedia, isWithVideo } from "../utils/ex
 import { TweetIndex } from "../types/Internal";
 import { PartialTweetUser, PartialTweet } from "../types/ClassicTweets";
 import { PartialTweetGDPR } from "../types/GDPRTweets";
+import Settings from "../utils/Settings";
 
 /**
  * Contains every tweet related to an archive.
@@ -13,6 +14,7 @@ import { PartialTweetGDPR } from "../types/GDPRTweets";
 export class TweetArchive {
   protected by_id: TweetIndex = {};
   protected _index: { [year: string]: { [month: string]: TweetIndex } } = {};
+  protected _all: PartialTweet[];
 
   protected user_cache: PartialTweetUser;
 
@@ -30,6 +32,8 @@ export class TweetArchive {
    * Prefer usage of `TwitterArchive.loadClassicArchivePart()` method.
    */
   add(tweets: PartialTweet[]) {
+    this._all = undefined;
+
     for (const tweet of tweets) {
       const date = dateFromTweet(tweet);
   
@@ -58,6 +62,8 @@ export class TweetArchive {
    * Prefer usage of `TwitterArchive.loadArchivePart()` method.
    */
   addGDPR(tweets: PartialTweetGDPR[]) {
+    this._all = undefined;
+
     for (const original of tweets) {
       const tweet = this.convertToPartial(original);
       const date = dateFromTweet(tweet);
@@ -230,6 +236,12 @@ export class TweetArchive {
    * To get ordered tweets, use `.sortedIterator()`.
    */
   get all() : PartialTweet[] {
+    if (Settings.ENABLE_CACHE) {
+      if (this._all)
+        return this._all;
+  
+      return this._all = Object.values(this.by_id);
+    }
     return Object.values(this.by_id);
   }
 
@@ -422,6 +434,8 @@ export class TweetArchive {
       rt.user = { ...rt.user };
 
       rt.text = text;
+      // @ts-ignore
+      delete rt.full_text;
       rt.user.screen_name = arobase;
       rt.user.name = arobase;
       // @ts-ignore

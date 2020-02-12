@@ -17,6 +17,8 @@ import { PartialTweet, TwitterUserDetails } from './types/ClassicTweets';
 import { AccountGDPR, ProfileGDPR } from './types/GDPRAccount';
 import { DMFile } from './types/GDPRDMs';
 import { TweetFileError, DirectMessageParseError, ProfileFileError, AccountFileError } from './utils/Errors';
+import Settings from './utils/Settings';
+import { sleep } from './utils/helpers';
 
 
 // Base variables, unexported
@@ -93,6 +95,9 @@ export type ArchiveReadStep = "zipready" | "userinfosready" | "tweetsread" | "in
  * ```
  */
 export class TwitterArchive {
+  // Export the settings as static property of default exported object
+  public static readonly settings = Settings;
+
   protected _ready: Promise<void> = Promise.resolve();
   protected archive: ConstructibleArchives;
 
@@ -196,36 +201,55 @@ export class TwitterArchive {
   }
 
   protected async initGDPR(build_ad_archive: boolean) {
-    // This is not accurate, but this is for compatibility reasons
-    this.events.emit('userinfosready');
-    this.events.emit('read', { step: 'userinfosready' });
+    const addTweetsToGdprArchive = (tweets: PartialTweetGDPR[]) => {
+      try {
+        this._tweets.addGDPR(tweets);
+      } catch (e) {
+        if (e instanceof Error) {
+          throw new TweetFileError(
+            `Unable to compute tweets: ${e.message}`,
+            tweets[0],
+            e.stack
+          );
+        }
+
+        throw e;
+      }
+    };
 
     // ------------------------
     // TWEETS AND PROFILE INFOS
     // ------------------------
 
+    // this._info is initialized here
+    await this.loadArchivePart({
+      account: await this.archive.get('account.js'),
+      profile: await this.archive.get('profile.js'),
+    });
+    
+    this.events.emit('userinfosready');
+    this.events.emit('read', { step: 'userinfosready' });
+
     // Init tweet indexes
-    const tweets: PartialTweetGDPR[] = await this.archive.get('tweet.js');
-
-    let i = 1;
-    while (this.archive.has(`tweet-part${i}.js`)) {
-      // Add every tweet in other files 
-      // inside a "new" array in the initial array
-      tweets.push(...await this.archive.get(`tweet-part${i}.js`));
-      i++;
-    }
-
     this.state = "tweet_read";
 
     this.events.emit('tweetsread');
     this.events.emit('read', { step: 'tweetsread' });
 
-    // this._info is initialized here
-    await this.loadArchivePart({
-      account: await this.archive.get('account.js'),
-      profile: await this.archive.get('profile.js'),
-      tweets
-    });
+    addTweetsToGdprArchive(await this.archive.get('tweet.js'));
+
+    if (Settings.LOW_RAM) {
+      // Sleep to temperate load; Helps garbage collector, with asynchonous tasks.
+      await sleep(750);
+    }
+
+    let i = 1;
+    while (this.archive.has(`tweet-part${i}.js`)) {
+      // Add every tweet in other files 
+      // inside a "new" array in the initial array
+      addTweetsToGdprArchive(await this.archive.get(`tweet-part${i}.js`));
+      i++;
+    }
 
     this.events.emit('indexready');
     this.events.emit('read', { step: 'indexready' });
