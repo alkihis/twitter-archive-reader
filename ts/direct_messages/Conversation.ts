@@ -2,6 +2,7 @@ import { supportsBigInt, dateOfDMEvent } from "../utils/helpers";
 import bigInt from 'big-integer';
 import { parseTwitterDate, getEventsFromMessages } from "../utils/exported_helpers";
 import { LinkedDirectMessage, DirectMessageEventContainer, GDPRConversation, DirectMessageEventsContainer } from "../types/GDPRDMs";
+import Settings from "../utils/Settings";
 
 /** Register the number of messages in each year, month and day, and let you access those messages. */
 interface ConversationIndex {
@@ -51,47 +52,28 @@ abstract class ConversationBase {
   protected _length: number;
 
   protected _index: DirectMessageIndex = {};
-  protected index_by_date: DirectMessageDateIndex = {};
+  protected _index_by_date: DirectMessageDateIndex;
+  protected _all: LinkedDirectMessage[];
 
   protected register(msg: LinkedDirectMessage) {
     this._index[msg.id] = msg;
     this._length = undefined;
-
-    if (!msg.createdAtDate) {
-      msg.createdAtDate = parseTwitterDate(msg.createdAt);
-    }
-
-    const [day, month, year] = [
-      msg.createdAtDate.getDate(), 
-      msg.createdAtDate.getMonth() + 1, 
-      msg.createdAtDate.getFullYear()
-    ];
-
-    if (!this.index_by_date[year]) {
-      this.index_by_date[year] = {};
-    }
-
-    if (!this.index_by_date[year][month]) {
-      this.index_by_date[year][month] = {};
-    }
-
-    if (!this.index_by_date[year][month][day]) {
-      this.index_by_date[year][month][day] = {};
-    }
-
-    this.index_by_date[year][month][day][msg.id] = msg;
+    this._all = undefined;
+    this._index_by_date = undefined;
   }
 
   protected unregisterAll() {
     this._index = {},
-    this.index_by_date = {};
+    this._index_by_date = undefined;
+    this._all = undefined;
     this._length = undefined;
   }
 
   /** Get direct messages from a specific month. */
   month(month: string | number, year: string | number) : SubConversation {
-    if (year in this.index_by_date && month in this.index_by_date[year]) {
-      const messages = [].concat(...Object.values(this.index_by_date[year][month]).map(e => Object.values(e)));
+    const index = this.index_by_date;
+    if (year in index && month in index[year]) {
+      const messages = [].concat(...Object.values(index[year][month]).map(e => Object.values(e)));
       
       return new SubConversation(messages, this.info.me);
     }
@@ -269,10 +251,11 @@ abstract class ConversationBase {
 
     const year = day.getFullYear(), month = day.getMonth() + 1, date = day.getDate();
 
-    if (year in this.index_by_date) {
-      if (month in this.index_by_date[year]) {
-        if (date in this.index_by_date[year][month]) {
-          return new SubConversation(Object.values(this.index_by_date[year][month][date]), this.info.me);
+    const index = this.index_by_date;
+    if (year in index) {
+      if (month in index[year]) {
+        if (date in index[year][month]) {
+          return new SubConversation(Object.values(index[year][month][date]), this.info.me);
         }
       }
     }
@@ -297,10 +280,11 @@ abstract class ConversationBase {
 
     const messages: LinkedDirectMessage[] = [];
 
-    for (const year in this.index_by_date) {
-      if (month in this.index_by_date[year]) {
-        if (date in this.index_by_date[year][month]) {
-          messages.push(...Object.values(this.index_by_date[year][month][date]));
+    const index = this.index_by_date;
+    for (const year in index) {
+      if (month in index[year]) {
+        if (date in index[year][month]) {
+          messages.push(...Object.values(index[year][month][date]));
         }
       }
     }
@@ -336,6 +320,11 @@ abstract class ConversationBase {
 
   /** All the messages in this conversation */
   get all() : LinkedDirectMessage[] {
+    if (Settings.ENABLE_CACHE) {
+      if (this._all)
+        return this._all;
+      return this._all = Object.values(this._index);
+    }
     return Object.values(this._index);
   }
 
@@ -380,8 +369,47 @@ abstract class ConversationBase {
     return info;
   }
 
+  protected get index_by_date() : DirectMessageDateIndex {
+    if (Settings.ENABLE_CACHE && this._index_by_date) {
+      return this._index_by_date;
+    }
+
+    const index: DirectMessageDateIndex = {};
+
+    for (const msg of this) {
+      if (!msg.createdAtDate) {
+        msg.createdAtDate = parseTwitterDate(msg.createdAt);
+      }
+  
+      const [day, month, year] = [
+        msg.createdAtDate.getDate(), 
+        msg.createdAtDate.getMonth() + 1, 
+        msg.createdAtDate.getFullYear()
+      ];
+  
+      if (!index[year]) {
+        index[year] = {};
+      }
+  
+      if (!index[year][month]) {
+        index[year][month] = {};
+      }
+  
+      if (!index[year][month][day]) {
+        index[year][month][day] = {};
+      }
+  
+      index[year][month][day][msg.id] = msg;
+    }
+
+    if (Settings.ENABLE_CACHE) {
+      return this._index_by_date = index;
+    }
+    return index;
+  }
+
   /** Messages sorted by year, month and day, without any other informations */
-  get raw_index() : DirectMessageDateIndex {
+  get raw_index() {
     return this.index_by_date;
   }
 

@@ -282,13 +282,17 @@ export class TwitterArchive {
       i++;
     }
 
-    await this.loadArchivePart({
-      dms: await Promise.all(
-        conv_files
-          .filter(name => this.archive.has(name))
-          .map(file => this.archive.get(file))
-      ),
-    });
+    for (const file of conv_files.filter(name => this.archive.has(name))) {
+      await this.loadArchivePart({
+        dms: [await this.archive.get(file)]
+      });
+
+      if (Settings.LOW_RAM) {
+        // Sleep to temperate load; Helps garbage collector, with asynchonous tasks.
+        await sleep(750);
+      }  
+    }
+    
     // DMs should be ok
 
     this.state = "extended_read";
