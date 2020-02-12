@@ -207,7 +207,6 @@ const test_5 = async () => {
 
 const test_6 = async () => {
   const timer = new Timer;
-  Timer.default_format = "s";
   const archive = new TwitterArchive(commander.file);
 
   await archive.ready();
@@ -233,21 +232,28 @@ const test_6 = async () => {
   console.log("Total time elapsed to extract profile and header files:", timer.elapsed);
 };
 
-if (commander.testOne) {
-  test_1();
-}
-if (commander.testTwo) {
-  test_2();
-}
-if (commander.testThree) {
-  test_3();
-}
-if (commander.testFour) {
-  test_4();
-}
-if (commander.testFive) {
-  test_5();
-}
-if (commander.testSix) {
-  test_6();
-}
+(async () => {
+  Timer.default_format = "s";
+  const timer = new Timer;
+
+  if (commander.testOne) {
+    await test_1();
+  }
+  if (commander.testTwo) {
+    await test_2();
+  }
+  if (commander.testThree) {
+    await test_3();
+  }
+  if (commander.testFour) {
+    await test_4();
+  }
+  if (commander.testFive) {
+    await test_5();
+  }
+  if (commander.testSix) {
+    await test_6();
+  }
+
+  console.log("Total time for tests:", timer.elapsed);
+})();
