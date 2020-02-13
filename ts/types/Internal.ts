@@ -1,5 +1,6 @@
 import { TwitterUserDetails, PartialTweet } from "./ClassicTweets";
 import { GDPRMoment } from "./GDPRMoments";
+import { ArchiveReadPart } from "../TwitterArchive";
 
 /*** INTERNAL: TwitterArchive */
 export interface BasicArchiveInfo {
@@ -14,7 +15,7 @@ export interface BasicArchiveInfo {
 }
 
 export interface TwitterArchiveLoadOptions {
-  build_ad_archive?: boolean,
+  ignore?: (ArchiveReadPart | "*")[],
 }
 
 export interface ArchiveSyntheticInfo {

@@ -118,7 +118,11 @@ export class UserData {
             shows = new Set(p13n.interests.shows);
           }
         }
-        if (p13n.inferredAgeInfo && this._age) {
+        if (p13n.inferredAgeInfo) {
+          if (!this._age) {
+            this._age = {};
+          }
+
           this._age.inferred = {
             age: UserData.parseAge(p13n.inferredAgeInfo.age),
             birthDate: p13n.inferredAgeInfo.birthDate

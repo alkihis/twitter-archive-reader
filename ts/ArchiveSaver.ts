@@ -2,50 +2,18 @@ import TwitterArchive from "./index";
 import Conversation from "./direct_messages/Conversation";
 import JSZip from 'jszip';
 import { UserLoadObject } from "./user/UserData";
-import { GDPRConversation, DirectMessageEventContainer, DirectMessageEventsContainer, DMFile } from "./types/GDPRDMs";
+import { GDPRConversation, DMFile } from "./types/GDPRDMs";
 import { ScreenNameChange, GPDRScreenNameHistory } from "./types/GDPRUserInformations";
 import { ArchiveSyntheticInfo } from "./types/Internal";
 import { PartialFavorite } from "./types/GDPRExtended";
 import { GDPRMoment } from "./types/GDPRMoments";
+import { getEventsFromMessages } from "./utils/exported_helpers";
 
 function convertConversationToGDPRConversation(conversation: Conversation) : GDPRConversation {
-  let first = true;
-  const msgs: DirectMessageEventContainer[] = [];
-
-  function addEvents(e: DirectMessageEventsContainer) {
-    for (const [key, vals] of Object.entries(e)) {
-      for (const val of vals) {
-        msgs.push({ [key]: val });
-      }
-    }
-  }
-
-  for (const msg of conversation.all) {
-    if (first) {
-      first = false;
-      if (msg.events && msg.events.before) {
-        addEvents(msg.events.before)
-      }
-    }
-  
-    msgs.push({ messageCreate: {
-      recipientId: msg.recipientId,
-      createdAt: msg.createdAt,
-      mediaUrls: msg.mediaUrls,
-      text: msg.text,
-      senderId: msg.senderId,
-      id: msg.id
-    }});
-
-    if (msg.events && msg.events.after) {
-      addEvents(msg.events.after);
-    }
-  }
-
   return {
     dmConversation: {
       conversationId: conversation.id,
-      messages: msgs
+      messages: [...getEventsFromMessages(conversation.all, true)]
     }
   };
 }

@@ -41,6 +41,8 @@ export type ArchiveReadState = "idle" | "reading" | "indexing" | "tweet_read" | 
 /** Read steps fired in `'read'` event. */
 export type ArchiveReadStep = "zipready" | "userinfosready" | "tweetsread" | "indexready" | "willreaddm" | "willreadextended";
 
+export type ArchiveReadPart = "tweet" | "dm" | "follower" | "following" | "mute" | "block" | "favorite" | "list" | "moment" | "ad";
+
 
 /**
  * Represents a full Twitter Archive. Support GDPR and classic archive.
@@ -64,7 +66,7 @@ export type ArchiveReadStep = "zipready" | "userinfosready" | "tweetsread" | "in
  * Direct messages, parsed if archive is a GDPR archive, stored in `.messages`, 
  * are returned and sorted from the most older to the more recent.
  * 
- * Binary data of Direct Message images can be get through `.dmImagesOf(dm_id: string)` method.
+ * Medias stored in archives are in `.medias`.
  * 
  * User detailled data (screen name history, email address) is in `.user` property.
  * 
@@ -146,10 +148,24 @@ export class TwitterArchive {
    */
   constructor(
     file: AcceptedZipSources | Promise<AcceptedZipSources> | null, 
-    options: TwitterArchiveLoadOptions = { 
-      build_ad_archive: false,
-    }
+    options: TwitterArchiveLoadOptions = {}
   ) {
+    let PARTS_TO_READ = new Set<ArchiveReadPart>(["tweet", "dm", "follower", "following", "mute", "block", "favorite", "list", "moment", "ad"]);
+
+    if (options && options.ignore) {
+      if (options.ignore.includes("*")) {
+        // Ignore everything
+        PARTS_TO_READ.clear();
+      }
+      else {
+        // Keep the non-ignored parts
+        for (const e of options.ignore) {
+          // @ts-ignore
+          PARTS_TO_READ.delete(e);
+        }
+      }
+    }
+
     if (file === undefined) {
       throw new TypeError("File input can't be undefined. " +
        "To initialize an archive without any data, give null to Twitter Archive constructor.");
@@ -184,10 +200,10 @@ export class TwitterArchive {
   
           // Init the archive data (read tweets and DMs)
           if (this.is_gdpr) {
-            return this.initGDPR(options.build_ad_archive === true);
+            return this.initGDPR(PARTS_TO_READ);
           }
           else {
-            return this.initClassic();
+            return this.initClassic(PARTS_TO_READ);
           }
         })
         .then(() => {
@@ -200,22 +216,29 @@ export class TwitterArchive {
     }
   }
 
-  protected async initGDPR(build_ad_archive: boolean) {
-    const addTweetsToGdprArchive = (tweets: PartialTweetGDPR[]) => {
-      try {
-        this._tweets.addGDPR(tweets);
-      } catch (e) {
-        if (e instanceof Error) {
-          throw new TweetFileError(
-            `Unable to compute tweets: ${e.message}`,
-            tweets[0],
-            e.stack
-          );
-        }
-
-        throw e;
+  protected addTweetsToGdprArchive(tweets: PartialTweetGDPR[]) {
+    try {
+      this._tweets.addGDPR(tweets);
+    } catch (e) {
+      if (e instanceof Error) {
+        throw new TweetFileError(
+          `Unable to compute tweets: ${e.message}`,
+          tweets[0],
+          e.stack
+        );
       }
-    };
+
+      throw e;
+    }
+  }
+
+  protected async initGDPR(parts_to_read: Set<ArchiveReadPart>) {
+    // Returns element if element in parts_to_read, empty string otherwise
+    function hasOrEmpty(element: ArchiveReadPart): ArchiveReadPart | "" {
+      if (parts_to_read.has(element))
+        return element;
+      return "";
+    }
 
     // ------------------------
     // TWEETS AND PROFILE INFOS
@@ -230,27 +253,14 @@ export class TwitterArchive {
     this.events.emit('userinfosready');
     this.events.emit('read', { step: 'userinfosready' });
 
-    // Init tweet indexes
+    // Starts the tweet read
     this.state = "tweet_read";
-
     this.events.emit('tweetsread');
     this.events.emit('read', { step: 'tweetsread' });
 
-    addTweetsToGdprArchive(await this.archive.get('tweet.js'));
+    await this.initArchivePart(hasOrEmpty("tweet"));
 
-    if (Settings.LOW_RAM) {
-      // Sleep to temperate load; Helps garbage collector, with asynchonous tasks.
-      await sleep(750);
-    }
-
-    let i = 1;
-    while (this.archive.has(`tweet-part${i}.js`)) {
-      // Add every tweet in other files 
-      // inside a "new" array in the initial array
-      addTweetsToGdprArchive(await this.archive.get(`tweet-part${i}.js`));
-      i++;
-    }
-
+    // Tweets are now indexed and parsed
     this.events.emit('indexready');
     this.events.emit('read', { step: 'indexready' });
 
@@ -262,36 +272,8 @@ export class TwitterArchive {
     this.state = "dm_read";
     this.events.emit('willreaddm');
     this.events.emit('read', { step: 'willreaddm' });
-    
-    // Init DMs
-    const conv_files = [
-      'direct-message.js', 
-      'direct-messages.js', 
-      'direct-message-group.js',
-      'direct-messages-group.js',
-    ];
 
-    i = 1;
-    while (this.archive.has(`direct-message-part${i}.js`)) {
-      conv_files.push(`direct-message-part${i}.js`);
-      i++;
-    }
-    i = 1;
-    while (this.archive.has(`direct-messages-part${i}.js`)) {
-      conv_files.push(`direct-messages-part${i}.js`);
-      i++;
-    }
-
-    for (const file of conv_files.filter(name => this.archive.has(name))) {
-      await this.loadArchivePart({
-        dms: [await this.archive.get(file)]
-      });
-
-      if (Settings.LOW_RAM) {
-        // Sleep to temperate load; Helps garbage collector, with asynchonous tasks.
-        await sleep(750);
-      }  
-    }
+    await this.initArchivePart(hasOrEmpty("dm"));
     
     // DMs should be ok
 
@@ -299,103 +281,28 @@ export class TwitterArchive {
     this.events.emit('willreadextended');
     this.events.emit('read', { step: 'willreadextended' });
 
-    await this.initExtendedGDPR();
+    // Init the extended GDPR data
+    await this.initArchivePart(
+      hasOrEmpty("follower"), 
+      hasOrEmpty("following"), 
+      hasOrEmpty("favorite"), 
+      hasOrEmpty("mute"), 
+      hasOrEmpty("block"),
+      hasOrEmpty("list"),
+      hasOrEmpty("moment")
+    );
 
-    if (build_ad_archive) {
-      await this._ads.__init(this.archive);
-    }
+    // Init deep user info (this not really heavy, so we parse it anyway)
+    await this._user.__init(this.archive);
+
+    await this.initArchivePart("ad");
 
     this.state = "ready";
   }
 
-  protected async initExtendedGDPR() {
-    // Followings
-    const followings = new Set<string>();
-    
-    try {
-      const f_following: GDPRFollowings = await this.archive.get('following.js');
-      for (const f of f_following) {
-        followings.add(f.following.accountId);
-      }
-    } catch (e) { }
-
-    // Followers
-    const followers = new Set<string>();
-
-    try {
-      const f_follower: GDPRFollowers = await this.archive.get('follower.js');
-      for (const f of f_follower) {
-        followers.add(f.follower.accountId);
-      }
-    } catch (e) { }
-
-    // Favorites
-    try {
-      const f_fav: GDPRFavorites = await this.archive.get('like.js');
-      this._favorites.add(f_fav);
-    } catch (e) { }
-
-    // Mutes
-    const mutes = new Set<string>();
-
-    try {
-      const f_mutes: GDPRMutes = await this.archive.get('mute.js');
-      for (const f of f_mutes) {
-        mutes.add(f.muting.accountId);
-      }
-    } catch (e) { }
-
-    // Blocks
-    const blocks = new Set<string>();
-
-    try {
-      const f_block: GDPRBlocks = await this.archive.get('block.js');
-      for (const f of f_block) {
-        blocks.add(f.blocking.accountId);
-      }
-    } catch (e) { }
-
-    // Lists
-    const lists : {
-      created: string[];
-      member_of: string[];
-      subscribed: string[];
-    } = {
-      created: [],
-      member_of: [],
-      subscribed: []
-    };
-
-    try {
-      lists.created = (await this.archive.get('lists-created.js'))[0].userListInfo.urls;
-      lists.member_of = (await this.archive.get('lists-member.js'))[0].userListInfo.urls;
-      lists.subscribed = (await this.archive.get('lists-subscribed.js'))[0].userListInfo.urls;
-    } catch (e) { }
-
-    // Moments
-    let moments: GDPRMoment[];
-    try {
-      moments = (await this.archive.get('moment.js') as GDPRMomentFile).map(e => e.moment);
-    } catch (e) { }
-
-    this.extended_info_container = {
-      moments,
-      lists,
-      followers,
-      followings,
-      mutes,
-      blocks
-    };
-
-    // Init deep user info
-    await this._user.__init(this.archive);
-  }
-
-  protected async initClassic() {
+  protected async initClassic(parts_to_read: Set<ArchiveReadPart>) {
     this.state = "user_read";
     const js_dir = this.archive.dir('data').dir('js');
-
-    const index: ClassicTweetIndex = await js_dir.get('tweet_index.js');
 
     this.loadClassicArchivePart({
       payload: await js_dir.get('payload_details.js'), 
@@ -405,30 +312,195 @@ export class TwitterArchive {
     this.events.emit('userinfosready');
     this.events.emit('read', { step: 'userinfosready' });
 
-    const files_to_read = index.map(e => e.file_name);
+    await this.initArchivePart(
+      parts_to_read.has("tweet") ? "tweet" : ""
+    );    
+  }
 
-    this.state = "tweet_read";
-    const tweet_file_promises: Promise<PartialTweet[]>[] = [];
+  /**
+   * Read one or more archive parts from loaded archive.
+   * 
+   * You don't need to call this method if you use the default constructor.
+   */
+  async initArchivePart(...parts: (ArchiveReadPart | "")[]) {
+    const p = new Set(parts);
 
-    for (const file of files_to_read) {
-      tweet_file_promises.push(this.archive.get(file));
+    if (p.has("tweet")) {
+      if (this.is_gdpr) {
+        this.addTweetsToGdprArchive(await this.archive.get('tweet.js'));
+
+        if (Settings.LOW_RAM) {
+          // Sleep to temperate load; Helps garbage collector, with asynchonous tasks.
+          await sleep(750);
+        }
+
+        let i = 1;
+        while (this.archive.has(`tweet-part${i}.js`)) {
+          // Add every tweet in other files 
+          // inside a "new" array in the initial array
+          this.addTweetsToGdprArchive(await this.archive.get(`tweet-part${i}.js`));
+          i++;
+        }
+      }
+      else {
+        const js_dir = this.archive.dir('data').dir('js');
+        const index: ClassicTweetIndex = await js_dir.get('tweet_index.js');
+        const files_to_read = index.map(e => e.file_name);
+
+        this.state = "tweet_read";
+
+        const tweet_file_promises: Promise<PartialTweet[]>[] = [];
+
+        // Read every tweet file
+        for (const file of files_to_read) {
+          tweet_file_promises.push(this.archive.get(file));
+        }
+        
+        // Concat all tweet files
+        let tweets: PartialTweet[] = [].concat(...await Promise.all(tweet_file_promises));
+
+        // Sort the tweets
+        tweets = sortTweets(tweets);
+
+        this.events.emit('tweetsread');
+        this.events.emit('read', { step: 'tweetsread' });
+
+        this.state = "indexing";
+
+        // Add tweets in TweetArchive
+        this._tweets.add(tweets);
+
+        this.events.emit('indexready');
+        this.events.emit('read', { step: 'indexready' });
+        this.state = "ready";
+      }
     }
-    
-    let tweets: PartialTweet[] = [].concat(...await Promise.all(tweet_file_promises));
 
-    // Tri les tweets par ID (le plus récent, plus grand en premier)
-    tweets = sortTweets(tweets);
+    if (!this.is_gdpr) {
+      return;
+    }
 
-    this.events.emit('tweetsread');
-    this.events.emit('read', { step: 'tweetsread' });
+    if (p.has("dm")) {
+       // Init DMs
+      const conv_files = [
+        'direct-message.js', 
+        'direct-messages.js', 
+        'direct-message-group.js',
+        'direct-messages-group.js',
+      ];
 
-    this.state = "indexing";
-    // Build index (read tweets)
-    this._tweets.add(tweets);
+      let i = 1;
+      while (this.archive.has(`direct-message-part${i}.js`)) {
+        conv_files.push(`direct-message-part${i}.js`);
+        i++;
+      }
+      i = 1;
+      while (this.archive.has(`direct-messages-part${i}.js`)) {
+        conv_files.push(`direct-messages-part${i}.js`);
+        i++;
+      }
 
-    this.events.emit('indexready');
-    this.events.emit('read', { step: 'indexready' });
-    this.state = "ready";
+      for (const file of conv_files.filter(name => this.archive.has(name))) {
+        await this.loadArchivePart({
+          dms: [await this.archive.get(file)]
+        });
+
+        if (Settings.LOW_RAM) {
+          // Sleep to temperate load; Helps garbage collector, with asynchonous tasks.
+          await sleep(750);
+        }  
+      }
+    }
+    if (p.has("following")) {
+      // Followings
+      const followings = new Set<string>();
+          
+      try {
+        const f_following: GDPRFollowings = await this.archive.get('following.js');
+        for (const f of f_following) {
+          followings.add(f.following.accountId);
+        }
+      } catch (e) { }
+
+      this.extended_info_container.followings = followings;
+    }
+    if (p.has("follower")) {
+      // Followers
+      const followers = new Set<string>();
+
+      try {
+        const f_follower: GDPRFollowers = await this.archive.get('follower.js');
+        for (const f of f_follower) {
+          followers.add(f.follower.accountId);
+        }
+      } catch (e) { }
+
+      this.extended_info_container.followers = followers;
+    }
+    if (p.has("favorite")) {
+      // Favorites
+      try {
+        const f_fav: GDPRFavorites = await this.archive.get('like.js');
+        this._favorites.add(f_fav);
+      } catch (e) { }
+    }
+    if (p.has("mute")) {
+      // Mutes
+      const mutes = new Set<string>();
+
+      try {
+        const f_mutes: GDPRMutes = await this.archive.get('mute.js');
+        for (const f of f_mutes) {
+          mutes.add(f.muting.accountId);
+        }
+      } catch (e) { }
+
+      this.extended_info_container.mutes = mutes;
+    }
+    if (p.has("block")) {
+      // Blocks
+      const blocks = new Set<string>();
+      
+      try {
+        const f_block: GDPRBlocks = await this.archive.get('block.js');
+        for (const f of f_block) {
+          blocks.add(f.blocking.accountId);
+        }
+      } catch (e) { }
+      this.extended_info_container.blocks = blocks;
+    }
+    if (p.has("list")) {
+      // Lists
+      const lists : {
+        created: string[];
+        member_of: string[];
+        subscribed: string[];
+      } = {
+        created: [],
+        member_of: [],
+        subscribed: []
+      };
+
+      try {
+        lists.created = (await this.archive.get('lists-created.js'))[0].userListInfo.urls;
+        lists.member_of = (await this.archive.get('lists-member.js'))[0].userListInfo.urls;
+        lists.subscribed = (await this.archive.get('lists-subscribed.js'))[0].userListInfo.urls;
+      } catch (e) { }
+
+      this.extended_info_container.lists = lists;
+    }
+    if (p.has("moment")) {
+      // Moments
+      let moments: GDPRMoment[] = [];
+      try {
+        moments = (await this.archive.get('moment.js') as GDPRMomentFile).map(e => e.moment);
+      } catch (e) { }
+
+      this.extended_info_container.moments = moments;
+    }
+    if (p.has("ad")) {
+      await this._ads.__init(this.archive);
+    }
   }
 
 

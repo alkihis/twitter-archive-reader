@@ -31,8 +31,6 @@ const test_1 = async () => {
 
   // Test dm
   if (archive.is_gdpr) {
-    // @ts-ignore
-    // console.log(archive.dm_img_archive);
     try {
       const blob = await archive.medias.get(MediaArchiveType.SingleDM, "818102592802848773-BrcGVlp3.jpg", true) as ArrayBuffer;
       writeFileSync('test_dir/mon_img.jpg', Buffer.from(blob));
