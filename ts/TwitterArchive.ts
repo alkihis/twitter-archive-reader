@@ -138,13 +138,19 @@ export class TwitterArchive {
    * If you want to build an archive instance **without** a file, you can pass `null` here.
    * You must then load parts of the archive with `.loadArchivePart()` or `.loadClassicArchivePart()` !
    *
-   * @param options.build_ad_archive
-   * `true` if ad data should be parsed and loaded.
+   * @param options.ignore
+   * Specify if you want to ignore a specific part of archive, for performance or memory reasons.
    * 
-   * If you want to save time and memory at construct time, omit this parameter, it's set to `false` by default. 
+   * Available parts are in `ArchiveReadPart` type.
    * 
-   * Then, before first accessing `.ads`, load the archive data present in the archive 
-   * using `.loadArchivePart({ current_ad_archive: true })`. 
+   * By default, all parts are imported from archive.
+   * If you want to ignore every part, you can specify `"*"` in the part array.
+   * 
+   * **Profile and account data is always parsed.**
+   * 
+   * ```ts
+   * type ArchiveReadPart = "tweet" | "dm" | "follower" | "following" | "mute" | "block" | "favorite" | "list" | "moment" | "ad";
+   * ```
    */
   constructor(
     file: AcceptedZipSources | Promise<AcceptedZipSources> | null, 
@@ -183,29 +189,7 @@ export class TwitterArchive {
           file.then(f => (this.archive = constructArchive(f)).ready())
           : (this.archive = constructArchive(file)).ready()
         )
-        .then(() => {
-          // Detect archive type
-          this._is_gdpr = this.archive.search(/^tweets\.csv$/).length === 0;
-        
-          // Listen for read error events on archives
-          this.archive.events.on('read error', ({ filename }: { filename: string }) => {
-            this.events.emit('archive file not found error', { filename });
-          });
-
-          // Init media archive
-          this._medias = new MediaArchive(this.archive);
-
-          this.events.emit('zipready');
-          this.events.emit('read', { step: 'zipready' });
-  
-          // Init the archive data (read tweets and DMs)
-          if (this.is_gdpr) {
-            return this.initGDPR(PARTS_TO_READ);
-          }
-          else {
-            return this.initClassic(PARTS_TO_READ);
-          }
-        })
+        .then(() => this.init(PARTS_TO_READ))
         .then(() => {
           this.events.emit('ready');
         })
@@ -229,6 +213,30 @@ export class TwitterArchive {
       }
 
       throw e;
+    }
+  }
+
+  protected init(parts_to_read: Set<ArchiveReadPart>) {
+    // Detect archive type
+    this._is_gdpr = this.archive.search(/^tweets\.csv$/).length === 0;
+            
+    // Listen for read error events on archives
+    this.archive.events.on('read error', ({ filename }: { filename: string }) => {
+      this.events.emit('archive file not found error', { filename });
+    });
+
+    // Init media archive
+    this._medias = new MediaArchive(this.archive);
+
+    this.events.emit('zipready');
+    this.events.emit('read', { step: 'zipready' });
+
+    // Init the archive data (read tweets and DMs)
+    if (this.is_gdpr) {
+      return this.initGDPR(parts_to_read);
+    }
+    else {
+      return this.initClassic(parts_to_read);
     }
   }
 
@@ -700,22 +708,12 @@ export class TwitterArchive {
    * Load a part of a GDPR archive.
    * 
    * Set current archive as GDPR archive.
-   * 
-   * ---
-   * 
-   * **Warning**: The DMs image parameters / current_ad_archive causes the read of new data.
-   * Read is asynchronous, you **must** wait read end before trying to get images / ad data.
-   * 
-   * ---
-   * 
-   * If you use the `current_*` parameters, ensure that archive is still loaded (`.is_zip_loaded`).
    */
   async loadArchivePart(parts: {
     tweets?: PartialTweetGDPR[],
     account?: AccountGDPR,
     profile?: ProfileGDPR,
     dms?: DMFile[],
-    current_ad_archive?: boolean,
     favorites?: PartialFavorite[],
     blocks?: string[],
     mutes?: string[],
@@ -839,9 +837,6 @@ export class TwitterArchive {
           throw e;
         }
       }
-    }
-    if (parts.current_ad_archive && this.is_zip_loaded) {
-      await this._ads.__init(this.archive);
     }
     if (parts.favorites) {
       if (!this._favorites) {
