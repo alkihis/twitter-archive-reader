@@ -520,8 +520,10 @@ export class TwitterArchive {
   /* Pure properties */
   /* --------------- */
 
-  /** `true` if ZIP file is still loaded inside this instance. 
-   * Can be freed (to save memory, f.e.) with `.releaseZip()`. */
+  /** 
+   * `true` if ZIP file is still loaded inside this instance. 
+   * Can be freed (to save memory, f.e.) with `.releaseZip()`. 
+   */
   get is_zip_loaded() {
     return !!this.archive;
   }
