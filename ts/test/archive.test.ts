@@ -146,12 +146,6 @@ test('direct messages', async () => {
 test('image dm', async () => {
   await archive.ready();
 
-  if (!archive.is_dm_images_available) {
-    // this is never true
-    await archive.loadArchivePart();
-  }
-  archive.releaseZip();
-
   const image = await archive.medias.get(MediaArchiveType.SingleDM, "818102592802848773-BrcGVlp3.jpg", true) as ArrayBuffer;
   expect(image.byteLength).toBe(47371);
 
