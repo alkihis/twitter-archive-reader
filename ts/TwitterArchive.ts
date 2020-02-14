@@ -527,20 +527,6 @@ export class TwitterArchive {
   }
 
   /** 
-   * `true` if `medias.get()` function is accessible.
-   * 
-   * `false` if your archive does not supports medias.
-   * 
-   * @deprecated use `.medias.has_medias` instead.
-   */
-  get is_dm_images_available() {
-    if (!this._is_gdpr) {
-      return false;
-    }
-    return this._medias.has_medias;
-  }
-
-  /** 
    * Archive creation date. 
    * 
    * **Warning**: This is accurate only for classic archives (< 2018, tweet only). 
@@ -685,9 +671,6 @@ export class TwitterArchive {
 
   /** 
    * Informations about which ads archive owner seen or interacted with.
-   * 
-   * `AdArchive` container does not contain any data if you 
-   * haven't used `{ build_ad_archive: true }` constructor parameter.
    */
   get ads() {
     return this._ads;

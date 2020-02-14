@@ -60,9 +60,6 @@ abstract class ConversationBase {
     if (!msg.createdAtDate) {
       msg.createdAtDate = parseTwitterDate(msg.createdAt);
     }
-    this._length = undefined;
-    this._all = undefined;
-    this._index_by_date = undefined;
   }
 
   protected unregisterAll() {
@@ -549,6 +546,7 @@ export class Conversation extends ConversationBase {
     // Every event is now sorted.
 
     this.unindexed = [];
+    // This will deinitializate length, all, etc.
     this.unregisterAll();
 
     // Indexation (ajout d'une clé next et previous)
@@ -650,7 +648,7 @@ export class Conversation extends ConversationBase {
           }
         }
         else {
-          console.log(event);
+          console.log("Unsupported event type", event);
         }
       }
     }
