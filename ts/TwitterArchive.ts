@@ -269,7 +269,18 @@ export class TwitterArchive {
     this.events.emit('tweetsread');
     this.events.emit('read', { step: 'tweetsread' });
 
-    await this.initArchivePart(hasOrEmpty("tweet"));
+    if (parts_to_read.has("tweet")) {
+      if (Settings.LOW_RAM) {
+        await sleep(700);
+      }
+
+      await this.initArchivePart("tweet");
+
+      if (Settings.LOW_RAM) {
+        // Wait for garbage collection
+        await sleep(2500);
+      }
+    }
 
     // Tweets are now indexed and parsed
     this.events.emit('indexready');
@@ -285,6 +296,13 @@ export class TwitterArchive {
     this.events.emit('read', { step: 'willreaddm' });
 
     await this.initArchivePart(hasOrEmpty("dm"));
+
+    if (parts_to_read.has("dm")) {
+      if (Settings.LOW_RAM) {
+        // Wait for garbage collection
+        await sleep(2500);
+      }
+    }
     
     // DMs should be ok
 

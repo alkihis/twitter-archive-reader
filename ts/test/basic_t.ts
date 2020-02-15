@@ -26,8 +26,10 @@ const test_1 = async () => {
   const archive = new TwitterArchive(commander.file);
   await archive.ready();
 
-  await archive.loadArchivePart();
   console.log("Archive ok");
+
+  const used = process.memoryUsage().heapUsed / 1024 / 1024;
+  console.log(used, "Mo used");
 
   // Test dm
   if (archive.is_gdpr) {
