@@ -151,13 +151,16 @@ export class TwitterArchive {
    * ```ts
    * type ArchiveReadPart = "tweet" | "dm" | "follower" | "following" | "mute" | "block" | "favorite" | "list" | "moment" | "ad";
    * ```
+   * 
+   * To manually load a part after archive has been loaded, use `.initArchivePart()` method.
+   * Please don't initialize a part twice, it could lead to vicious bugs !
    */
   constructor(
     file: AcceptedZipSources | Promise<AcceptedZipSources> | null, 
     options: TwitterArchiveLoadOptions = {}
   ) {
     let PARTS_TO_READ = new Set<ArchiveReadPart>(["tweet", "dm", "follower", "following", "mute", "block", "favorite", "list", "moment", "ad"]);
-
+    this.initArchivePart()
     if (options && options.ignore) {
       if (options.ignore.includes("*")) {
         // Ignore everything
