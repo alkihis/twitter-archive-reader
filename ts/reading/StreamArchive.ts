@@ -189,9 +189,19 @@ class StreamArchive implements BaseArchive<ZipEntry> {
     if (parse_auto) {
       return fp.then(data => {
         if (type === "text") {
-          const buffer_as_text = data.toString();
+          let start_pos = 0;
+          let length = data.length;
+          for (let i = 0; i < length && i < 1024; i++) {
+            // Buffer code for "=" character
+            if (data[i] === 61) {
+              start_pos = i + 1;
+              break;
+            }
+          }
+
+          const buffer_as_text = data.toString('utf-8', start_pos);
           try {
-            return JSON.parse(buffer_as_text.substr(buffer_as_text.indexOf('=') + 1).trimLeft());
+            return JSON.parse(buffer_as_text);
           } catch (e) {
             if (e instanceof SyntaxError) {
               throw new FileParseError(
