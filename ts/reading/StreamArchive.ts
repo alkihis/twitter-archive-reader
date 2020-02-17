@@ -2,6 +2,9 @@ import JSZip from 'jszip';
 import StreamZip, { ZipEntry } from './StreamZip';
 import { FileParseError, FileNotFoundError } from '../utils/Errors';
 import { EventEmitter } from 'events';
+import { Readable } from 'stream';
+// @ts-ignore
+import json from 'big-json';
 
 /**
  * string: Filename. WILL USE STREAMING METHOD.
@@ -186,6 +189,19 @@ class StreamArchive implements BaseArchive<ZipEntry> {
   ) {
     const fp = this.s_zip.entryData(file.name);
 
+    function bufferToStream(binary: Buffer) {
+      const readableInstanceStream = new Readable({
+        read() {
+          this.push(binary);
+          this.push(null);
+        }
+      });
+  
+      return readableInstanceStream;
+    }
+
+
+    
     if (parse_auto) {
       return fp.then(data => {
         if (type === "text") {
@@ -199,7 +215,40 @@ class StreamArchive implements BaseArchive<ZipEntry> {
             }
           }
 
-          const buffer_as_text = data.toString('utf-8', start_pos);
+          const buffer_part = data.slice(start_pos);
+          
+          // > 20 Mo
+          if (buffer_part.length > 20 * 1024 * 1024) {
+            return new Promise((resolve, reject) => {
+              const stream_buffer = bufferToStream(buffer_part);
+              const parseStream = json.createParseStream();
+  
+              parseStream.on('data', function(obj: any) {
+                if ('0' in obj) {
+                  resolve(Object.values(obj));
+                }
+                else {
+                  resolve(obj);
+                }
+              });
+              parseStream.on('error', function(err: any) {
+                reject(err);
+              });
+              
+              stream_buffer.pipe(parseStream);
+            }).catch(e => {
+              if (e instanceof Error) {
+                throw new FileParseError(
+                  `Unexpected SyntaxError at JSON.parse when reading a file (${file.name}): ${e.message}`,
+                  file.name,
+                  ""
+                );
+              }
+              throw e;
+            }) as any;
+          }
+        
+          const buffer_as_text = buffer_part.toString();
           try {
             return JSON.parse(buffer_as_text);
           } catch (e) {

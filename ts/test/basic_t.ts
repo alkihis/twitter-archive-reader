@@ -207,6 +207,10 @@ const test_5 = async () => {
 
 const test_6 = async () => {
   const timer = new Timer;
+  setInterval(() => {
+    console.log(Object.entries(process.memoryUsage()).map(e => [e[0], String(e[1] / 1024 / 1024) + " Mo"]))
+  }, 300);
+
   const archive = new TwitterArchive(commander.file);
 
   await archive.ready();

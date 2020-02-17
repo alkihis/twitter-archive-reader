@@ -15,6 +15,7 @@
     "@types/blob-to-buffer": "^1.2.0",
     "@types/jszip": "^3.1.7",
     "big-integer": "^1.6.48",
+    "big-json": "^3.1.0",
     "blob-to-buffer": "^1.2.8",
     "events": "^3.1.0",
     "js-md5": "^0.7.3",
