@@ -266,14 +266,15 @@ export class TwitterArchive {
 
     // Starts the tweet read
     this.state = "tweet_read";
-    this.events.emit('tweetsread');
-    this.events.emit('read', { step: 'tweetsread' });
 
     if (parts_to_read.has("tweet")) {
       await this.initArchivePart("tweet");
     }
 
     // Tweets are now indexed and parsed
+    this.events.emit('tweetsread');
+    this.events.emit('read', { step: 'tweetsread' });
+
     this.events.emit('indexready');
     this.events.emit('read', { step: 'indexready' });
 
