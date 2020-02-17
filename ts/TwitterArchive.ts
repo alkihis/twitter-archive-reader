@@ -18,7 +18,6 @@ import { AccountGDPR, ProfileGDPR } from './types/GDPRAccount';
 import { DMFile } from './types/GDPRDMs';
 import { TweetFileError, DirectMessageParseError, ProfileFileError, AccountFileError } from './utils/Errors';
 import Settings from './utils/Settings';
-import { sleep } from './utils/helpers';
 
 
 // Base variables, unexported
@@ -277,6 +276,7 @@ export class TwitterArchive {
 
     this.emitAndChangeState('willreaddm', 'dm_read');
 
+    this._messages = new DMArchive(this.user.id);
     await this.initArchivePart(hasOrEmpty("dm"));
     
     // DMs should be ok
