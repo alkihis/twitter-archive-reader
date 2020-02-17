@@ -201,16 +201,17 @@ class StreamArchive implements BaseArchive<ZipEntry> {
       return readableInstanceStream;
     }
 
-
-    
     if (parse_auto) {
       return fp.then(data => {
         if (type === "text") {
+          const EQUAL_CHAR_CODE = 61;
+          const LINE_FEED_CHAR_CODE = 10;
+
           let start_pos = 0;
           let length = data.length;
-          for (let i = 0; i < length && i < 1024; i++) {
-            // Buffer code for "=" character
-            if (data[i] === 61) {
+          for (let i = 0; i < length && i < 1024 && data[i] !== LINE_FEED_CHAR_CODE; i++) {
+            // Buffer code for "=" character (in utf8 or ascii)
+            if (data[i] === EQUAL_CHAR_CODE) {
               start_pos = i + 1;
               break;
             }

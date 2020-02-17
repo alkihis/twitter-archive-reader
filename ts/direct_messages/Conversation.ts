@@ -1,4 +1,4 @@
-import { supportsBigInt, dateOfDMEvent } from "../utils/helpers";
+import { supportsBigInt, dateOfDMEvent, safePusher } from "../utils/helpers";
 import bigInt from 'big-integer';
 import { parseTwitterDate, getEventsFromMessages } from "../utils/exported_helpers";
 import { LinkedDirectMessage, DirectMessageEventContainer, GDPRConversation, DirectMessageEventsContainer } from "../types/GDPRDMs";
@@ -487,9 +487,9 @@ export class Conversation extends ConversationBase {
     if (conv.dmConversation.conversationId !== this.info.id) {
       throw new Error("You must add into a existing conversation a conversation with the same ID");
     }
-    
+
     // Can't replace the array: conversations may be splitted into parts
-    this.unindexed.push(...conv.dmConversation.messages);
+    safePusher(this.unindexed, conv.dmConversation.messages);
   }
 
   /** `true` if a conversation is indexed. If `false`, a call to `.indexate()` is required. */

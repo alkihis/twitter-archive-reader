@@ -3,6 +3,7 @@ import { TweetIndex } from "../types/Internal";
 import { PartialTweetUser, PartialTweet } from "../types/ClassicTweets";
 import { PartialTweetGDPR } from "../types/GDPRTweets";
 import Settings from "../utils/Settings";
+import { safePusher } from "../utils/helpers";
 
 interface TweetDateIndex { [year: string]: { [month: string]: TweetIndex } }
 
@@ -125,8 +126,10 @@ export class TweetArchive {
         for (const month in index[year]) {
           if (Number(month) === now_m + 1) {
             // Month of interest
-            tweets.push(
-              ...Object.values(index[year][month])
+            safePusher(
+              tweets, 
+              Object
+                .values(index[year][month])
                 .filter(t => dateFromTweet(t).getDate() === now_d)
             );
           }
