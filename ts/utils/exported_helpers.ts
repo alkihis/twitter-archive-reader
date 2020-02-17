@@ -13,7 +13,11 @@ import { PartialTweetGDPR } from "../types/GDPRTweets";
  * 
  * If you want messages events to be iterated, set {include_messages} to `true`.
  */
-export function* getEventsFromMessages(msgs: LinkedDirectMessage[], include_messages = false) : Generator<DirectMessageEventContainer, void, void> {
+export function* getEventsFromMessages(
+  msgs: LinkedDirectMessage[], 
+  include_messages = false,
+  remove_double_linked_list = false,
+) : Generator<DirectMessageEventContainer, void, void> {
   function* addEvents(e: DirectMessageEventsContainer) {
     const all_events: [string, DirectMessageEvent][] = [];
 
@@ -28,7 +32,7 @@ export function* getEventsFromMessages(msgs: LinkedDirectMessage[], include_mess
   }
 
   let first = true;
-  for (const msg of msgs) {
+  for (let msg of msgs) {
     if (first) {
       first = false;
       if (msg.events && msg.events.before) {
@@ -37,6 +41,12 @@ export function* getEventsFromMessages(msgs: LinkedDirectMessage[], include_mess
     }
 
     if (include_messages) {
+      if (remove_double_linked_list) {
+        msg = { ...msg };
+        delete msg.next;
+        delete msg.previous;
+      }
+
       yield { messageCreate: msg };
     }
 

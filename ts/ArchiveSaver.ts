@@ -13,7 +13,7 @@ function convertConversationToGDPRConversation(conversation: Conversation) : GDP
   return {
     dmConversation: {
       conversationId: conversation.id,
-      messages: [...getEventsFromMessages(conversation.all, true)]
+      messages: [...getEventsFromMessages(conversation.all, true, true)]
     }
   };
 }

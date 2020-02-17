@@ -5,6 +5,7 @@ import { EventEmitter } from 'events';
 import { Readable } from 'stream';
 // @ts-ignore
 import json from 'big-json';
+import Settings from '../utils/Settings';
 
 /**
  * string: Filename. WILL USE STREAMING METHOD.
@@ -217,14 +218,18 @@ class StreamArchive implements BaseArchive<ZipEntry> {
 
           const buffer_part = data.slice(start_pos);
           
-          // > 20 Mo
-          if (buffer_part.length > 20 * 1024 * 1024) {
+          // > {LAZY_JSON_THRESHOLD} Mo
+          if (Settings.LAZY_JSON_PARSE && buffer_part.length > Settings.LAZY_JSON_THRESHOLD * 1024 * 1024) {
             return new Promise((resolve, reject) => {
               const stream_buffer = bufferToStream(buffer_part);
               const parseStream = json.createParseStream();
   
               parseStream.on('data', function(obj: any) {
+                // for an unknown reason, 
+                // arrays are not specified with the right prototype
                 if ('0' in obj) {
+                  // Setting prototype does not work,
+                  // So we're just getting an array from the object.
                   resolve(Object.values(obj));
                 }
                 else {

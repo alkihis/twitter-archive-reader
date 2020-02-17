@@ -270,16 +270,7 @@ export class TwitterArchive {
     this.events.emit('read', { step: 'tweetsread' });
 
     if (parts_to_read.has("tweet")) {
-      if (Settings.LOW_RAM) {
-        await sleep(700);
-      }
-
       await this.initArchivePart("tweet");
-
-      if (Settings.LOW_RAM) {
-        // Wait for garbage collection
-        await sleep(2500);
-      }
     }
 
     // Tweets are now indexed and parsed
@@ -296,13 +287,6 @@ export class TwitterArchive {
     this.events.emit('read', { step: 'willreaddm' });
 
     await this.initArchivePart(hasOrEmpty("dm"));
-
-    if (parts_to_read.has("dm")) {
-      if (Settings.LOW_RAM) {
-        // Wait for garbage collection
-        await sleep(2500);
-      }
-    }
     
     // DMs should be ok
 
@@ -357,11 +341,6 @@ export class TwitterArchive {
     if (p.has("tweet")) {
       if (this.is_gdpr) {
         this.addTweetsToGdprArchive(await this.archive.get('tweet.js'));
-
-        if (Settings.LOW_RAM) {
-          // Sleep to temperate load; Helps garbage collector, with asynchonous tasks.
-          await sleep(750);
-        }
 
         let i = 1;
         while (this.archive.has(`tweet-part${i}.js`)) {
@@ -433,11 +412,6 @@ export class TwitterArchive {
         await this.loadArchivePart({
           dms: [await this.archive.get(file)]
         });
-
-        if (Settings.LOW_RAM) {
-          // Sleep to temperate load; Helps garbage collector, with asynchonous tasks.
-          await sleep(750);
-        }  
       }
     }
     if (p.has("following")) {

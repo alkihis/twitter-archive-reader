@@ -9,14 +9,24 @@ export const Settings = new class Settings {
    * Defaults to `true`.
    */
   public ENABLE_CACHE: boolean = true;
+
   /**
-   * Set to `true`, this will slow down archive reading and disable some performance tweaks
-   * that use a lot of memory. Set this parameter to `true` if webpage crashes
-   * when you load a very big archive, or if your system is memory-limited.
+   * On large files (> {LAZY_JSON_THRESHOLD} Mo), 
+   * enable a lazy streaming-based JSON parsing method.
    * 
-   * Defaults to `false`.
+   * This cause a slower read process, but uses way less RAM than basic `JSON.parse()`.
+   * 
+   * By default, it's enabled.
    */
-  public LOW_RAM: boolean = false;
+  public LAZY_JSON_PARSE: boolean = true; 
+
+  /**
+   * If {LAZY_JSON_PARSE} is enabled, the lazy JSON read will be triggered when
+   * read file size exceed the specified number, in **megabytes**.
+   * 
+   * By default, threshold is set to `15` (MB).
+   */
+  public LAZY_JSON_THRESHOLD: number = 15;
 }();
 
 export default Settings;
