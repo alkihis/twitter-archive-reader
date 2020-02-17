@@ -231,8 +231,7 @@ export class TwitterArchive {
     // Init media archive
     this._medias = new MediaArchive(this.archive);
 
-    this.events.emit('zipready');
-    this.events.emit('read', { step: 'zipready' });
+    this.emitAndChangeState('zipready');
 
     // Init the archive data (read tweets and DMs)
     if (this.is_gdpr) {
@@ -261,39 +260,28 @@ export class TwitterArchive {
       profile: await this.archive.get('profile.js'),
     });
     
-    this.events.emit('userinfosready');
-    this.events.emit('read', { step: 'userinfosready' });
-
     // Starts the tweet read
-    this.state = "tweet_read";
+    this.emitAndChangeState('userinfosready', 'tweet_read');
 
     if (parts_to_read.has("tweet")) {
       await this.initArchivePart("tweet");
     }
 
     // Tweets are now indexed and parsed
-    this.events.emit('tweetsread');
-    this.events.emit('read', { step: 'tweetsread' });
-
-    this.events.emit('indexready');
-    this.events.emit('read', { step: 'indexready' });
-
+    this.emitAndChangeState('tweetsread');
+    this.emitAndChangeState('indexready');
 
     // ---------------
     // DIRECT MESSAGES
     // ---------------
 
-    this.state = "dm_read";
-    this.events.emit('willreaddm');
-    this.events.emit('read', { step: 'willreaddm' });
+    this.emitAndChangeState('willreaddm', 'dm_read');
 
     await this.initArchivePart(hasOrEmpty("dm"));
     
     // DMs should be ok
 
-    this.state = "extended_read";
-    this.events.emit('willreadextended');
-    this.events.emit('read', { step: 'willreadextended' });
+    this.emitAndChangeState('willreadextended', 'extended_read');
 
     // Init the extended GDPR data
     await this.initArchivePart(
@@ -323,8 +311,7 @@ export class TwitterArchive {
       user: await js_dir.get('user_details.js'),
     });
 
-    this.events.emit('userinfosready');
-    this.events.emit('read', { step: 'userinfosready' });
+    this.emitAndChangeState('userinfosready');
 
     await this.initArchivePart(
       parts_to_read.has("tweet") ? "tweet" : ""
@@ -371,17 +358,12 @@ export class TwitterArchive {
         // Sort the tweets
         tweets = sortTweets(tweets);
 
-        this.events.emit('tweetsread');
-        this.events.emit('read', { step: 'tweetsread' });
-
-        this.state = "indexing";
+        this.emitAndChangeState('tweetsread', 'indexing');
 
         // Add tweets in TweetArchive
         this._tweets.add(tweets);
 
-        this.events.emit('indexready');
-        this.events.emit('read', { step: 'indexready' });
-        this.state = "ready";
+        this.emitAndChangeState('indexready', 'ready');
       }
     }
 
@@ -991,6 +973,15 @@ export class TwitterArchive {
    */
   get hash() {
     return TwitterArchive.hash(this);
+  }
+
+  protected emitAndChangeState(step: string, new_state?: ArchiveReadState) {
+    if (new_state) {
+      this.state = new_state;
+    }
+
+    this.events.emit(step);
+    this.events.emit('read', { step });
   }
 }
 
