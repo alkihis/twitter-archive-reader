@@ -12,7 +12,6 @@
   "repository": "https://github.com/alkihis/twitter-archive-reader",
   "bugs": "https://github.com/alkihis/twitter-archive-reader/issues",
   "dependencies": {
-    "@types/blob-to-buffer": "^1.2.0",
     "@types/jszip": "^3.1.7",
     "big-integer": "^1.6.48",
     "big-json": "^3.1.0",
@@ -26,6 +25,7 @@
     "js/*"
   ],
   "devDependencies": {
+    "@types/blob-to-buffer": "^1.2.0",
     "@types/jest": "^24.9.0",
     "@types/js-md5": "^0.4.2",
     "commander": "^4.1.0",
