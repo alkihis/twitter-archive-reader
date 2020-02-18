@@ -185,12 +185,19 @@ export class TwitterArchive {
     }
     else {
       this.state = "reading";
+
+      const file_ready_promise = (async () => {
+        if (file instanceof Promise) {
+          const constructed = await file;
+          this.archive = constructArchive(constructed);
+        }
+        else {
+          this.archive = constructArchive(file);
+        }
+        await this.archive.ready();
+      })();
     
-      this._ready = 
-        (file instanceof Promise ? 
-          file.then(f => (this.archive = constructArchive(f)).ready())
-          : (this.archive = constructArchive(file)).ready()
-        )
+      this._ready = file_ready_promise
         .then(() => this.init(PARTS_TO_READ))
         .then(() => {
           this.events.emit('ready');
