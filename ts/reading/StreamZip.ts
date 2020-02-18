@@ -25,14 +25,18 @@ async function blobFileReader(file: Blob, buffer: Buffer, offset_in_buffer: numb
   const sliced = file.slice(position_in_file, position_in_file + length);
 
   const copy_buffer = await new Promise((resolve, reject) => {
-    ToBuffer(sliced, function (err, buffer) {
-      if (err) {
-        reject(err);
-        return;
-      }
-     
-      resolve(buffer);
-    });
+    try {
+      ToBuffer(sliced, function (err, buffer) {
+        if (err) {
+          reject(err);
+          return;
+        }
+       
+        resolve(buffer);
+      });
+    } catch (e) {
+      reject(e);
+    }
   }) as Buffer;
 
   buffer.set(copy_buffer, offset_in_buffer);

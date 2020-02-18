@@ -15,6 +15,7 @@ commander
   .option('-4, --test-four', "Test 4")
   .option('-5, --test-five', "Test 5")
   .option('-6, --test-six', 'Test 6')
+  .option('-7, --test-seven', 'Test 7')
 .parse(process.argv);
 
 const write = (name: string, data: any) => {
@@ -233,6 +234,11 @@ const test_6 = async () => {
   console.log("Total time elapsed to extract profile and header files:", timer.elapsed);
 };
 
+const test_7 = async () => {
+  const archive = new TwitterArchive(commander.file);
+  await archive.ready();
+};
+
 (async () => {
   Timer.default_format = "s";
   const timer = new Timer;
@@ -254,6 +260,9 @@ const test_6 = async () => {
   }
   if (commander.testSix) {
     await test_6();
+  }
+  if (commander.testSeven) {
+    await test_7();
   }
 
   console.log("Total time for tests:", timer.elapsed);
