@@ -2,7 +2,6 @@ import zlib from 'zlib';
 import events from 'events';
 import stream from 'stream';
 import fs from 'fs';
-import ToBuffer from 'blob-to-buffer';
 
 export type AcceptedFile = File | string;
 
@@ -24,19 +23,18 @@ export interface FileReader<T, S = T> {
 async function blobFileReader(file: Blob, buffer: Buffer, offset_in_buffer: number, length: number, position_in_file: number) {
   const sliced = file.slice(position_in_file, position_in_file + length);
 
-  const copy_buffer = await new Promise((resolve, reject) => {
-    try {
-      ToBuffer(sliced, function (err, buffer) {
-        if (err) {
-          reject(err);
-          return;
-        }
-       
-        resolve(buffer);
-      });
-    } catch (e) {
+  const copy_buffer = await new Promise((resolve, reject) => {  
+    const reader = new FileReader;
+
+    reader.onload = () => {
+      resolve(Buffer.from(reader.result as ArrayBuffer));
+    };
+
+    reader.onerror = (e: any) => {
       reject(e);
-    }
+    };
+  
+    reader.readAsArrayBuffer(sliced);
   }) as Buffer;
 
   buffer.set(copy_buffer, offset_in_buffer);
