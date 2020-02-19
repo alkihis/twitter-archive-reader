@@ -35,7 +35,7 @@ This package can be used inside a browser or in Node.js.
 
 ### Getting ready
 
-Full documentation (version 5.x.x) is available on [GitHub Wiki](../../wiki). Take a look !
+Full documentation (version 6.x.x) is available on [GitHub Wiki](../../wiki). Take a look !
 
 ### [Examples](./Examples.md)
 
@@ -92,6 +92,9 @@ Wiki for 2.x.x is available [here](./wiki_2_00/Home.md).
 Wiki for 3.x.x is available [here](./wiki_3_00/Home.md).
 
 Wiki for 4.x.x is available [here](./wiki_4_00/Home.md).
+
+Documentation for 5.x.x is nearly the same as 6.0.0.
+Use current documentation for those versions.
 
 ## Migrate from 2.x.x to 3.0.0
 
