@@ -493,18 +493,26 @@ export class TweetArchive {
       rt.user = { ...rt.user };
 
       rt.text = text;
-      // @ts-ignore
-      delete rt.full_text;
+
+      // Calc the difference between full_text and text length to refresh entities indices
+      const diff = rt.full_text.length - rt.text.length;
+
+      // We need to remove the first user mention IF it matches {arobase}
+      this.refreshEntities(rt, arobase, diff);
+
+
       rt.user.screen_name = arobase;
       rt.user.name = arobase;
       // @ts-ignore
       rt.retweeted = true;
       rt.retweet_count = Number(rt.retweet_count);
       rt.favorite_count = Number(rt.favorite_count);
+      // @ts-ignore
+      delete rt.full_text;
 
       // Recherche si un ID est disponible par exemple dans les medias (sinon tant pis)
       if (rt.extended_entities && rt.extended_entities.media) {
-        if (rt.extended_entities.media.length) {
+        if (rt.extended_entities.media.length && rt.extended_entities.media[0].source_user_id_str) {
           rt.user.id_str = rt.extended_entities.media[0].source_user_id_str;
         }
       }
@@ -513,6 +521,35 @@ export class TweetArchive {
     }
 
     return tweet as unknown as PartialTweet;
+  }
+
+  protected refreshEntities(tweet: PartialTweet, owner: string, difference: number) {
+    if (tweet.entities.user_mentions && tweet.entities.user_mentions.length) {
+      const first = tweet.entities.user_mentions[0];
+      if (first.screen_name === owner) {
+        tweet.entities.user_mentions.shift();
+      }
+    }
+
+    // Now, the possible bad entity is removed. We need to refresh every "indices" element
+    const en = tweet.entities;
+    if (en) {
+      for (const type in en) {
+        // @ts-ignore
+        const data = en[type];
+
+        for (const e of data) {
+          e.indices = [+e.indices[0] - difference, +e.indices[1] - difference];
+        }
+      }
+    }
+
+    const ex = tweet.extended_entities;
+    if (ex && ex.media && ex.media.length) {
+      for (const e of ex.media) {
+        e.indices = [String(+e.indices[0] - difference), String(+e.indices[1] - difference)];
+      }
+    }
   }
 }
 
