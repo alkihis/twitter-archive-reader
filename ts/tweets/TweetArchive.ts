@@ -485,7 +485,7 @@ export class TweetArchive {
     tweet.favorite_count = Number(tweet.favorite_count);
 
     // Gérer le cas des retweets
-    const rt_data = /^RT @(.+?): (.+)/.exec(tweet.full_text);
+    const rt_data = /^RT @(.+?): (.+)/s.exec(tweet.full_text);
 
     if (rt_data && rt_data.length && !("retweeted_status" in tweet)) {
       const [, arobase, text] = rt_data;
