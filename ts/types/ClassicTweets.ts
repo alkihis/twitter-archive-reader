@@ -51,6 +51,8 @@ export interface PartialTweet {
   favorited?: boolean;
   /** Defined if archive type is GDPR. */
   full_text?: string;
+  /** Defined if this tweet is the content of a retweet ({retweeted_status}) and entities has been actualized to be accurate. */
+  trimmed_entities?: true;
 }
 
 export interface PartialTweetMediaEntity {

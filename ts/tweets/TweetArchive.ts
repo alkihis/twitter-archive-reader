@@ -498,8 +498,11 @@ export class TweetArchive {
       const diff = rt.full_text.length - rt.text.length;
 
       // We need to remove the first user mention IF it matches {arobase}
-      this.refreshEntities(rt, arobase, diff);
-
+      if (Settings.TRIM_GDPR_RETWEET_ENTITIES) {
+        this.refreshEntities(rt, arobase, diff);
+        // @ts-ignore
+        delete rt.full_text;
+      }
 
       rt.user.screen_name = arobase;
       rt.user.name = arobase;
@@ -507,8 +510,6 @@ export class TweetArchive {
       rt.retweeted = true;
       rt.retweet_count = Number(rt.retweet_count);
       rt.favorite_count = Number(rt.favorite_count);
-      // @ts-ignore
-      delete rt.full_text;
 
       // Recherche si un ID est disponible par exemple dans les medias (sinon tant pis)
       if (rt.extended_entities && rt.extended_entities.media) {
@@ -542,6 +543,7 @@ export class TweetArchive {
           e.indices = [+e.indices[0] - difference, +e.indices[1] - difference];
         }
       }
+      tweet.trimmed_entities = true;
     }
 
     const ex = tweet.extended_entities;

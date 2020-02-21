@@ -27,6 +27,13 @@ export const Settings = new class Settings {
    * By default, threshold is set to `15` (MB).
    */
   public LAZY_JSON_THRESHOLD: number = 15;
+  /**
+   * When tweet is a retweet in GDPR archives, retweet data {retweeted_status} is
+   * artificially created. If this parameter is set to `true` (default), content of {entities}
+   * and {extended_entities} is refreshed to remove first mention (RT @...), fix indexes mis-placement,
+   * and remove {full_text} property.
+   */
+  public TRIM_GDPR_RETWEET_ENTITIES = true;
 }();
 
 export default Settings;
