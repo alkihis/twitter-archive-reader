@@ -159,7 +159,7 @@ export class TwitterArchive {
     options: TwitterArchiveLoadOptions = {}
   ) {
     let PARTS_TO_READ = new Set<ArchiveReadPart>(["tweet", "dm", "follower", "following", "mute", "block", "favorite", "list", "moment", "ad"]);
-    this.initArchivePart()
+
     if (options && options.ignore) {
       if (options.ignore.includes("*")) {
         // Ignore everything
