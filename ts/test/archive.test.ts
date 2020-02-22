@@ -6,7 +6,7 @@ import { MediaArchiveType } from '../MediaArchive';
 // Archive load / save could take a long time
 jest.setTimeout(9999999);
 
-const UNIT_TEST_FILE = path.join(__dirname, '../../../Documents/Archives Twitter/GDPR-2019-09-16-ALKIHIS.zip');
+const UNIT_TEST_FILE = path.join(__dirname, '../../../Archives Twitter/GDPR-2019-09-16-ALKIHIS.zip');
 const archive = new TwitterArchive(UNIT_TEST_FILE);
 
 test('archive init', async () => {
