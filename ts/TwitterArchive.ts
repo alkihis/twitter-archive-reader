@@ -18,6 +18,7 @@ import { AccountGDPR, ProfileGDPR } from './types/GDPRAccount';
 import { DMFile } from './types/GDPRDMs';
 import { TweetFileError, DirectMessageParseError, ProfileFileError, AccountFileError } from './utils/Errors';
 import Settings from './utils/Settings';
+import { initAdArchiveFromArchive } from './utils/helpers';
 
 
 // Base variables, unexported
@@ -492,7 +493,7 @@ export class TwitterArchive {
       this.extended_info_container.moments = moments;
     }
     if (p.has("ad")) {
-      await this._ads.__init(this.archive);
+      await initAdArchiveFromArchive(this.archive, this._ads);
     }
   }
 

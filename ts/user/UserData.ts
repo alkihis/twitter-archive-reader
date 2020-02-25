@@ -441,7 +441,8 @@ export class UserData {
     return this._apps;
   }
 
-  /** Contains IP dumps of your last activity on Twitter (using mobile or desktop devices).
+  /** 
+   * Contains IP dumps of your last activity on Twitter (using mobile or desktop devices).
    *  
    * Seems limited up to 7 days from archive creation.
    */
@@ -459,7 +460,8 @@ export class UserData {
     return this._verified;
   }
 
-  /** Archive owner phone number (if he registred one), `undefined` otherwise.
+  /** 
+   * Archive owner phone number (if he registred one), `undefined` otherwise.
    * Begin by `+<countryCode>`
    */
   get phone_number() {

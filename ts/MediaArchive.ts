@@ -17,11 +17,14 @@ export enum MediaArchiveType {
 }
 
 export class MediaArchive {
-  protected dm_single: SingleMediaArchive | undefined;
-  protected dm_group: SingleMediaArchive | undefined;
-  protected tweet: SingleMediaArchive | undefined;
-  protected profile: SingleMediaArchive | undefined;
-  protected moment: SingleMediaArchive | undefined;
+  /**
+   * Contains associations with internal `typeName` to `SingleMediaArchive` instances.
+   */
+  protected folders_to_archive: { [typeName: string]: SingleMediaArchive } = {};
+  /**
+   * User defined media types, associated to folders.
+   */
+  protected custom_folders: { [typeName: string]: string[] } = {};
 
   protected static readonly DM_SINGLE_FOLDER = ["direct_message_media", "direct_messages_media"];
   protected static readonly DM_GROUP_FOLDER = ["direct_message_group_media", "direct_messages_group_media"];
@@ -43,41 +46,26 @@ export class MediaArchive {
   /**
   * Get a media from a specific media type.
   * 
-  * @param from Media archive
+  * @param from Media archive type
   * @param name Filename (exact filename required)
   * @param as_array_buffer True if return type is ArrayBuffer. Otherwise, Blob will be used.
   * By default, returns ArrayBuffer on Node.js and Blob when available.
+  * 
+  * ```ts
+  * // For parameter {from}, you can use `MediaArchiveType` enum.
+  * import { MediaArchiveType } from 'twitter-archive-reader';
+  * 
+  * const my_media = archive.medias.get(MediaArchiveType.SingleDM, "xxx.jpg", true) as Promise<ArrayBuffer>;
+  * ```
   */
-  async get(from: MediaArchiveType, name: string, as_array_buffer?: boolean) : Promise<Blob | ArrayBuffer> {
-    switch (from) {
-      case MediaArchiveType.SingleDM: {
-        await this.initOrAwaitArchive("dm_single", MediaArchive.DM_SINGLE_FOLDER);
-
-        return this.dm_single.file(name, as_array_buffer);
-      }
-      case MediaArchiveType.GroupDM: {
-        await this.initOrAwaitArchive("dm_group", MediaArchive.DM_GROUP_FOLDER);
-
-        return this.dm_group.file(name, as_array_buffer);
-      }
-      case MediaArchiveType.Tweet: {
-        await this.initOrAwaitArchive("tweet", MediaArchive.TWEET_FOLDER);
-
-        return this.tweet.file(name, as_array_buffer);
-      }
-      case MediaArchiveType.Moment: {
-        await this.initOrAwaitArchive("moment", MediaArchive.MOMENT_FOLDER);
-
-        return this.moment.file(name, as_array_buffer);
-      }
-      case MediaArchiveType.Profile: {
-        await this.initOrAwaitArchive("profile", MediaArchive.PROFILE_FOLDER);
-
-        return this.profile.file(name, as_array_buffer);
-      }
+  async get(from: MediaArchiveType | string, name: string, as_array_buffer?: boolean) : Promise<Blob | ArrayBuffer> {
+    if (!(from in this.folders_to_archive) && this.getFolderOfType(from) === undefined) {
+      throw new Error("You need to define your custom archive type before using it.");
     }
 
-    throw new Error("Unsupported media type.");
+    return (
+      await this.initOrAwaitArchive(this.getArchiveType(from), this.getFolderOfType(from))
+    ).file(name, as_array_buffer);
   }
 
   /**
@@ -85,41 +73,44 @@ export class MediaArchive {
   * 
   * @param of_archive Media archive
   */
-  async list(of_archive: MediaArchiveType) {
-    switch (of_archive) {
-      case MediaArchiveType.SingleDM: {
-        await this.initOrAwaitArchive("dm_single", MediaArchive.DM_SINGLE_FOLDER);
-
-        return this.dm_single.files;
-      }
-      case MediaArchiveType.GroupDM: {
-        await this.initOrAwaitArchive("dm_group", MediaArchive.DM_GROUP_FOLDER);
-
-        return this.dm_group.files;
-      }
-      case MediaArchiveType.Tweet: {
-        await this.initOrAwaitArchive("tweet", MediaArchive.TWEET_FOLDER);
-
-        return this.tweet.files;
-      }
-      case MediaArchiveType.Moment: {
-        await this.initOrAwaitArchive("moment", MediaArchive.MOMENT_FOLDER);
-
-        return this.moment.files;
-      }
-      case MediaArchiveType.Profile: {
-        await this.initOrAwaitArchive("profile", MediaArchive.PROFILE_FOLDER);
-
-        return this.profile.files;
-      }
+  async list(of_archive: MediaArchiveType | string) {
+    if (!(of_archive in this.folders_to_archive) && this.getFolderOfType(of_archive) === undefined) {
+      throw new Error("You need to define your custom archive type before using it.");
     }
 
-    throw new Error("Unsupported media type.");
+    return (
+      await this.initOrAwaitArchive(this.getArchiveType(of_archive), this.getFolderOfType(of_archive))
+    ).files;
   }
 
   /*
    * MEDIA GETTERS: PRIVATE
    */
+
+  protected getArchiveType(archive: string) {
+    switch (archive) {
+      case MediaArchiveType.SingleDM: return "dm_single";
+      case MediaArchiveType.GroupDM: return "dm_group";
+      case MediaArchiveType.Tweet: return "tweet";
+      case MediaArchiveType.Moment: return "moment";
+      case MediaArchiveType.Profile: return "profile";
+    }
+    return archive;
+  }
+
+  protected getFolderOfType(archive: string) {
+    switch (archive) {
+      case MediaArchiveType.SingleDM: return MediaArchive.DM_SINGLE_FOLDER;
+      case MediaArchiveType.GroupDM: return MediaArchive.DM_GROUP_FOLDER;
+      case MediaArchiveType.Tweet: return MediaArchive.TWEET_FOLDER;
+      case MediaArchiveType.Moment: return MediaArchive.MOMENT_FOLDER;
+      case MediaArchiveType.Profile: return MediaArchive.PROFILE_FOLDER;
+    }
+
+    if (archive in this.custom_folders) {
+      return this.custom_folders[archive];
+    }
+  }
 
   // -------------------
   // - Direct Messages -
@@ -189,8 +180,6 @@ export class MediaArchive {
   /**
    * Extract related tweet video or picture from a media entity.
    * 
-   * @throws If not valid media found, promise is rejected.
-   * 
    * ```ts
    * const tweet = archive.tweets.all[0];
    * 
@@ -203,6 +192,8 @@ export class MediaArchive {
    *    }
    * }
    * ```
+   * 
+   * @throws If not valid media found, promise is rejected.
    */
   async fromTweetMediaEntity(media_entity: MediaGDPREntity | PartialTweetMediaEntity, as_array_buffer?: boolean) : Promise<Blob | ArrayBuffer> {
     if ('video_info' in media_entity) {
@@ -310,42 +301,59 @@ export class MediaArchive {
    * INIT ARCHIVES
    */
 
-  async loadArchive(parts: {
-    dm_single_archive?: AcceptedZipSources | Promise<AcceptedZipSources>,
-    dm_group_archive?: AcceptedZipSources | Promise<AcceptedZipSources>,
-    moment_archive?: AcceptedZipSources | Promise<AcceptedZipSources>,
-    tweet_archive?: AcceptedZipSources | Promise<AcceptedZipSources>,
-    profile_archive?: AcceptedZipSources | Promise<AcceptedZipSources>
-  }) {
-    if (parts.dm_group_archive) {
-      this.dm_group = new SingleMediaArchive(null, "");
-      await this.dm_group.sideload(constructArchive(await parts.dm_group_archive));
-    }
-    if (parts.dm_single_archive) {
-      this.dm_single = new SingleMediaArchive(null, "");
-      await this.dm_single.sideload(constructArchive(await parts.dm_single_archive));
-    }
-    if (parts.moment_archive) {
-      this.moment = new SingleMediaArchive(null, "");
-      await this.moment.sideload(constructArchive(await parts.moment_archive));
-    }
-    if (parts.tweet_archive) {
-      this.tweet = new SingleMediaArchive(null, "");
-      await this.tweet.sideload(constructArchive(await parts.tweet_archive));
-    }
-    if (parts.profile_archive) {
-      this.profile = new SingleMediaArchive(null, "");
-      await this.profile.sideload(constructArchive(await parts.profile_archive));
+  /**
+   * Manually set the archive used for a media type.
+   * 
+   * The specified {mediaType} can be a reference to a `MediaArchiveType` enum, or a custom media type
+   * registered with `.registerMediaFolder()` method.
+   * 
+   * ```ts
+   * import { MediaArchiveType } from 'twitter-archive-reader';
+   * 
+   * // Accepted types are the same as accepted for `TwitterArchive` constructor
+   * const my_tweet_media_archive = "tweet_media.zip";
+   * 
+   * // Load this archive instead of base one
+   * await archive.medias.loadArchive({
+   *   [MediaArchiveType.Tweet]: my_tweet_media_archive
+   * });
+   * ```
+   */
+  async loadArchive(parts: { [mediaType: string]: AcceptedZipSources | Promise<AcceptedZipSources> }) {
+    for (const part in parts) {
+      // Check if the media folder exists
+      const folder = this.getFolderOfType(part);
+
+      if (folder === undefined) {
+        throw new Error("You need to define your custom archive type before using it.");
+      }
+
+      // Init the archive
+      this.folders_to_archive[part] = new SingleMediaArchive(null, "");
+      await this.folders_to_archive[part].sideload(constructArchive(await parts[part]));
     }
   }
 
-  protected initOrAwaitArchive(archive_type: ExisitingArchives, init_folder: string | string[]) {
-    if (!this[archive_type]) {
-      this[archive_type] = new SingleMediaArchive(this.archive, init_folder);
+  protected async initOrAwaitArchive(archive_type: ExisitingArchives | string, init_folder: string | string[]) {
+    if (!this.folders_to_archive[archive_type]) {
+      this.folders_to_archive[archive_type] = new SingleMediaArchive(this.archive, init_folder);
     }
-    return this[archive_type].ready;
+    await this.folders_to_archive[archive_type].ready;
+    return this.folders_to_archive[archive_type];
   }
 
+  /**
+   * If the archive has a custom media folder, you can specify it here.
+   * 
+   * @param type_name Refers to used name to access this folder, take care of not using one of the `MediaArchiveType` enum.
+   * When you use `.get()` and `.list()`, use this {type_name} as first parameter of those methods.
+   * 
+   * @param folder Folder name in the archive.
+   * @param alternative_names Alternate folder names if the {folder} does not exists in the archive.
+   */
+  registerMediaFolder(type_name: string, folder: string, ...alternative_names: string[]) {
+    this.custom_folders[type_name] = [folder, ...alternative_names];
+  }
 
   /*
    * HELPERS

@@ -1,4 +1,7 @@
 import { parseTwitterDate } from "./exported_helpers";
+import { BaseArchive } from "../reading/StreamArchive";
+import { AdImpressionFile, AdEngagementFile, AdMobileConversionsFile, AdOnlineConversionsFile } from "../types/GDPRAds";
+import AdArchive from "../user/AdArchive";
 
 export function supportsBigInt() {
   return typeof BigInt !== 'undefined';
@@ -35,4 +38,35 @@ export function safePusher<T>(array: Array<T>, elements: Array<T>) {
   else {
     array.push(...elements);
   }
+}
+
+export async function initAdArchiveFromArchive(archive: BaseArchive<any>, ads: AdArchive) {
+  try {
+    const impressions = await archive.get('ad-impressions.js') as AdImpressionFile;
+    for (const i of impressions) {
+      ads.impressions.push(...i.ad.adsUserData.adImpressions.impressions);
+    }
+  } catch (e) { }
+
+  try {
+    const engagements = await archive.get('ad-engagements.js') as AdEngagementFile;
+    for (const e of engagements) {
+      ads.engagements.push(...e.ad.adsUserData.adEngagements.engagements);
+      ads.impressions.push(...e.ad.adsUserData.adEngagements.engagements.map(e => e.impressionAttributes));
+    }
+  } catch (e) { }
+
+  try {
+    const ads_mobile = await archive.get('ad-mobile-conversions-attributed.js') as AdMobileConversionsFile;
+    for (const ad of ads_mobile) {
+      ads.mobile_conversions.push(...ad.ad.adsUserData.attributedMobileAppConversions.conversions);
+    }
+  } catch (e) { }
+
+  try {
+    const ads_online = await archive.get('ad-online-conversions-attributed.js') as AdOnlineConversionsFile;
+    for (const ad of ads_online) {
+      ads.online_conversions.push(...ad.ad.adsUserData.attributedOnlineConversions.conversions);
+    }
+  } catch (e) { }
 }

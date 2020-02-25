@@ -1,5 +1,4 @@
-import { BaseArchive } from "../reading/StreamArchive";
-import { AdImpression, AdEngagement, AdMobileConversion, AdOnlineConversion, AdImpressionFile, AdEngagementFile, AdMobileConversionsFile, AdOnlineConversionsFile } from "../types/GDPRAds";
+import { AdImpression, AdEngagement, AdMobileConversion, AdOnlineConversion } from "../types/GDPRAds";
 
 /**
  * Twitter collected data about ads viewed and interacted with by the archive owner.
@@ -31,37 +30,6 @@ export class AdArchive {
    * For example: Clicked on the ad and see a webpage...
    */
   online_conversions: AdOnlineConversion[] = [];
-
-  async __init(archive: BaseArchive<any>) {
-    try {
-      const impressions = await archive.get('ad-impressions.js') as AdImpressionFile;
-      for (const i of impressions) {
-        this.impressions.push(...i.ad.adsUserData.adImpressions.impressions);
-      }
-    } catch (e) { }
-
-    try {
-      const engagements = await archive.get('ad-engagements.js') as AdEngagementFile;
-      for (const e of engagements) {
-        this.engagements.push(...e.ad.adsUserData.adEngagements.engagements);
-        this.impressions.push(...e.ad.adsUserData.adEngagements.engagements.map(e => e.impressionAttributes));
-      }
-    } catch (e) { }
-
-    try {
-      const ads_mobile = await archive.get('ad-mobile-conversions-attributed.js') as AdMobileConversionsFile;
-      for (const ad of ads_mobile) {
-        this.mobile_conversions.push(...ad.ad.adsUserData.attributedMobileAppConversions.conversions);
-      }
-    } catch (e) { }
-
-    try {
-      const ads_online = await archive.get('ad-online-conversions-attributed.js') as AdOnlineConversionsFile;
-      for (const ad of ads_online) {
-        this.online_conversions.push(...ad.ad.adsUserData.attributedOnlineConversions.conversions);
-      }
-    } catch (e) { }
-  }
 
   /**
    * Impressions by display location (where archive owner seen it on Twitter environnement: Timeline, profile...)
