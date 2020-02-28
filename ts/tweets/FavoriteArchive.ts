@@ -61,6 +61,8 @@ export class FavoriteArchive {
 
   /**
    * Favorites sorted by year then months.
+   * 
+   * Favs on `2010-10` are favorites than cannot be date classed.
    */
   get index() {
     if (this._date_index)
