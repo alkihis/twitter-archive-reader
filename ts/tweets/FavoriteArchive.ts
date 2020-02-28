@@ -1,5 +1,4 @@
 import { PartialFavorite, GDPRFavorites } from "../types/GDPRExtended";
-import twitterSnowflakeToDate from 'twitter-snowflake-to-date';
 import Settings from "../utils/Settings";
 import { dateFromFavorite, sortFavorites } from "../utils/exported_helpers";
 
