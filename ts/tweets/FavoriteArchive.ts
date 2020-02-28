@@ -1,25 +1,36 @@
 import { PartialFavorite, GDPRFavorites } from "../types/GDPRExtended";
+import twitterSnowflakeToDate from 'twitter-snowflake-to-date';
+import Settings from "../utils/Settings";
+import { dateFromFavorite, sortFavorites } from "../utils/exported_helpers";
+
+export interface FavoriteIndex { [tweetId: string]: PartialFavorite }
+export interface FavoriteDateIndex { [year: string]: { [month: string]: FavoriteIndex } }
 
 export class FavoriteArchive {
-  protected index: { [tweetId: string]: PartialFavorite } = {};
+  protected _all: PartialFavorite[];
+  protected _index: FavoriteIndex = {};
+  protected _date_index: FavoriteDateIndex;
   protected fav_set: Set<string>;
 
   add(favs: GDPRFavorites | PartialFavorite[]) {
     for (const f of favs) {
       if ('like' in f) {
-        this.index[f.like.tweetId] = f.like;
+        this._index[f.like.tweetId] = f.like;
       }
       else {
-        this.index[f.tweetId] = f;
+        this._index[f.tweetId] = f;
       }
     }
+    this._all = undefined;
+    this._date_index = undefined;
+    this.fav_set = undefined;
   }
 
   /**
    * Check if {tweet_id} has been favorited.
    */
   has(tweet_id: string) {
-    return tweet_id in this.index;
+    return tweet_id in this._index;
   }
 
   /**
@@ -28,7 +39,7 @@ export class FavoriteArchive {
    * If {tweet_id} is not favorited, returns `undefined`.
    */
   get(tweet_id: string) {
-    return this.index[tweet_id];
+    return this._index[tweet_id];
   }
 
   *[Symbol.iterator]() {
@@ -39,7 +50,42 @@ export class FavoriteArchive {
    * Get all the registred favorites
    */
   get all() {
-    return Object.values(this.index);
+    if (this._all)
+      return this._all;
+
+    if (Settings.ENABLE_CACHE) {
+      return this._all = sortFavorites(Object.values(this._index), "asc");
+    }
+    return sortFavorites(Object.values(this._index), "asc");
+  }
+
+  /**
+   * Favorites sorted by year then months.
+   */
+  get index() {
+    if (this._date_index)
+      return this._date_index;
+
+    const index: FavoriteDateIndex = {};
+
+    for (const fav of this.all) {
+      const d = dateFromFavorite(fav);
+      const year = d.getFullYear(), month = d.getMonth() + 1;
+
+      if (!(year in index)) {
+        index[year] = {};
+      }
+      if (!(month in index[year])) {
+        index[year][month] = {};
+      }
+
+      index[year][month][fav.tweetId] = fav;
+    }
+
+    if (Settings.ENABLE_CACHE) {
+      return this._date_index = index;
+    }
+    return index;
   }
 
   /**
@@ -49,7 +95,7 @@ export class FavoriteArchive {
     if (this.fav_set) {
       return this.fav_set;
     }
-    return this.fav_set = new Set(Object.keys(this.index));
+    return this.fav_set = new Set(Object.keys(this._index));
   }
 
   /**

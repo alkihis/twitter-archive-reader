@@ -41,4 +41,6 @@ export interface PartialFavorite {
   fullText?: string;
   /** URL to the tweet. Defined only if archive creation > around June 2019. */
   expandedUrl?: string;
+  /** Internal date. */
+  date?: Date;
 }

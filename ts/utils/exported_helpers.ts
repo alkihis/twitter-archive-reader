@@ -3,6 +3,8 @@ import bigInt from 'big-integer';
 import { LinkedDirectMessage, DirectMessageEventContainer, DirectMessageEventsContainer, DirectMessageEvent } from "../types/GDPRDMs";
 import { PartialTweet } from "../types/ClassicTweets";
 import { PartialTweetGDPR } from "../types/GDPRTweets";
+import { PartialFavorite } from "../types/GDPRExtended";
+import twitterSnowflakeToDate from "twitter-snowflake-to-date";
 
 // -------------------------
 // - ABOUT DIRECT MESSAGES -
@@ -102,6 +104,14 @@ export function dateFromTweet(tweet: PartialTweet) : Date {
   return tweet.created_at_d = parseTwitterDate(tweet.created_at);
 }
 
+/** Return the `Date` object affiliated to **favorite**. */
+export function dateFromFavorite(favorite: PartialFavorite) : Date {
+  if (favorite.date && favorite.date instanceof Date) {
+    return favorite.date;
+  }
+  return favorite.date = twitterSnowflakeToDate(favorite.tweetId);
+}
+
 /**
  * Parse a date inside a `PushDevice` or a `MessagingDevice` object.
  * 
@@ -127,7 +137,7 @@ export function parseDeviceDate(date: string) {
 
 /**
  * Sort tweets by ID (descending order by default).
-  */
+ */
 export function sortTweets(tweets: PartialTweet[], order: "asc" | "desc" = "desc") {
   let sort_fn: (a: PartialTweet, b: PartialTweet) => number;
 
@@ -145,6 +155,28 @@ export function sortTweets(tweets: PartialTweet[], order: "asc" | "desc" = "desc
   }
 
   return tweets.sort(sort_fn);
+}
+
+/**
+ * Sort favorites by ID (descending order by default).
+ */
+export function sortFavorites(favorites: PartialFavorite[], order: "asc" | "desc" = "desc") {
+  let sort_fn: (a: PartialFavorite, b: PartialFavorite) => number;
+
+  if (supportsBigInt()) {
+    if (order === "asc")
+      sort_fn = (a, b) => Number(BigInt(a.tweetId) - BigInt(b.tweetId));
+    else
+      sort_fn = (a, b) => Number(BigInt(b.tweetId) - BigInt(a.tweetId));
+  }
+  else {
+    if (order === "asc")
+      sort_fn = (a, b) => (bigInt(a.tweetId).minus(bigInt(b.tweetId))).toJSNumber();
+    else
+      sort_fn = (a, b) => (bigInt(b.tweetId).minus(bigInt(a.tweetId))).toJSNumber();
+  }
+
+  return favorites.sort(sort_fn);
 }
 
 /**
