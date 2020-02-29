@@ -5,7 +5,21 @@ import { PartialTweetGDPR } from "../types/GDPRTweets";
 import Settings from "../utils/Settings";
 import { safePusher } from "../utils/helpers";
 
-interface TweetDateIndex { [year: string]: { [month: string]: TweetIndex } }
+export interface TweetDateIndex<T> { 
+  [year: string]: { [month: string]: TweetIndex<T> } 
+}
+
+export interface TweetLikeContainer<T> {
+  add(elements: T[]): void;
+  month(month: string | number, year: string | number): T[];
+  fromThatDay(start?: Date) : T[];
+  single(id_str: string) : T | null;
+  has(id_str: string): boolean;
+  readonly index: TweetDateIndex<T>;
+  readonly length: number;
+  readonly all: T[];
+  [Symbol.iterator](): Generator<T, void, void>;
+}
 
 /**
  * Contains every tweet related to an archive.
@@ -14,15 +28,15 @@ interface TweetDateIndex { [year: string]: { [month: string]: TweetIndex } }
  * or when tweets are loaded through `TwitterArchive.loadArchivePart()` / 
  * `TwitterArchive.loadClassicArchivePart()` methods.
  */
-export class TweetArchive {
+export class TweetArchive implements TweetLikeContainer<PartialTweet> {
   /** ID-indexed tweets; This is always filled. */
-  protected _index: TweetIndex = {};
+  protected _index: TweetIndex<PartialTweet> = {};
   /** 
    * Year then month-indexed tweets; 
    * This is not always generated,  
    * use `.index` getter instead.
    */
-  protected _date_index: TweetDateIndex;
+  protected _date_index: TweetDateIndex<PartialTweet>;
   /** 
    * All tweets, in a single array; 
    * This is not always generated,  
@@ -309,7 +323,7 @@ export class TweetArchive {
     if (Settings.ENABLE_CACHE && this._date_index)
       return this._date_index;
     
-    const index: TweetDateIndex = {};
+    const index: TweetDateIndex<PartialTweet> = {};
 
     for (const tweet of this) {
       const date = dateFromTweet(tweet);

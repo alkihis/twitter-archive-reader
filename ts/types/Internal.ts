@@ -51,6 +51,6 @@ export interface ExtendedInfoContainer {
 /**
  * Link a tweet identifier to a single tweet. Tweets IDs must be **string**.
  */
-export interface TweetIndex {
-  [id: string]: PartialTweet;
+export interface TweetIndex<T> {
+  [id: string]: T;
 }

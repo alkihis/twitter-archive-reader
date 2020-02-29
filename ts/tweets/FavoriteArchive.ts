@@ -1,14 +1,14 @@
 import { PartialFavorite, GDPRFavorites } from "../types/GDPRExtended";
 import Settings from "../utils/Settings";
 import { dateFromFavorite, sortFavorites } from "../utils/exported_helpers";
+import { TweetLikeContainer, TweetDateIndex } from "./TweetArchive";
+import { TweetIndex } from "../types/Internal";
+import { safePusher } from "../utils/helpers";
 
-export interface FavoriteIndex { [tweetId: string]: PartialFavorite }
-export interface FavoriteDateIndex { [year: string]: { [month: string]: FavoriteIndex } }
-
-export class FavoriteArchive {
+export class FavoriteArchive implements TweetLikeContainer<PartialFavorite> {
   protected _all: PartialFavorite[];
-  protected _index: FavoriteIndex = {};
-  protected _date_index: FavoriteDateIndex;
+  protected _index: TweetIndex<PartialFavorite> = {};
+  protected _date_index: TweetDateIndex<PartialFavorite>;
   protected fav_set: Set<string>;
 
   add(favs: GDPRFavorites | PartialFavorite[]) {
@@ -37,8 +37,76 @@ export class FavoriteArchive {
    * 
    * If {tweet_id} is not favorited, returns `undefined`.
    */
-  get(tweet_id: string) {
+  single(tweet_id: string) {
     return this._index[tweet_id];
+  }
+
+  /**
+   * @deprecated Use `.single()` instead.
+   */
+  get(tweet_id: string) {
+    return this.single(tweet_id);
+  }
+
+  month(month: string | number, year: string | number) {
+    const m = Number(month);
+    const y = Number(year);
+    const index = this.index;
+
+    if (year in index) {
+      if (month in index[year]) {
+        return Object.values(index[year][month]);
+      }
+    } 
+    return [];
+  }
+
+  fromThatDay(start?: Date) {
+    start = start instanceof Date ? start : new Date;
+    const now_m = start.getMonth();
+    const now_d = start.getDate();
+
+    const favorites: PartialFavorite[] = [];
+
+    if (this._date_index || Settings.ENABLE_CACHE) {
+      const index = this._date_index;
+  
+      for (const year in index) {
+        for (const month in index[year]) {
+          if (Number(month) === now_m + 1) {
+            // Month of interest
+            safePusher(
+              favorites, 
+              Object
+                .values(index[year][month])
+                .filter(t => dateFromFavorite(t).getDate() === now_d)
+            );
+          }
+        }
+      }
+    }
+    else {
+      const now_y = start.getFullYear();
+
+      for (const id in this._index) {
+        const tweet = this._index[id];
+        const date = dateFromFavorite(tweet);
+
+        if (date.getDate() !== now_d) {
+          continue;
+        }
+        if (date.getMonth() !== now_m) {
+          continue;
+        }
+        if (date.getFullYear() !== now_y) {
+          continue;
+        }
+
+        favorites.push(tweet);
+      }
+    }
+
+    return favorites;
   }
 
   *[Symbol.iterator]() {
@@ -67,7 +135,7 @@ export class FavoriteArchive {
     if (this._date_index)
       return this._date_index;
 
-    const index: FavoriteDateIndex = {};
+    const index: TweetDateIndex<PartialFavorite> = {};
 
     for (const fav of this.all) {
       const d = dateFromFavorite(fav);
