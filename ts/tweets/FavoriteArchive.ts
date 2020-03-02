@@ -177,7 +177,7 @@ export class FavoriteArchive implements TweetLikeContainer<PartialFavorite> {
   /** `true` if this archive's favorites supported "extended" properties: `.fullText` and `.expandedUrl`. */
   get has_extended_favorites() {
     if (this.length) {
-      return 'fullText' in this.all[0];
+      return 'expandedUrl' in this.all[0] || 'fullText' in this.all[0];
     }
     return false;
   }
