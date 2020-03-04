@@ -57,7 +57,7 @@ abstract class ConversationBase {
 
   protected register(msg: LinkedDirectMessage) {
     this._index[msg.id] = msg;
-    if (!msg.createdAtDate) {
+    if (!msg.createdAtDate || typeof msg.createdAtDate === 'string') {
       msg.createdAtDate = parseTwitterDate(msg.createdAt);
     }
   }
