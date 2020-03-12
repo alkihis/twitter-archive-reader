@@ -229,6 +229,13 @@ export class TwitterArchive {
   protected init(parts_to_read: Set<ArchiveReadPart>) {
     // Detect archive type
     this._is_gdpr = this.archive.search(/^tweets\.csv$/).length === 0;
+
+    // Fix for GDPR archive of March 2020+
+    if (this.is_gdpr) {
+      if (this.archive.searchDir(/^data\/?$/).length) {
+        this.archive = this.archive.dir('data');
+      }
+    }
             
     // Listen for read error events on archives
     this.archive.events.on('read error', ({ filename }: { filename: string }) => {
