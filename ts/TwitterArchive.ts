@@ -101,7 +101,7 @@ export class TwitterArchive {
   public static readonly settings = Settings;
 
   protected _ready: Promise<void> = Promise.resolve();
-  protected _has_viewer: boolean = true;
+  protected _has_viewer = false;
   protected archive: ConstructibleArchives;
 
   /** Current archive load state. */
@@ -232,13 +232,14 @@ export class TwitterArchive {
     this._is_gdpr = this.archive.search(/^tweets\.csv$/).length === 0;
 
     // Fix for GDPR archive of March 2020+
-    if (this.is_gdpr) {
+    if (this._is_gdpr) {
       if (this.archive.searchDir(/^data\/?$/).length) {
         this.archive = this.archive.dir('data');
+        this._has_viewer = true;
       }
-      else {
-        this._has_viewer = false;
-      }
+    }
+    else {
+      this._has_viewer = true;
     }
             
     // Listen for read error events on archives
