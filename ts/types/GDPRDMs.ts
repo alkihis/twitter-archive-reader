@@ -20,6 +20,7 @@ export interface DirectMessageEventContainer {
   conversationNameUpdate?: ConversationNameUpdate;
   participantsJoin?: ParticipantJoin;
   participantsLeave?: ParticipantLeave;
+  reactionCreate?: MessageReaction;
 }
 
 /*
@@ -31,6 +32,7 @@ export interface DirectMessageEventsContainer {
   conversationNameUpdate?: ConversationNameUpdate[];
   participantsJoin?: ParticipantJoin[];
   participantsLeave?: ParticipantLeave[];
+  reactionCreate?: MessageReaction[];
 }
 
 /*
@@ -80,6 +82,8 @@ export interface LinkedDirectMessage extends DirectMessage {
     before?: DirectMessageEventsContainer;
     after?: DirectMessageEventsContainer;
   };
+  /** Message reactions. If message don't have reaction, this is `undefined`. */
+  reactions?: MessageReaction[];
 }
 
 /*
@@ -116,4 +120,25 @@ export interface ConversationNameUpdate extends DirectMessageEvent {
   initiatingUserId: string;
   /** The new conversation name. */
   name: string;
+}
+
+export type ReactionKey = "agree" | "disagree" | "sad" | "funny" | "surprised" | "like" | "hot";
+
+export interface MessageReaction extends DirectMessageEvent {
+  /** User ID that send this reaction. */
+  senderId: string;
+  /** 
+   * Reaction type. 
+   * Each emoji is linked to a key. 
+   * 
+   * - agree: Thumbs up
+   * - disagree: Thumbs down
+   * - sad: Emoji with a tear
+   * - funny: Crying laugh emoji
+   * - surprised: Emoji surprised
+   * - like: A heart
+   */
+  reactionKey: ReactionKey;
+  /** To which direct message this reaction is linked to. */
+  eventId: string;
 }

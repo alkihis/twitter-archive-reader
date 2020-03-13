@@ -597,6 +597,33 @@ export class Conversation extends ConversationBase {
           previous_events = undefined;
         }
       }
+      else if (event.reactionCreate) {
+        // This is a reaction
+        const evt = event.reactionCreate;
+
+        if (!evt.eventId) {
+          // undefined key, twitter might have changed key
+          // should try reactionEventID (as readme says) ?
+          // @ts-ignore
+          evt.eventId = evt.reactionEventID;
+        }
+
+        if (evt.eventId) {
+          // Register the reaction in the DM
+          const msg = this._index[evt.eventId];
+
+          // The message exists; It should always exists,
+          // as reactions can't exist -before- a message.
+          if (msg) {
+            if (msg.reactions) {
+              msg.reactions.push(evt);
+            }
+            else {
+              msg.reactions = [evt];
+            }
+          }
+        }
+      }
       else {
         // This is an event
 
