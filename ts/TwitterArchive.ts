@@ -19,6 +19,7 @@ import { DMFile } from './types/GDPRDMs';
 import { TweetFileError, DirectMessageParseError, ProfileFileError, AccountFileError } from './utils/Errors';
 import Settings from './utils/Settings';
 import { initAdArchiveFromArchive } from './utils/helpers';
+import ArchiveManifest from './types/GDPRManifest';
 
 
 // Base variables, unexported
@@ -102,6 +103,7 @@ export class TwitterArchive {
 
   protected _ready: Promise<void> = Promise.resolve();
   protected _has_viewer = false;
+  protected _manifest: ArchiveManifest | undefined;
   protected archive: ConstructibleArchives;
 
   /** Current archive load state. */
@@ -233,7 +235,7 @@ export class TwitterArchive {
 
     // Fix for GDPR archive of March 2020+
     if (this._is_gdpr) {
-      if (this.archive.searchDir(/^data\/?$/).length) {
+      if (this.archive.search(/^data\/manifest\.js$/).length) {
         this.archive = this.archive.dir('data');
         this._has_viewer = true;
       }
@@ -267,6 +269,17 @@ export class TwitterArchive {
       if (parts_to_read.has(element))
         return element;
       return "";
+    }
+
+    // Read the manifest (if any)
+    const manifest_entry = this.archive.search(/^manifest\.js$/);
+    if (manifest_entry.length) {
+      try {
+        this._manifest = await this.archive.get('manifest.js');
+        this._created_at = this._manifest.archiveInfo.generationDate;
+      } catch (e) {
+        this.events.emit('manifest error', e);
+      }
     }
 
     // ------------------------
@@ -529,9 +542,19 @@ export class TwitterArchive {
   /** 
    * Archive creation date. 
    * 
-   * **Warning**: This is accurate only for classic archives (< 2018, tweet only). 
+   * **Warning**: This is accurate only for classic archives (< 2018, tweet only),
+   * or GDPR archives produced after mid-March 2020 (which also have a `manifest.js` file).
    * 
-   * In GDPR archives, this will be the current date. 
+   * In other archives, this will be the current date. 
+   * 
+   * You can check if the generation date is valid with this tiny snippet.
+   * ```ts
+   * const date_is_valid = !archive.is_gdpr || archive.has_manifest;
+   * 
+   * if (date_is_valid) {
+   *  console.log("Generation date is", archive.generation_date);
+   * }
+   * ```
    * 
    */
   get generation_date() {
@@ -564,6 +587,24 @@ export class TwitterArchive {
    */
   get has_viewer() {
     return this._has_viewer;
+  }
+
+  /**
+   * `true` if archive have a manifest file inside.
+   * 
+   * This only applies to GDPR archives produced by Twitter after mid-March 2020.
+   */
+  get has_manifest() {
+    return !!this._manifest;
+  }
+
+  /**
+   * Manifest file, indicating generation date, all available JS files, and more.
+   * 
+   * This property is only available for GDPR archives produced by Twitter after mid-March 2020.
+   */
+  get manifest() {
+    return this._manifest;
   }
 
   /** 

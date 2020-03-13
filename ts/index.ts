@@ -27,6 +27,7 @@ export * from './types/GDPRAds';
 export * from './types/GDPRAccount';
 export * from './types/ClassicTweets';
 export * from './types/ClassicPayloadIndex';
+export * from './types/GDPRManifest';
 
 
 // Default export
