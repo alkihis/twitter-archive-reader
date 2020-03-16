@@ -26,9 +26,9 @@
   ],
   "devDependencies": {
     "@types/blob-to-buffer": "^1.2.0",
-    "@types/jest": "^24.9.0",
+    "@types/jest": "^24.9.1",
     "@types/js-md5": "^0.4.2",
-    "commander": "^4.1.0",
+    "commander": "^4.1.1",
     "jest": "^24.9.0",
     "timerize": "^1.0.3"
   },
