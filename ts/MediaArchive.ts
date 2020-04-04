@@ -477,24 +477,55 @@ export class SingleMediaArchive {
     return Object.keys(this._archive.ls(true)).filter(e => e);
   }
 
-  async file<T = true>(name: string, as_array_buffer: T): Promise<ArrayBuffer>;
-  async file<T = false>(name: string, as_array_buffer: T): Promise<Blob>;
-  async file(name: string, as_array_buffer?: boolean) {
+  async file<T extends boolean>(name: string, as_array_buffer?: T) : Promise<T extends true ? ArrayBuffer : Blob> {
     if (!this._archive || !this._ok) {
       throw new Error("Archive is not loaded or hasn't been initialized properly.");
     }
 
     const results = this._archive.search(new RegExp(name + "(\.?.*)$"));
+    let use_ab: boolean = as_array_buffer;
   
     if (results.length) {
-      if (as_array_buffer === undefined) {
-        as_array_buffer = SingleMediaArchive.autoDetectIfArrayBuffer();
+      if (use_ab === undefined) {
+        use_ab = SingleMediaArchive.autoDetectIfArrayBuffer();
       }
 
-      return this._archive.read(results[0] as any, as_array_buffer ? "arraybuffer" : "blob");
+      let file: Blob | ArrayBuffer = await this._archive.read(results[0] as any, use_ab ? "arraybuffer" : "blob");
+
+      if (!(file instanceof ArrayBuffer)) {
+        // file instanceof Blob
+        // Detecting MIME type
+
+        file = file.slice(0, file.size, this.detectMimeType(name));
+      }
+
+      // @ts-ignore
+      return file;
     }
 
     throw new FileNotFoundError("File not found", name);
+  }
+
+  protected detectMimeType(name: string) {
+    const ext = name.slice(name.lastIndexOf('.') + 1, name.length).toLocaleLowerCase();
+
+    switch (ext) {
+      case "jpg": return "image/jpeg";
+      case "png": return "image/png";
+      case "gif": return "image/gif";
+      case "mp4": return "video/mp4";
+      case "webm": return "video/webm";
+      case "webp": return "image/webp";
+      case "bmp": return "image/bitmap";
+      case "ogv": return "video/ogg";
+      case "ico": return "image/x-icon";
+      case "mp3": return "audio/mp3";
+      case "txt": return "text/plain";
+      case "json": return "application/json";
+      case "js": return "text/javascript";
+      case "html": return "text/html";
+    }
+    return "";
   }
   
   async sideload(archive: ConstructibleArchives) {

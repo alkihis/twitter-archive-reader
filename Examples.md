@@ -8,7 +8,7 @@ this **isn't meant to be a comprehensive list of what the package can do !**
 
 This `import` statement will be printed every time a new thing need to be imported.
 
-## Table of contents
+## <a name='Tableofcontents'></a>Table of contents
 
 <!-- vscode-markdown-toc -->
 * [Initialization](#Initialization)
@@ -34,6 +34,7 @@ This `import` statement will be printed every time a new thing need to be import
 	* [Get media related to a direct message, by a media URL](#GetmediarelatedtoadirectmessagebyamediaURL)
 	* [Get medias related to a tweet](#Getmediasrelatedtoatweet)
 	* [Get the user profile picture and banner as binary data](#Gettheuserprofilepictureandbannerasbinarydata)
+	* [Get medias of tweets posted in a certain period of time and write them in a directory](#Getmediasoftweetspostedinacertainperiodoftimeandwritetheminadirectory)
 
 <!-- vscode-markdown-toc-config
 	numbering=false
@@ -292,4 +293,27 @@ const [profile, header] = await Promise.all([
   archive.medias.getProfilePictureOf(archive.user),
   archive.medias.getProfileBannerOf(archive.user)
 ]);
+```
+
+
+### <a name='Getmediasoftweetspostedinacertainperiodoftimeandwritetheminadirectory'></a>Get medias of tweets posted in a certain period of time and write them in a directory
+```ts
+import { promises as FsPromise } from 'fs';
+
+// Find the tweets
+const tweets = archive.tweets.between("2019-01-01T12:01:00Z", "2019-06-06T16:32:45Z");
+
+const destination = "/path/to/dir/";
+
+for (const tweet of tweets) {
+  // Get the medias of the tweets
+  const medias: ArrayBuffer[] = await archive.medias.ofTweet(tweet);
+
+  let i = 0;
+  for (const media of medias) {
+    // Write a media on the disk
+    await FsPromise.writeFile(destination + `${tweet.id_str}-${i}`, Buffer.from(media));
+    i++;
+  }
+}
 ```

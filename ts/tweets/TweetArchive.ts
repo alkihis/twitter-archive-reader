@@ -685,6 +685,12 @@ const INITIAL_STATIC: { [staticName: string]: TweetSearchStaticValidator } = {
   videos_only: isWithVideo,
 };
 
+export interface TweetFindOptions {
+  use_regex?: boolean | string;
+  static_validators?: string[];
+  search_in?: ('text' | 'user.name' | 'user.screen_name')[];
+}
+
 export class TweetFinder {
   /**
    * Keywords to use in search query.
@@ -713,6 +719,23 @@ export class TweetFinder {
   static_validators: { [staticName: string]: TweetSearchStaticValidator } = { ...INITIAL_STATIC };
 
   /**
+   * Deprecated. Use `.find()` instead, that is more future proof.
+   */
+  search(
+    tweets: Iterable<PartialTweet>, 
+    query: string, 
+    is_regex: boolean | string = false, 
+    static_validators: string[] = [],
+    search_in: string[] = ["text", "user.screen_name"]
+  ) { 
+    return [...this.find(query, tweets, {
+      use_regex: is_regex,
+      static_validators,
+      search_in: search_in as ("text" | "user.screen_name" | "user.name")[],
+    })];
+  }
+
+  /**
    * Search into **tweets** using **query**.
    * 
    * Query can contain keywords.
@@ -722,7 +745,7 @@ export class TweetFinder {
    * - `from:{screen_name,screen_name_2,screen_name_3}`
    * - `retweet_of:{screen_name} (use of , is allowed, like from:)`
    * 
-   * To be in the result array, a tweet must validate ALL the keywords.
+   * To be matched, a tweet must validate ALL the keywords.
    * 
    * You can add your custom validators by pushing 
    * to **this.validators** a object implementing `TweetSearchValidator`.
@@ -732,14 +755,14 @@ export class TweetFinder {
    * @param query String to be searched for in the tweet.text / screen_name.
    * You should remember that in tweets, `>` and `<` are encoded as `&gt;` and `&lt;`.
    * 
-   * @param is_regex If the string should be considered as a regex during text.match or not.
-   * - If **is_regex** is `true`, regex will be enabled without flags.
-   * - If **is_regex** is `false`, **query** will be regex escaped.
-   * - If **is_regex** is a `String`, regex will be enabled with **is_regex** as flags.
+   * @param options.use_regex If the string should be considered as a regex during text.match or not.
+   * - If **use_regex** is `true`, regex will be enabled without flags.
+   * - If **use_regex** is `false`, **query** will be regex escaped.
+   * - If **use_regex** is a `String`, regex will be enabled with **is_regex** as flags.
    * 
    * Validators inside the query, such as `since:2018-01-01` will be removed from the query regex/string.
    * 
-   * @param static_validators Array of static validators names that should used. 
+   * @param options.static_validators Array of static validators names that should used. 
    * See `.static_validators`.
    * 
    * Default defined static validators are:
@@ -748,7 +771,7 @@ export class TweetFinder {
    * - `videos_only`
    * - `no_retweets`
    * 
-   * @param search_in Tweet properties to search. This is NOT dynamic you can't specify the property you want.
+   * @param options.search_in Tweet properties to search. This is NOT dynamic you can't specify the property you want.
    * Available properties are:
    * - `text`
    * - `user.screen_name`
@@ -761,13 +784,7 @@ export class TweetFinder {
    * 
    * @throws {ReferenceError} `Validator {name} does not exists` when a invalid static validator is used.
    */
-  search(
-    tweets: Iterable<PartialTweet>, 
-    query: string, 
-    is_regex: boolean | string = false, 
-    static_validators: string[] = [],
-    search_in: string[] = ["text", "user.screen_name"]
-  ) {
+  *find(query: string, tweets: Iterable<PartialTweet>, options: TweetFindOptions = {}) : Generator<PartialTweet, void, undefined> {
     // Search for keywords
     const validators: ((tweet: PartialTweet) => boolean)[] = [];
 
@@ -780,32 +797,36 @@ export class TweetFinder {
 
       for (const separator of separators) {
         const kw_reg = new RegExp(keyword + (separator ? separator : ":") + '(\\S+)');
-  
+
         let res: RegExpMatchArray = kw_reg.exec(query);
-  
+
         // If match found
         while (res && res[1]) {
           // Deleting the keyword:value of the query
           query = query.replace(new RegExp(kw_reg), '').trim();
           let v: ValidatorExecFunction;
-  
+
           // Generate the validator
           try {
             v = validator(res[1], separator);
           } catch (e) {}
-  
+
           if (!v) {
             throw new SyntaxError(keyword + ": Invalid query");
           }
           
           // Store the validator
           validators.push(v);
-  
+
           // Re-execute the regex (if same keyword presents multiple times)
           res = kw_reg.exec(query);
         }
       }
     }
+
+    const static_validators = options.static_validators ?? [];
+    const is_regex = options.use_regex ?? false;
+    const search_in = options.search_in ?? ['text', 'user.screen_name'];
 
     // Add user choosen static validators to validators
     for (const v of static_validators) {
@@ -821,8 +842,6 @@ export class TweetFinder {
     const flags = typeof is_regex === 'string' ? is_regex : undefined;
     const regex_search = query ? new RegExp(is_regex !== false ? query.trim() : escapeRegExp(query), flags) : null;
 
-    const results: PartialTweet[] = [];
-
     // Search for desired properties
     const [search_text, search_name, search_sn] = [
       search_in.includes("text"), 
@@ -836,24 +855,20 @@ export class TweetFinder {
         // If a query exists (user can just have typed keywords)
         if (regex_search) {
           // Test desired property
-          if (search_text && regex_search.test(t.text)) {
-            results.push(t);
-          }
-          else if (search_name && regex_search.test(t.user.name)) {
-            results.push(t);
-          }
-          else if (search_sn && regex_search.test(t.user.screen_name)) {
-            results.push(t);
+          if (
+            (search_text && regex_search.test(t.text)) || 
+            (search_name && regex_search.test(t.user.name)) || 
+            (search_sn && regex_search.test(t.user.screen_name))
+          ) {
+            yield t;
           }
         }
         else {
           // No query string, tweet is OK.
-          results.push(t);
+          yield t;
         }
       }
     }
-
-    return results;
   }
 
   /** Reset validators. This does NOT work if you have modified the inner initial objects ! */
