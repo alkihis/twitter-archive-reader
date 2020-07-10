@@ -1,7 +1,7 @@
 import { dateFromTweet, sortTweets, isWithMedia, isWithVideo } from "../utils/exported_helpers";
 import { TweetIndex } from "../types/Internal";
-import { PartialTweetUser, PartialTweet } from "../types/ClassicTweets";
-import { PartialTweetGDPR } from "../types/GDPRTweets";
+import { PartialTweetUser, PartialTweet, ClickedTweet } from "../types/ClassicTweets";
+import { PartialTweetGDPR, GDPRClickedTweet } from "../types/GDPRTweets";
 import Settings from "../utils/Settings";
 import { safePusher } from "../utils/helpers";
 
@@ -48,6 +48,9 @@ export class TweetArchive implements TweetLikeContainer<PartialTweet> {
 
   protected _finder: TweetFinder;
 
+  protected _clicked: { [id_str: string]: ClickedTweet } = {};
+  protected _clicked_urls: Set<string>;
+
 
   /** ------------------ */
   /** ARCHIVE MANAGEMENT */
@@ -81,6 +84,20 @@ export class TweetArchive implements TweetLikeContainer<PartialTweet> {
     for (const original of tweets) {
       const tweet = this.convertToPartial(original);      
       this._index[tweet.id_str] = tweet;
+    }
+  }
+
+  /**
+   * Add clicked actions to this container.
+   */
+  addClicked(clicked_actions: GDPRClickedTweet[]) {
+    for (const action of clicked_actions) {
+      const data = action.userInteractionsData.linkClick;
+      this._clicked[data.tweetId] = {
+        id_str: data.tweetId,
+        created_at: new Date(data.timeStampOfInteraction),
+        url: data.finalUrl
+      };
     }
   }
 
@@ -391,6 +408,36 @@ export class TweetArchive implements TweetLikeContainer<PartialTweet> {
     return this._finder;
   }
 
+
+  /** ------- */
+  /** CLICKED */
+  /** ------- */
+
+  get clicked() {
+    return Object.values(this._clicked);
+  }
+
+  get clicked_urls() {
+    if (this._clicked_urls)
+      return this._clicked_urls;
+    return this._clicked_urls = new Set(this.clicked.map(e => e.url));
+  }
+
+  /**
+   * Tells if tweet {id_str} has been clicked.
+   */
+  hasClickedTo(id_str: string) {
+    return id_str in this._clicked;
+  }
+
+  /**
+   * Tells if URL {link} has been clicked by user.
+   */
+  hasClickedLink(link: string) {
+    return this.clicked_urls.has(link);
+  }
+
+
   /** --------- */
   /** ITERATORS */
   /** --------- */
@@ -429,7 +476,33 @@ export class TweetArchive implements TweetLikeContainer<PartialTweet> {
     }
   }
 
-   /**
+  /**
+   * Iterate over clicked links sorted by tweet ID.
+   * 
+   * @param order Order by `asc` or `desc`. `desc` by default.
+   */
+  *sortedClickedIterator(order: "asc" | "desc" = "desc") : Generator<ClickedTweet, void, undefined> {
+    yield* sortTweets(this.clicked, order);
+  }
+
+  /**
+   * Iterate over clicked links sorted by click timestamp.
+   * 
+   * @param order Order by `asc` or `desc`. `desc` by default.
+   */
+  *dateClickedIterator(order: "asc" | "desc" = "desc") : Generator<ClickedTweet, void, undefined> {
+    let sort_fn: (a: ClickedTweet, b: ClickedTweet) => number;
+    if (order === "asc") {
+      sort_fn = (a, b) => a.created_at.valueOf() - b.created_at.valueOf();
+    }
+    else {
+      sort_fn = (a, b) => b.created_at.valueOf() - a.created_at.valueOf();
+    }
+
+    yield* this.clicked.sort(sort_fn);
+  }
+
+  /**
    * Iterate array of tweets by month
    * 
    * @param order Order by `asc` or `desc`.

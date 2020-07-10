@@ -127,3 +127,9 @@ export interface TwitterUserDetails {
   /** Profile banner. Available if `archive.is_gpdr === true` and if archive owner had a banner. */
   profile_banner_url?: string;
 }
+
+export interface ClickedTweet {
+  id_str: string;
+  url: string;
+  created_at: Date;
+}

@@ -138,8 +138,8 @@ export function parseDeviceDate(date: string) {
 /**
  * Sort tweets by ID (descending order by default).
  */
-export function sortTweets(tweets: PartialTweet[], order: "asc" | "desc" = "desc") {
-  let sort_fn: (a: PartialTweet, b: PartialTweet) => number;
+export function sortTweets<T extends { id_str: string }>(tweets: T[], order: "asc" | "desc" = "desc") {
+  let sort_fn: (a: T, b: T) => number;
 
   if (supportsBigInt()) {
     if (order === "asc")

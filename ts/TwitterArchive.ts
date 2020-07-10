@@ -370,6 +370,11 @@ export class TwitterArchive {
           this.addTweetsToGdprArchive(await this.archive.get(`tweet-part${i}.js`));
           i++;
         }
+
+        // Init tweet click
+        if (this.archive.has('user-link-click.js')) {
+          this.tweets.addClicked(await this.archive.get('user-link-click.js'));
+        }
       }
       else {
         const js_dir = this.archive.dir('data').dir('js');

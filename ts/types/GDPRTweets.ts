@@ -74,4 +74,13 @@ export interface MediaGDPREntity {
   type: "photo" | "animated_gif" | "video";
 }
 
-
+export interface GDPRClickedTweet {
+  userInteractionsData: {
+    linkClick: {
+      tweetId: string;
+      finalUrl: string;
+      /** Normal timestamp, no problem to read with new Date() */
+      timeStampOfInteraction: string;
+    },
+  },
+}
