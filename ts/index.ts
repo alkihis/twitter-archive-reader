@@ -5,7 +5,6 @@ export * from './reading/StreamArchive';
 export * from './direct_messages/Conversation';
 export * from './direct_messages/DMArchive';
 export * from './tweets/TweetArchive';
-export * from './ArchiveSaver';
 export * from './tweets/FavoriteArchive';
 export * from './user/UserData';
 export * from './user/AdArchive';

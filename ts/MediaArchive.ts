@@ -6,7 +6,7 @@ import { MediaGDPREntity } from "./types/GDPRTweets";
 import { FileNotFoundError } from "./utils/Errors";
 
 export type ArchiveDMImagesFormation = "none" | "inside" | "zipped";
-type ExisitingArchives = "dm_single" | "dm_group" | "tweet" | "moment" | "profile";
+type ExistingArchives = "dm_single" | "dm_group" | "tweet" | "moment" | "profile";
 
 export enum MediaArchiveType {
   SingleDM = "single-dm", 
@@ -334,7 +334,7 @@ export class MediaArchive {
     }
   }
 
-  protected async initOrAwaitArchive(archive_type: ExisitingArchives | string, init_folder: string | string[]) {
+  protected async initOrAwaitArchive(archive_type: ExistingArchives | string, init_folder: string | string[]) {
     if (!this.folders_to_archive[archive_type]) {
       this.folders_to_archive[archive_type] = new SingleMediaArchive(this.archive, init_folder);
     }

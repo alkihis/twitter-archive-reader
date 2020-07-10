@@ -3,7 +3,6 @@ import { TwitterArchive } from '../TwitterArchive';
 import { writeFileSync } from 'fs';
 import { inspect } from 'util';
 import Timer from 'timerize';
-import ArchiveSaver from '../ArchiveSaver';
 import { TweetSearcher } from '../tweets/TweetArchive';
 import { MediaArchiveType } from '../MediaArchive';
 
@@ -134,15 +133,15 @@ const test_2 = async () => {
 };
 
 const test_3 = async () => {
-  const test_archive = new TwitterArchive(commander.file);
-  await test_archive.ready();
+  const archive = new TwitterArchive(commander.file);
+  await archive.ready();
   // Test archive import/export
 
   console.log("Archive ok");
 
   Timer.default_format = "s";
   const timer = new Timer;
-  const exported = await ArchiveSaver.create(test_archive);
+  // const exported = await ArchiveSaver.create(test_archive);
 
   console.log("Archive exported in", timer.elapsed, "seconds");
 
@@ -150,7 +149,7 @@ const test_3 = async () => {
 
   console.log("Creating archive from export");
 
-  const archive = await ArchiveSaver.restore(exported);
+  // const archive = await ArchiveSaver.restore(exported);
 
   console.log("Archive imported in", timer.elapsed, "seconds");
 
