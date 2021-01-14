@@ -47,18 +47,18 @@ export interface DirectMessageEvent {
 }
 
 export interface DirectMessage extends DirectMessageEvent {
-  /** 
-   * Person who get the DM (Twitter user ID). 
+  /**
+   * Person who get the DM (Twitter user ID).
    * In group conversations, this property isn't defined or is set to `"0"`.
    */
   recipientId: string;
   /** Content of the DM. */
   text: string;
-  /** 
-   * Array of URLs linked to this direct message. 
-   * Currently, a DM could only contain **one** media. 
-   * 
-   * To display images/medias linked in this property, use 
+  /**
+   * Array of URLs linked to this direct message.
+   * Currently, a DM could only contain **one** media.
+   *
+   * To display images/medias linked in this property, use
    * **.dmImageFromUrl()** method in the `TwitterArchive` instance.
    */
   mediaUrls: string[];
@@ -76,7 +76,7 @@ export interface LinkedDirectMessage extends DirectMessage {
   createdAtDate: Date;
   /** Conversation linked to the message. This property is set if the message is in a `GlobalConversation` object. */
   conversation?: Conversation;
-  /** Events fired before and after this direct message. 
+  /** Events fired before and after this direct message.
    * Events can be conversation name change, a new participant... */
   events?: {
     before?: DirectMessageEventsContainer;
@@ -101,7 +101,7 @@ export interface ParticipantJoin extends DirectMessageEvent {
 }
 
 /** Event fired when someone leave conversation. */
-export interface ParticipantLeave extends DirectMessageEvent { 
+export interface ParticipantLeave extends DirectMessageEvent {
   /** Concerned persons by this event */
   userIds: string[];
 }
@@ -127,10 +127,10 @@ export type ReactionKey = "agree" | "disagree" | "sad" | "funny" | "surprised" 
 export interface MessageReaction extends DirectMessageEvent {
   /** User ID that send this reaction. */
   senderId: string;
-  /** 
-   * Reaction type. 
-   * Each emoji is linked to a key. 
-   * 
+  /**
+   * Reaction type.
+   * Each emoji is linked to a key.
+   *
    * - agree: Thumbs up
    * - disagree: Thumbs down
    * - sad: Emoji with a tear

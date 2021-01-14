@@ -16,9 +16,9 @@ export interface PartialTweet {
   retweeted_status?: PartialTweet;
   /** If the tweet is a reply, this is the tweet ID that this tweet replies to.  */
   in_reply_to_status_id_str?: string;
-  /** 
-   * Tweet creation date. To get the parsed date, 
-   * use `TwitterHelpers.dateFromTweet()` function with the tweet in parameter. 
+  /**
+   * Tweet creation date. To get the parsed date,
+   * use `TwitterHelpers.dateFromTweet()` function with the tweet in parameter.
    */
   created_at: string;
   created_at_d?: Date;
@@ -37,10 +37,10 @@ export interface PartialTweet {
 
   /** Defined if archive type is GDPR. */
   retweeted?: boolean;
-  /** 
-   * Defined if archive type is GDPR. 
+  /**
+   * Defined if archive type is GDPR.
    * Should usually define tweet text boundaries, without the leading(s) @.
-   * 
+   *
    * This is **NOT** accurate, Twitter set it inproperly in archives:
    * First element of array is always `"0"`, which makes this property useless.
    */

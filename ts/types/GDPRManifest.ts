@@ -25,7 +25,7 @@ export interface ArchiveManifestFileInfoMediaDirectory {
 
 /** Describe each key linked to a `ArchiveManifestFileInfoNoMedia` object. */
 export type ArchiveManifestDataTypeNoMedia = "account" | "accountCreationIp" | "accountSuspension" | "accountTimezone" | "adEngagements" |
-  "adImpressions" | "adMobileConversionsAttributed" | "adMobileConversionsUnattributed" | "adOnlineConversionsAttributed" | 
+  "adImpressions" | "adMobileConversionsAttributed" | "adMobileConversionsUnattributed" | "adOnlineConversionsAttributed" |
   "adOnlineConversionsUnattributed" | "ageinfo" | "block" | "branchLinks" | "connectedApplication" | "contact" | "deviceToken" |
   "directMessageGroupHeaders" | "directMessageHeaders" | "emailAddressChange" | "follower" | "following" | "ipAudit" | "like" |
   "listsCreated" | "listsMember" | "listsSubscribed" | "mute" | "niDevices" | "periscopeAccountInformation" |
@@ -40,15 +40,15 @@ export type ArchiveManifestDataTypeWithMedia = "directMessages" | "directMessage
 export type ArchiveManifestDataTypeMediaDirectory = "directMessagesMedia" | "directMessagesGroupMedia" | "momentsMedia" | 
   "momentsTweetsMedia" | "profileMedia" | "tweetMedia";
 
-export type ArchiveManifestDataTypes = 
+export type ArchiveManifestDataTypes =
 {
   [T in ArchiveManifestDataTypeNoMedia]: ArchiveManifestFileInfoNoMedia;
-} 
-  & 
+}
+  &
 {
   [T in ArchiveManifestDataTypeWithMedia]: ArchiveManifestFileInfoWithMedia;
-} 
-  & 
+}
+  &
 {
   [T in ArchiveManifestDataTypeMediaDirectory]: ArchiveManifestFileInfoMediaDirectory;
 };
@@ -80,9 +80,9 @@ export interface ArchiveManifest {
     /** README filename (related path from `directory`) */
     name: string;
   };
-  /** 
-   * Store links between data type => linked JS file(s). 
-   * Also contains location of media directories. 
+  /**
+   * Store links between data type => linked JS file(s).
+   * Also contains location of media directories.
    */
   dataTypes: ArchiveManifestDataTypes;
 }

@@ -5,7 +5,7 @@ import fs from 'fs';
 
 export type AcceptedFile = File | string;
 
-function isFile(val: any) : val is File {
+function isFile(val: any): val is File {
   return typeof File !== 'undefined' && val instanceof File;
 }
 
@@ -18,12 +18,12 @@ export interface FileReader<T, S = T> {
 
 /**
  * Read a part of a Blob into a Node.js buffer,
- * from position to position+length, into Buffer offset to offset+length 
+ * from position to position+length, into Buffer offset to offset+length
  */
 async function blobFileReader(file: Blob, buffer: Buffer, offset_in_buffer: number, length: number, position_in_file: number) {
   const sliced = file.slice(position_in_file, position_in_file + length);
 
-  const copy_buffer = await new Promise((resolve, reject) => {  
+  const copy_buffer = await new Promise((resolve, reject) => {
     const reader = new FileReader;
 
     reader.onload = () => {
@@ -33,7 +33,7 @@ async function blobFileReader(file: Blob, buffer: Buffer, offset_in_buffer: numb
     reader.onerror = (e: any) => {
       reject(e);
     };
-  
+
     reader.readAsArrayBuffer(sliced);
   }) as Buffer;
 
@@ -44,16 +44,16 @@ async function blobFileReader(file: Blob, buffer: Buffer, offset_in_buffer: numb
 
 /**
  * Read a part of a file (via a file descriptor) into a Node.js buffer,
- * from position to position+length, into Buffer offset to offset+length 
+ * from position to position+length, into Buffer offset to offset+length
  */
 async function numberFileReader(file: number, buffer: Buffer, offset_in_buffer: number, length: number, position_in_file: number) {
   const bytesRead = await new Promise((resolve, reject) => {
     fs.read(
-      file, 
-      buffer, 
-      offset_in_buffer, 
-      length, 
-      position_in_file, 
+      file,
+      buffer,
+      offset_in_buffer,
+      length,
+      position_in_file,
       (err, bytesRead) => {
         if (err) {
           reject(err);
@@ -70,137 +70,137 @@ async function numberFileReader(file: number, buffer: Buffer, offset_in_buffer: 
 
 /**
  * This code partially belong to node-stream-zip.
- * 
+ *
  * Code is ported to ES6 + async + TypeScript,
  * and enable Blob use instead of File System I/O operations.
- * 
+ *
  * @license node-stream-zip | (c) 2015 Antelle | https://github.com/antelle/node-stream-zip/blob/master/LICENSE
  * Portions copyright https://github.com/cthackers/adm-zip | https://raw.githubusercontent.com/cthackers/adm-zip/master/LICENSE
  */
 
 const consts = {
-    /* The local file header */
-    LOCHDR           : 30, // LOC header size
-    LOCSIG           : 0x04034b50, // "PK\003\004"
-    LOCVER           : 4, // version needed to extract
-    LOCFLG           : 6, // general purpose bit flag
-    LOCHOW           : 8, // compression method
-    LOCTIM           : 10, // modification time (2 bytes time, 2 bytes date)
-    LOCCRC           : 14, // uncompressed file crc-32 value
-    LOCSIZ           : 18, // compressed size
-    LOCLEN           : 22, // uncompressed size
-    LOCNAM           : 26, // filename length
-    LOCEXT           : 28, // extra field length
+  /* The local file header */
+  LOCHDR: 30, // LOC header size
+  LOCSIG: 0x04034b50, // "PK\003\004"
+  LOCVER: 4, // version needed to extract
+  LOCFLG: 6, // general purpose bit flag
+  LOCHOW: 8, // compression method
+  LOCTIM: 10, // modification time (2 bytes time, 2 bytes date)
+  LOCCRC: 14, // uncompressed file crc-32 value
+  LOCSIZ: 18, // compressed size
+  LOCLEN: 22, // uncompressed size
+  LOCNAM: 26, // filename length
+  LOCEXT: 28, // extra field length
 
-    /* The Data descriptor */
-    EXTSIG           : 0x08074b50, // "PK\007\008"
-    EXTHDR           : 16, // EXT header size
-    EXTCRC           : 4, // uncompressed file crc-32 value
-    EXTSIZ           : 8, // compressed size
-    EXTLEN           : 12, // uncompressed size
+  /* The Data descriptor */
+  EXTSIG: 0x08074b50, // "PK\007\008"
+  EXTHDR: 16, // EXT header size
+  EXTCRC: 4, // uncompressed file crc-32 value
+  EXTSIZ: 8, // compressed size
+  EXTLEN: 12, // uncompressed size
 
-    /* The central directory file header */
-    CENHDR           : 46, // CEN header size
-    CENSIG           : 0x02014b50, // "PK\001\002"
-    CENVEM           : 4, // version made by
-    CENVER           : 6, // version needed to extract
-    CENFLG           : 8, // encrypt, decrypt flags
-    CENHOW           : 10, // compression method
-    CENTIM           : 12, // modification time (2 bytes time, 2 bytes date)
-    CENCRC           : 16, // uncompressed file crc-32 value
-    CENSIZ           : 20, // compressed size
-    CENLEN           : 24, // uncompressed size
-    CENNAM           : 28, // filename length
-    CENEXT           : 30, // extra field length
-    CENCOM           : 32, // file comment length
-    CENDSK           : 34, // volume number start
-    CENATT           : 36, // internal file attributes
-    CENATX           : 38, // external file attributes (host system dependent)
-    CENOFF           : 42, // LOC header offset
+  /* The central directory file header */
+  CENHDR: 46, // CEN header size
+  CENSIG: 0x02014b50, // "PK\001\002"
+  CENVEM: 4, // version made by
+  CENVER: 6, // version needed to extract
+  CENFLG: 8, // encrypt, decrypt flags
+  CENHOW: 10, // compression method
+  CENTIM: 12, // modification time (2 bytes time, 2 bytes date)
+  CENCRC: 16, // uncompressed file crc-32 value
+  CENSIZ: 20, // compressed size
+  CENLEN: 24, // uncompressed size
+  CENNAM: 28, // filename length
+  CENEXT: 30, // extra field length
+  CENCOM: 32, // file comment length
+  CENDSK: 34, // volume number start
+  CENATT: 36, // internal file attributes
+  CENATX: 38, // external file attributes (host system dependent)
+  CENOFF: 42, // LOC header offset
 
-    /* The entries in the end of central directory */
-    ENDHDR           : 22, // END header size
-    ENDSIG           : 0x06054b50, // "PK\005\006"
-    ENDSIGFIRST      : 0x50,
-    ENDSUB           : 8, // number of entries on this disk
-    ENDTOT           : 10, // total number of entries
-    ENDSIZ           : 12, // central directory size in bytes
-    ENDOFF           : 16, // offset of first CEN header
-    ENDCOM           : 20, // zip file comment length
-    MAXFILECOMMENT   : 0xFFFF,
+  /* The entries in the end of central directory */
+  ENDHDR: 22, // END header size
+  ENDSIG: 0x06054b50, // "PK\005\006"
+  ENDSIGFIRST: 0x50,
+  ENDSUB: 8, // number of entries on this disk
+  ENDTOT: 10, // total number of entries
+  ENDSIZ: 12, // central directory size in bytes
+  ENDOFF: 16, // offset of first CEN header
+  ENDCOM: 20, // zip file comment length
+  MAXFILECOMMENT: 0xFFFF,
 
-    /* The entries in the end of ZIP64 central directory locator */
-    ENDL64HDR       : 20, // ZIP64 end of central directory locator header size
-    ENDL64SIG       : 0x07064b50, // ZIP64 end of central directory locator signature
-    ENDL64SIGFIRST  : 0x50,
-    ENDL64OFS       : 8, // ZIP64 end of central directory offset
+  /* The entries in the end of ZIP64 central directory locator */
+  ENDL64HDR: 20, // ZIP64 end of central directory locator header size
+  ENDL64SIG: 0x07064b50, // ZIP64 end of central directory locator signature
+  ENDL64SIGFIRST: 0x50,
+  ENDL64OFS: 8, // ZIP64 end of central directory offset
 
-    /* The entries in the end of ZIP64 central directory */
-    END64HDR        : 56, // ZIP64 end of central directory header size
-    END64SIG        : 0x06064b50, // ZIP64 end of central directory signature
-    END64SIGFIRST   : 0x50,
-    END64SUB        : 24, // number of entries on this disk
-    END64TOT        : 32, // total number of entries
-    END64SIZ        : 40,
-    END64OFF        : 48,
+  /* The entries in the end of ZIP64 central directory */
+  END64HDR: 56, // ZIP64 end of central directory header size
+  END64SIG: 0x06064b50, // ZIP64 end of central directory signature
+  END64SIGFIRST: 0x50,
+  END64SUB: 24, // number of entries on this disk
+  END64TOT: 32, // total number of entries
+  END64SIZ: 40,
+  END64OFF: 48,
 
-    /* Compression methods */
-    STORED           : 0, // no compression
-    SHRUNK           : 1, // shrunk
-    REDUCED1         : 2, // reduced with compression factor 1
-    REDUCED2         : 3, // reduced with compression factor 2
-    REDUCED3         : 4, // reduced with compression factor 3
-    REDUCED4         : 5, // reduced with compression factor 4
-    IMPLODED         : 6, // imploded
-    // 7 reserved
-    DEFLATED         : 8, // deflated
-    ENHANCED_DEFLATED: 9, // enhanced deflated
-    PKWARE           : 10,// PKWare DCL imploded
-    // 11 reserved
-    BZIP2            : 12, //  compressed using BZIP2
-    // 13 reserved
-    LZMA             : 14, // LZMA
-    // 15-17 reserved
-    IBM_TERSE        : 18, // compressed using IBM TERSE
-    IBM_LZ77         : 19, //IBM LZ77 z
+  /* Compression methods */
+  STORED: 0, // no compression
+  SHRUNK: 1, // shrunk
+  REDUCED1: 2, // reduced with compression factor 1
+  REDUCED2: 3, // reduced with compression factor 2
+  REDUCED3: 4, // reduced with compression factor 3
+  REDUCED4: 5, // reduced with compression factor 4
+  IMPLODED: 6, // imploded
+  // 7 reserved
+  DEFLATED: 8, // deflated
+  ENHANCED_DEFLATED: 9, // enhanced deflated
+  PKWARE: 10,// PKWare DCL imploded
+  // 11 reserved
+  BZIP2: 12, //  compressed using BZIP2
+  // 13 reserved
+  LZMA: 14, // LZMA
+  // 15-17 reserved
+  IBM_TERSE: 18, // compressed using IBM TERSE
+  IBM_LZ77: 19, //IBM LZ77 z
 
-    /* General purpose bit flag */
-    FLG_ENC          : 0,  // encrypted file
-    FLG_COMP1        : 1,  // compression option
-    FLG_COMP2        : 2,  // compression option
-    FLG_DESC         : 4,  // data descriptor
-    FLG_ENH          : 8,  // enhanced deflation
-    FLG_STR          : 16, // strong encryption
-    FLG_LNG          : 1024, // language encoding
-    FLG_MSK          : 4096, // mask header values
-    FLG_ENTRY_ENC    : 1,
+  /* General purpose bit flag */
+  FLG_ENC: 0,  // encrypted file
+  FLG_COMP1: 1,  // compression option
+  FLG_COMP2: 2,  // compression option
+  FLG_DESC: 4,  // data descriptor
+  FLG_ENH: 8,  // enhanced deflation
+  FLG_STR: 16, // strong encryption
+  FLG_LNG: 1024, // language encoding
+  FLG_MSK: 4096, // mask header values
+  FLG_ENTRY_ENC: 1,
 
-    /* 4.5 Extensible data fields */
-    EF_ID            : 0,
-    EF_SIZE          : 2,
+  /* 4.5 Extensible data fields */
+  EF_ID: 0,
+  EF_SIZE: 2,
 
-    /* Header IDs */
-    ID_ZIP64         : 0x0001,
-    ID_AVINFO        : 0x0007,
-    ID_PFS           : 0x0008,
-    ID_OS2           : 0x0009,
-    ID_NTFS          : 0x000a,
-    ID_OPENVMS       : 0x000c,
-    ID_UNIX          : 0x000d,
-    ID_FORK          : 0x000e,
-    ID_PATCH         : 0x000f,
-    ID_X509_PKCS7    : 0x0014,
-    ID_X509_CERTID_F : 0x0015,
-    ID_X509_CERTID_C : 0x0016,
-    ID_STRONGENC     : 0x0017,
-    ID_RECORD_MGT    : 0x0018,
-    ID_X509_PKCS7_RL : 0x0019,
-    ID_IBM1          : 0x0065,
-    ID_IBM2          : 0x0066,
-    ID_POSZIP        : 0x4690,
+  /* Header IDs */
+  ID_ZIP64: 0x0001,
+  ID_AVINFO: 0x0007,
+  ID_PFS: 0x0008,
+  ID_OS2: 0x0009,
+  ID_NTFS: 0x000a,
+  ID_OPENVMS: 0x000c,
+  ID_UNIX: 0x000d,
+  ID_FORK: 0x000e,
+  ID_PATCH: 0x000f,
+  ID_X509_PKCS7: 0x0014,
+  ID_X509_CERTID_F: 0x0015,
+  ID_X509_CERTID_C: 0x0016,
+  ID_STRONGENC: 0x0017,
+  ID_RECORD_MGT: 0x0018,
+  ID_X509_PKCS7_RL: 0x0019,
+  ID_IBM1: 0x0065,
+  ID_IBM2: 0x0066,
+  ID_POSZIP: 0x4690,
 
-    EF_ZIP64_OR_32   : 0xffffffff,
-    EF_ZIP64_OR_16   : 0xffff
+  EF_ZIP64_OR_32: 0xffffffff,
+  EF_ZIP64_OR_16: 0xffff
 };
 
 export default class StreamZip<T, S = T> extends events.EventEmitter {
@@ -234,10 +234,10 @@ export default class StreamZip<T, S = T> extends events.EventEmitter {
   };
 
   constructor(
-    file: T, 
+    file: T,
     protected fileReader?: FileReader<T, S>,
-    storeEntries = true, 
-    public chunkSize?: number, 
+    storeEntries = true,
+    public chunkSize?: number,
     skip_valid = false
   ) {
     super();
@@ -266,11 +266,11 @@ export default class StreamZip<T, S = T> extends events.EventEmitter {
                 reject(err);
                 return;
               }
-                
+
               resolve(f);
             });
           }) as number;
-          
+
           return r;
         },
         getSize: f => {
@@ -280,7 +280,7 @@ export default class StreamZip<T, S = T> extends events.EventEmitter {
                 reject(err);
                 return;
               }
-    
+
               resolve(stat.size);
             });
           }) as Promise<number>;
@@ -304,7 +304,7 @@ export default class StreamZip<T, S = T> extends events.EventEmitter {
 
       this.fileName = await this.fileReader.getName(this.file, file);
       this.fileSize = await this.fileReader.getSize(this.file, file);
-  
+
       this.open(chunkSize);
     })().catch(err => {
       this.emit('error', err);
@@ -313,7 +313,7 @@ export default class StreamZip<T, S = T> extends events.EventEmitter {
 
   protected open(chunkSize?: number) {
     this.chunkSize = chunkSize || Math.round(this.fileSize / 1000);
-    this.chunkSize = Math.max(Math.min(this.chunkSize, Math.min(128*1024, this.fileSize)), Math.min(1024, this.fileSize));
+    this.chunkSize = Math.max(Math.min(this.chunkSize, Math.min(128 * 1024, this.fileSize)), Math.min(1024, this.fileSize));
     this.readCentralDirectory();
   }
 
@@ -385,9 +385,9 @@ export default class StreamZip<T, S = T> extends events.EventEmitter {
       this.entriesCount = centralDirectory.volumeEntries;
       this.centralDirectory = centralDirectory;
       if (
-        (centralDirectory.volumeEntries === consts.EF_ZIP64_OR_16 && 
-        centralDirectory.totalEntries === consts.EF_ZIP64_OR_16 )|| 
-        centralDirectory.size === consts.EF_ZIP64_OR_32 || 
+        (centralDirectory.volumeEntries === consts.EF_ZIP64_OR_16 &&
+          centralDirectory.totalEntries === consts.EF_ZIP64_OR_16) ||
+        centralDirectory.size === consts.EF_ZIP64_OR_32 ||
         centralDirectory.offset === consts.EF_ZIP64_OR_32
       ) {
         return this.readZip64CentralDirectoryLocator();
@@ -417,10 +417,10 @@ export default class StreamZip<T, S = T> extends events.EventEmitter {
     if (!bytesRead)
       return this.emit('error', 'Entries read error');
     var
-        buffer = this.op.win.buffer,
-        bufferPos = this.op.pos - this.op.win.position,
-        bufferLength = buffer.length,
-        entry = this.op.entry;
+      buffer = this.op.win.buffer,
+      bufferPos = this.op.pos - this.op.win.position,
+      bufferLength = buffer.length,
+      entry = this.op.entry;
     try {
       while (this.op.entriesLeft > 0) {
         if (!entry) {
@@ -570,11 +570,11 @@ export default class StreamZip<T, S = T> extends events.EventEmitter {
 
     var buffer = Buffer.alloc(consts.LOCHDR);
     await new FsRead(
-      this.file, 
-      buffer, 
-      0, 
-      buffer.length, 
-      entry.offset, 
+      this.file,
+      buffer,
+      0,
+      buffer.length,
+      entry.offset,
       this.fileReader
     ).read();
 
@@ -599,25 +599,23 @@ export default class StreamZip<T, S = T> extends events.EventEmitter {
     var err = null;
     [err, entry] = await this.openEntry(entry);
     if (err)
-        throw err;
+      throw err;
 
     var data = Buffer.alloc(entry.compressedSize);
 
     await new FsRead(
-      this.file, 
-      data, 
-      0, 
-      entry.compressedSize, 
-      this.dataOffset(entry), 
+      this.file,
+      data,
+      0,
+      entry.compressedSize,
+      this.dataOffset(entry),
       this.fileReader
     ).read();
 
-    if (err)
-        throw err;
-    if (entry.method === consts.STORED) {} 
+    if (entry.method === consts.STORED) { }
     else if (entry.method === consts.DEFLATED || entry.method === consts.ENHANCED_DEFLATED) {
       data = zlib.inflateRawSync(data);
-    } 
+    }
     else {
       throw new Error('Unknown compression method: ' + entry.method);
     }
@@ -660,7 +658,7 @@ class CentralDirectoryLoc64Header {
 
   read(data: Buffer) {
     if (data.length !== consts.ENDL64HDR || data.readUInt32LE(0) !== consts.ENDL64SIG)
-        throw new Error('Invalid zip64 central directory locator');
+      throw new Error('Invalid zip64 central directory locator');
     // ZIP64 EOCD header offset
     this.headerOffset = Util.readUInt64LE(data, consts.ENDSUB);
   }
@@ -768,12 +766,12 @@ export class ZipEntry {
     // compressed size
     var compressedSize = data.readUInt32LE(consts.LOCSIZ);
     if (compressedSize && compressedSize !== consts.EF_ZIP64_OR_32) {
-        this.compressedSize = compressedSize;
+      this.compressedSize = compressedSize;
     }
     // uncompressed size
     var size = data.readUInt32LE(consts.LOCLEN);
     if (size && size !== consts.EF_ZIP64_OR_32) {
-        this.size = size;
+      this.size = size;
     }
     // filename length
     this.fnameLen = data.readUInt16LE(consts.LOCNAM);
@@ -801,7 +799,7 @@ export class ZipEntry {
       size = data.readUInt16LE(offset);
       offset += 2;
       if (consts.ID_ZIP64 === signature) {
-          this.parseZip64Extra(data, offset, size);
+        this.parseZip64Extra(data, offset, size);
       }
       offset += size;
     }
@@ -849,19 +847,19 @@ function toBits(dec: number, size: number) {
 }
 
 function parseZipTime(timebytes: number, datebytes: number) {
-    const timebits = toBits(timebytes, 16);
-    const datebits = toBits(datebytes, 16);
+  const timebits = toBits(timebytes, 16);
+  const datebits = toBits(datebytes, 16);
 
-    const mt = {
-      h: parseInt(timebits.slice(0,5).join(''), 2),
-      m: parseInt(timebits.slice(5,11).join(''), 2),
-      s: parseInt(timebits.slice(11,16).join(''), 2) * 2,
-      Y: parseInt(datebits.slice(0,7).join(''), 2) + 1980,
-      M: parseInt(datebits.slice(7,11).join(''), 2),
-      D: parseInt(datebits.slice(11,16).join(''), 2),
-    };
-    const dt_str = [mt.Y, mt.M, mt.D].join('-') + ' ' + [mt.h, mt.m, mt.s].join(':') + ' GMT+0';
-    return new Date(dt_str).getTime();
+  const mt = {
+    h: parseInt(timebits.slice(0, 5).join(''), 2),
+    m: parseInt(timebits.slice(5, 11).join(''), 2),
+    s: parseInt(timebits.slice(11, 16).join(''), 2) * 2,
+    Y: parseInt(datebits.slice(0, 7).join(''), 2) + 1980,
+    M: parseInt(datebits.slice(7, 11).join(''), 2),
+    D: parseInt(datebits.slice(11, 16).join(''), 2),
+  };
+  const dt_str = [mt.Y, mt.M, mt.D].join('-') + ' ' + [mt.h, mt.m, mt.s].join(':') + ' GMT+0';
+  return new Date(dt_str).getTime();
 }
 
 class FsRead<S> {
@@ -875,23 +873,23 @@ class FsRead<S> {
     public length: number,
     public position: number,
     public fileReader: FileReader<any, S>,
-  ) {}
+  ) { }
 
   async read() {
     this.waiting = true;
 
     const readed = await this.fileReader.reader(
-      this.file, 
-      this.buffer, 
+      this.file,
+      this.buffer,
       this.offset + this.bytesRead,
-      this.length - this.bytesRead, 
+      this.length - this.bytesRead,
       this.position + this.bytesRead
     );
 
     return this.readCallback(readed);
   }
 
-  readCallback(bytesRead: number) : Promise<number> {
+  readCallback(bytesRead: number): Promise<number> {
     if (typeof bytesRead === 'number')
       this.bytesRead += bytesRead;
     if (!bytesRead || this.bytesRead === this.length) {
@@ -907,8 +905,8 @@ class FileWindowBuffer<S> {
   position: number;
   buffer: Buffer = Buffer.alloc(0);
   fsOp: FsRead<S> = null;
-  
-  constructor(public file: S, public fileReader: FileReader<any, S>) {}
+
+  constructor(public file: S, public fileReader: FileReader<any, S>) { }
 
   checkOp() {
     if (this.fsOp && this.fsOp.waiting) {
@@ -942,11 +940,11 @@ class FileWindowBuffer<S> {
     var offset = this.buffer.length;
     this.buffer = Buffer.concat([this.buffer, Buffer.alloc(length)]);
     this.fsOp = new FsRead(
-      this.file, 
-      this.buffer, 
-      offset, 
-      length, 
-      this.position + offset, 
+      this.file,
+      this.buffer,
+      offset,
+      length,
+      this.position + offset,
       this.fileReader
     );
 
@@ -956,20 +954,20 @@ class FileWindowBuffer<S> {
   async moveRight(_: number, shift: number) {
     this.checkOp();
     if (shift) {
-        this.buffer.copy(this.buffer, 0, shift);
+      this.buffer.copy(this.buffer, 0, shift);
     } else {
-        shift = 0;
+      shift = 0;
     }
     this.position += shift;
     this.fsOp = new FsRead(
-      this.file, 
-      this.buffer, 
-      this.buffer.length - shift, 
-      shift, 
+      this.file,
+      this.buffer,
+      this.buffer.length - shift,
+      shift,
       this.position + this.buffer.length - shift,
       this.fileReader
     );
-  
+
     return await this.fsOp.read();
   }
 }
@@ -985,10 +983,10 @@ class EntryDataReaderStream<S> extends stream.Readable {
     var buffer = Buffer.alloc(Math.min(n, this.length - this.pos));
     if (buffer.length) {
       const prom = this.fileReader.reader(
-        this.file, 
-        buffer, 
-        0, 
-        buffer.length, 
+        this.file,
+        buffer,
+        0,
+        buffer.length,
         this.offset + this.pos
       );
 
@@ -1009,7 +1007,7 @@ class EntryDataReaderStream<S> extends stream.Readable {
       this.push(null);
     } else {
       if (bytesRead !== buffer.length)
-          buffer = buffer.slice(0, bytesRead);
+        buffer = buffer.slice(0, bytesRead);
       this.push(buffer);
     }
   }
@@ -1030,9 +1028,9 @@ class EntryVerifyStream<S> extends stream.Transform {
   _transform(data: Buffer, _: string, callback: Function) {
     var err;
     try {
-        this.verify.data(data);
+      this.verify.data(data);
     } catch (e) {
-        err = e;
+      err = e;
     }
     callback(err, data);
   }
@@ -1046,7 +1044,7 @@ class CrcVerify {
 
   static crcTable: any[];
 
-  constructor(public crc: number, public size: number) {}
+  constructor(public crc: number, public size: number) { }
 
   data(data: Buffer) {
     var crcTable = CrcVerify.getCrcTable();
@@ -1065,7 +1063,7 @@ class CrcVerify {
         throw new Error('Invalid size');
     }
   }
-  
+
   static getCrcTable() {
     var crcTable = CrcVerify.crcTable;
     if (!crcTable) {
@@ -1073,8 +1071,8 @@ class CrcVerify {
       var b = Buffer.alloc(4);
       for (var n = 0; n < 256; n++) {
         var c = n;
-        for (var k = 8; --k >= 0; )
-          if ((c & 1) !== 0)  { c = 0xedb88320 ^ (c >>> 1); } else { c = c >>> 1; }
+        for (var k = 8; --k >= 0;)
+          if ((c & 1) !== 0) { c = 0xedb88320 ^ (c >>> 1); } else { c = c >>> 1; }
         if (c < 0) {
           b.writeInt32LE(c, 0);
           c = b.readUInt32LE(0);
@@ -1087,7 +1085,7 @@ class CrcVerify {
 }
 
 const Util = {
-  readUInt64LE: function(buffer: Buffer, offset: number) {
+  readUInt64LE: function (buffer: Buffer, offset: number) {
     return (buffer.readUInt32LE(offset + 4) * 0x0000000100000000) + buffer.readUInt32LE(offset);
   }
 };

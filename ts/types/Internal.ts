@@ -1,4 +1,4 @@
-import { TwitterUserDetails, PartialTweet } from "./ClassicTweets";
+import { TwitterUserDetails } from "./ClassicTweets";
 import { GDPRMoment } from "./GDPRMoments";
 import { ArchiveReadPart } from "../TwitterArchive";
 
@@ -24,14 +24,14 @@ export interface ArchiveSyntheticInfo {
   version: string;
   last_tweet_date: string;
   /** ONLY AT INFORMATIVE GOAL. MAYBE HAVE COLLISIONS ! */
-  hash: string; 
+  hash: string;
   tweet_count: number;
   dm_count: number;
 }
 
-/** 
+/**
  * Raw informations stored in GDPR, extracted for a simpler use.
- * 
+ *
  * This includes list of followers, followings, mutes, blocks,
  * registered and subscribed lists, and Twitter moments.
  */

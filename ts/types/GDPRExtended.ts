@@ -1,5 +1,5 @@
 /*
- * Per file entity (type used to read files) 
+ * Per file entity (type used to read files)
  */
 
 export type GDPRFollowings = {

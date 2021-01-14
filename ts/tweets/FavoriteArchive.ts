@@ -34,7 +34,7 @@ export class FavoriteArchive implements TweetLikeContainer<PartialFavorite> {
 
   /**
    * Get favorites informations of {tweet_id}.
-   * 
+   *
    * If {tweet_id} is not favorited, returns `undefined`.
    */
   single(tweet_id: string) {
@@ -53,11 +53,11 @@ export class FavoriteArchive implements TweetLikeContainer<PartialFavorite> {
     const y = Number(year);
     const index = this.index;
 
-    if (year in index) {
-      if (month in index[year]) {
-        return Object.values(index[year][month]);
+    if (y in index) {
+      if (m in index[y]) {
+        return Object.values(index[y][m]);
       }
-    } 
+    }
     return [];
   }
 
@@ -70,13 +70,13 @@ export class FavoriteArchive implements TweetLikeContainer<PartialFavorite> {
 
     if (this._date_index || Settings.ENABLE_CACHE) {
       const index = this._date_index;
-  
+
       for (const year in index) {
         for (const month in index[year]) {
           if (Number(month) === now_m + 1) {
             // Month of interest
             safePusher(
-              favorites, 
+              favorites,
               Object
                 .values(index[year][month])
                 .filter(t => dateFromFavorite(t).getDate() === now_d)
@@ -128,7 +128,7 @@ export class FavoriteArchive implements TweetLikeContainer<PartialFavorite> {
 
   /**
    * Favorites sorted by year then months.
-   * 
+   *
    * Favs on `2010-10` are favorites than cannot be date classed.
    */
   get index() {

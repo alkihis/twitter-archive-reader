@@ -9,10 +9,10 @@ export type ArchiveDMImagesFormation = "none" | "inside" | "zipped";
 type ExistingArchives = "dm_single" | "dm_group" | "tweet" | "moment" | "profile";
 
 export enum MediaArchiveType {
-  SingleDM = "single-dm", 
-  GroupDM = "group-dm", 
-  Moment = "moment", 
-  Tweet = "tweet", 
+  SingleDM = "single-dm",
+  GroupDM = "group-dm",
+  Moment = "moment",
+  Tweet = "tweet",
   Profile = "profile",
 }
 
@@ -34,7 +34,7 @@ export class MediaArchive {
 
   protected _store_type: ArchiveDMImagesFormation = "none";
 
-  constructor(protected archive: ConstructibleArchives) { 
+  constructor(protected archive: ConstructibleArchives) {
     if (this.archive)
       this._store_type = MediaArchive.autoDetectStoreType(this.archive);
   }
@@ -42,19 +42,19 @@ export class MediaArchive {
   /*
    * MEDIA GETTERS: PUBLIC
    */
-  
+
   /**
   * Get a media from a specific media type.
-  * 
+  *
   * @param from Media archive type
   * @param name Filename (exact filename required)
   * @param as_array_buffer True if return type is ArrayBuffer. Otherwise, Blob will be used.
   * By default, returns ArrayBuffer on Node.js and Blob when available.
-  * 
+  *
   * ```ts
   * // For parameter {from}, you can use `MediaArchiveType` enum.
   * import { MediaArchiveType } from 'twitter-archive-reader';
-  * 
+  *
   * const my_media = archive.medias.get(MediaArchiveType.SingleDM, "xxx.jpg", true) as Promise<ArrayBuffer>;
   * ```
   */
@@ -70,7 +70,7 @@ export class MediaArchive {
 
   /**
   * List files available on a specific media archive.
-  * 
+  *
   * @param of_archive Media archive
   */
   async list(of_archive: MediaArchiveType | string) {
@@ -118,12 +118,12 @@ export class MediaArchive {
 
   /**
    * Return all the images of a direct message, as blob or array buffer.
-   * 
+   *
    * If the message does not exists or the DM archive is not loaded / available,
    * return an empty array.
-   * 
+   *
    * Otherwise, return a array of `Blob` / `ArrayBuffer`
-   * 
+   *
    * @param direct_message Direct message object
    * @param as_array_buffer Return an `ArrayBuffer` array, instead of a `Blob` array
    */
@@ -139,7 +139,7 @@ export class MediaArchive {
     return Promise.all(images);
   }
 
-  /** 
+  /**
    * Extract the related media file to a URL present in the `mediaUrls` array of a Direct Message.
    */
   fromDmMediaUrl(url: string, is_group: boolean = false, as_array_buffer?: boolean) : Promise<Blob | ArrayBuffer> {
@@ -179,20 +179,20 @@ export class MediaArchive {
 
   /**
    * Extract related tweet video or picture from a media entity.
-   * 
+   *
    * ```ts
    * const tweet = archive.tweets.all[0];
-   * 
+   *
    * if (tweet.extended_entities || tweet.entities) {
    *    // Always try to use extended entities instead of classic entities
    *    const m_entities = (tweet.extended_entities || tweet.entities).media;
-   * 
+   *
    *    if (m_entities && m_entities.length) {
    *      const media_file = archive.medias.fromTweetMediaEntity(m_entities[0]);
    *    }
    * }
    * ```
-   * 
+   *
    * @throws If not valid media found, promise is rejected.
    */
   async fromTweetMediaEntity(media_entity: MediaGDPREntity | PartialTweetMediaEntity, as_array_buffer?: boolean) : Promise<Blob | ArrayBuffer> {
@@ -211,7 +211,7 @@ export class MediaArchive {
         }
       }
     }
-  
+
     const url = media_entity.media_url_https.split('/').pop();
     const url_without_qs = url.split('?')[0];
     if (url_without_qs) {
@@ -227,9 +227,9 @@ export class MediaArchive {
 
   /**
    * Get the profile banner of given user.
-   * 
+   *
    * The first parameter should generally be `archive.user`.
-   * 
+   *
    * If user has no banner, this method returns `Promise<void>`.
    */
   async getProfileBannerOf(user: UserData, as_array_buffer?: boolean) : Promise<Blob | ArrayBuffer> {
@@ -243,9 +243,9 @@ export class MediaArchive {
 
   /**
    * Get the profile picture of given user.
-   * 
+   *
    * The first parameter should generally be `archive.user`.
-   * 
+   *
    * If user has no profile picture, this method returns `Promise<void>`.
    */
   async getProfilePictureOf(user: UserData, as_array_buffer?: boolean) : Promise<Blob | ArrayBuffer> {
@@ -262,14 +262,14 @@ export class MediaArchive {
   // - Moments -
   // -----------
 
-  /** 
-   * Extract a moment header image from GDPR archive (exact filename required). 
-   * 
+  /**
+   * Extract a moment header image from GDPR archive (exact filename required).
+   *
    * In order to have tweets medias inside the moments (duplicated by Twitter in the archive, use `.ofTweet(tweet)`).
-   * 
+   *
    * Shortcut of `.get(MediaArchiveType.Moment, name, as_array_buffer)`, prefer using this instead.
-   * 
-   * @param name Media filename 
+   *
+   * @param name Media filename
    */
   async fromMomentDirectory(name: string, as_array_buffer?: boolean) : Promise<Blob | ArrayBuffer> {
     return this.get(MediaArchiveType.Moment, name, as_array_buffer);
@@ -303,16 +303,16 @@ export class MediaArchive {
 
   /**
    * Manually set the archive used for a media type.
-   * 
+   *
    * The specified {mediaType} can be a reference to a `MediaArchiveType` enum, or a custom media type
    * registered with `.registerMediaFolder()` method.
-   * 
+   *
    * ```ts
    * import { MediaArchiveType } from 'twitter-archive-reader';
-   * 
+   *
    * // Accepted types are the same as accepted for `TwitterArchive` constructor
    * const my_tweet_media_archive = "tweet_media.zip";
-   * 
+   *
    * // Load this archive instead of base one
    * await archive.medias.loadArchive({
    *   [MediaArchiveType.Tweet]: my_tweet_media_archive
@@ -344,10 +344,10 @@ export class MediaArchive {
 
   /**
    * If the archive has a custom media folder, you can specify it here.
-   * 
+   *
    * @param type_name Refers to used name to access this folder, take care of not using one of the `MediaArchiveType` enum.
    * When you use `.get()` and `.list()`, use this {type_name} as first parameter of those methods.
-   * 
+   *
    * @param folder Folder name in the archive.
    * @param alternative_names Alternate folder names if the {folder} does not exists in the archive.
    */
@@ -482,9 +482,9 @@ export class SingleMediaArchive {
       throw new Error("Archive is not loaded or hasn't been initialized properly.");
     }
 
-    const results = this._archive.search(new RegExp(name + "(\.?.*)$"));
+    const results = this._archive.search(new RegExp(name + "(\\.?.*)$"));
     let use_ab: boolean = as_array_buffer;
-  
+
     if (results.length) {
       if (use_ab === undefined) {
         use_ab = SingleMediaArchive.autoDetectIfArrayBuffer();
@@ -527,7 +527,7 @@ export class SingleMediaArchive {
     }
     return "";
   }
-  
+
   async sideload(archive: ConstructibleArchives) {
     this._archive = archive;
     this._ok = false;

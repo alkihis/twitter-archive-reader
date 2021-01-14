@@ -1,6 +1,6 @@
 
 /*
- * Types for files 
+ * Types for files
  */
 
 export type GDPRAgeInfo = [{
@@ -52,7 +52,7 @@ export interface InnerGDPRPersonalization {
 }
 
 /*
- * Types for storage in package 
+ * Types for storage in package
  */
 
 // ageinfo.js
