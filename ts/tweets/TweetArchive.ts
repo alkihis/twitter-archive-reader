@@ -762,6 +762,20 @@ export interface TweetFindOptions {
   use_regex?: boolean | string;
   static_validators?: string[];
   search_in?: ('text' | 'user.name' | 'user.screen_name')[];
+  get_debug_results?: (debug: TweetFinderDebugObject) => any;
+}
+
+export interface TweetFinderDebugObject {
+  validators: {
+    [keyword: string]: Array<{
+      separator: string,
+      callback: Function,
+      text: string,
+    }>,
+  },
+  static_validators: Function[],
+  text: string,
+  query?: RegExp,
 }
 
 export class TweetFinder {
@@ -852,6 +866,8 @@ export class TweetFinder {
    *
    * Default activated properties are `text` and `user.screen_name`.
    *
+   * @param options.get_debug_results A callable function that take compiled search options (static validators, validators, text). Defaults to `undefined`.
+   *
    * @throws {SyntaxError} Format `{keyword}: Invalid query` if user input is invalid
    * for a specific validator.
    *
@@ -860,6 +876,12 @@ export class TweetFinder {
   *find(query: string, tweets: Iterable<PartialTweet>, options: TweetFindOptions = {}) : Generator<PartialTweet, void, undefined> {
     // Search for keywords
     const validators: ((tweet: PartialTweet) => boolean)[] = [];
+    // Log validators
+    const debug_validators: TweetFinderDebugObject = {
+      validators: {},
+      static_validators: [],
+      text: '',
+    };
 
     // Iterating over validators
     for (const { keyword, validator, separator: raw_separators } of this.validators) {
@@ -898,6 +920,15 @@ export class TweetFinder {
 
           // Store the validator
           validators.push(v);
+          // Add validators to debug
+          if (!(keyword in debug_validators.validators)) {
+            debug_validators.validators[keyword] = [];
+          }
+          debug_validators.validators[keyword].push({
+            separator,
+            callback: v,
+            text: matching_group,
+          });
 
           // Re-execute the regex (if same keyword presents multiple times)
           res = kw_reg.exec(query);
@@ -913,15 +944,26 @@ export class TweetFinder {
     for (const v of static_validators) {
       if (v in this.static_validators) {
         validators.push(this.static_validators[v]);
+        debug_validators.static_validators.push(this.static_validators[v]);
       }
       else {
         throw new ReferenceError("Validator " + v + " does not exists");
       }
     }
 
+    debug_validators.text = query;
+
     // Building regex
     const flags = typeof is_regex === 'string' ? is_regex : undefined;
     const regex_search = query ? new RegExp(is_regex !== false ? query.trim() : escapeRegExp(query), flags) : null;
+
+    if (regex_search) {
+      debug_validators.query = regex_search;
+    }
+
+    if (options.get_debug_results) {
+      options.get_debug_results(debug_validators);
+    }
 
     // Search for desired properties
     const [search_text, search_name, search_sn] = [
