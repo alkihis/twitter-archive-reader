@@ -5,8 +5,8 @@ import { PartialTweetGDPR, GDPRClickedTweet } from "../types/GDPRTweets";
 import Settings from "../utils/Settings";
 import { safePusher } from "../utils/helpers";
 
-export interface TweetDateIndex<T> { 
-  [year: string]: { [month: string]: TweetIndex<T> } 
+export interface TweetDateIndex<T> {
+  [year: string]: { [month: string]: TweetIndex<T> }
 }
 
 export interface TweetLikeContainer<T> {
@@ -23,23 +23,23 @@ export interface TweetLikeContainer<T> {
 
 /**
  * Contains every tweet related to an archive.
- * 
+ *
  * This object is automatically built when you load an archive inside `TwitterArchive` constructor,
- * or when tweets are loaded through `TwitterArchive.loadArchivePart()` / 
+ * or when tweets are loaded through `TwitterArchive.loadArchivePart()` /
  * `TwitterArchive.loadClassicArchivePart()` methods.
  */
 export class TweetArchive implements TweetLikeContainer<PartialTweet> {
   /** ID-indexed tweets; This is always filled. */
   protected _index: TweetIndex<PartialTweet> = {};
-  /** 
-   * Year then month-indexed tweets; 
-   * This is not always generated,  
+  /**
+   * Year then month-indexed tweets;
+   * This is not always generated,
    * use `.index` getter instead.
    */
   protected _date_index: TweetDateIndex<PartialTweet>;
-  /** 
-   * All tweets, in a single array; 
-   * This is not always generated,  
+  /**
+   * All tweets, in a single array;
+   * This is not always generated,
    * use `.all` getter instead.
    */
   protected _all: PartialTweet[];
@@ -59,7 +59,7 @@ export class TweetArchive implements TweetLikeContainer<PartialTweet> {
   /**
    * Add tweets to this archive.
    * This method should not be called by end-programmer.
-   * 
+   *
    * Prefer usage of `TwitterArchive.loadClassicArchivePart()` method.
    */
   add(tweets: PartialTweet[]) {
@@ -74,7 +74,7 @@ export class TweetArchive implements TweetLikeContainer<PartialTweet> {
   /**
    * Add unconverted GDPR tweets to this archive.
    * This method should not be called by end-programmer.
-   * 
+   *
    * Prefer usage of `TwitterArchive.loadArchivePart()` method.
    */
   addGDPR(tweets: PartialTweetGDPR[]) {
@@ -82,7 +82,7 @@ export class TweetArchive implements TweetLikeContainer<PartialTweet> {
     this._date_index = undefined;
 
     for (const original of tweets) {
-      const tweet = this.convertToPartial(original);      
+      const tweet = this.convertToPartial(original);
       this._index[tweet.id_str] = tweet;
     }
   }
@@ -101,7 +101,7 @@ export class TweetArchive implements TweetLikeContainer<PartialTweet> {
     }
   }
 
-  
+
   /** ---------------- */
   /** TWEET NAVIGATION */
   /** ---------------- */
@@ -110,7 +110,7 @@ export class TweetArchive implements TweetLikeContainer<PartialTweet> {
   month(month: string | number, year: string | number) : PartialTweet[] {
     if (this._date_index || Settings.ENABLE_CACHE) {
       const index = this.index;
-      
+
       if (year in index) {
         if (month in index[year]) {
           return Object.values(index[year][month]);
@@ -152,13 +152,13 @@ export class TweetArchive implements TweetLikeContainer<PartialTweet> {
 
     if (this._date_index || Settings.ENABLE_CACHE) {
       const index = this._date_index;
-  
+
       for (const year in index) {
         for (const month in index[year]) {
           if (Number(month) === now_m + 1) {
             // Month of interest
             safePusher(
-              tweets, 
+              tweets,
               Object
                 .values(index[year][month])
                 .filter(t => dateFromTweet(t).getDate() === now_d)
@@ -195,7 +195,7 @@ export class TweetArchive implements TweetLikeContainer<PartialTweet> {
   between(since: Date | string, until: Date | string) {
     if (typeof since === 'string') {
       since = new Date(since);
-    } 
+    }
     if (typeof until === 'string') {
       until = new Date(until);
     }
@@ -230,7 +230,7 @@ export class TweetArchive implements TweetLikeContainer<PartialTweet> {
     const tweets: PartialTweet[] = [];
 
     const [end_day, end_month, end_year] = [until.getDate(), until.getMonth(), until.getFullYear()];
-    
+
     // Finding tweets that are same or after since date or before until date
     for (const [month, year] of remaining_months) {
       const m = this.month(month, year);
@@ -265,60 +265,60 @@ export class TweetArchive implements TweetLikeContainer<PartialTweet> {
 
   /**
    * Find tweets matching **query** in this tweet archive.
-   * 
+   *
    * This is a shortcut of `.finder.search(tweets, ...)`
-   * 
-   * --- 
-   * 
+   *
+   * ---
+   *
    * **Documentation from `TweetFinder.search()`** :
-   * 
+   *
    * Query can contain keywords.
    * Default available keywords are:
    * - `since:{YYYY-MM-DD} or {YYYY-MM} or {YYYY}`
    * - `until:{YYYY-MM-DD} or {YYYY-MM} or {YYYY}`
    * - `from:{screen_name,screen_name_2,screen_name_3}`
    * - `retweet_of:{screen_name} (use of , is allowed, like from:)`
-   * 
+   *
    * To be in the result array, a tweet must validate ALL the keywords.
-   * 
-   * You can add your custom validators by pushing 
+   *
+   * You can add your custom validators by pushing
    * to **.finder.validators** a object implementing `TweetSearchValidator`.
-   * 
+   *
    * @param query String to be searched for in the tweet.text / screen_name.
    * You should remember that in tweets, `>` and `<` are encoded as `&gt;` and `&lt;`.
-   * 
+   *
    * @param is_regex If the string should be considered as a regex during text.match or not.
    * - If **is_regex** is `true`, regex will be enabled without flags.
    * - If **is_regex** is `false`, **query** will be regex escaped.
    * - If **is_regex** is a `String`, regex will be enabled with **is_regex** as flags.
-   * 
+   *
    * Validators inside the query, such as `since:2018-01-01` will be removed from the query regex/string.
-   * 
-   * @param static_validators Array of static validators names that should used. 
+   *
+   * @param static_validators Array of static validators names that should used.
    * See `.finder.static_validators`.
-   * 
+   *
    * Default defined static validators are:
    * - `retweets_only`
    * - `medias_only`
    * - `videos_only`
    * - `no_retweets`
-   * 
+   *
    * @param search_in Tweet properties to search. This is NOT dynamic you can't specify the property you want.
    * Available properties are:
    * - `text`
    * - `user.screen_name`
    * - `user.name`
-   * 
+   *
    * Default activated properties are `text` and `user.screen_name`.
-   * 
+   *
    * @throws {SyntaxError} Format `{keyword}: Invalid query` if user input is invalid
    * for a specific validator.
-   * 
+   *
    * @throws {ReferenceError} `Validator {name} does not exists` when a invalid static validator is used.
    */
   find(
-    query: string, 
-    is_regex: boolean | string = false, 
+    query: string,
+    is_regex: boolean | string = false,
     static_validators: string[] = [],
     search_in: string[] = ["text", "user.screen_name"]
   ) {
@@ -331,15 +331,15 @@ export class TweetArchive implements TweetLikeContainer<PartialTweet> {
   /** --------- */
 
   /**
-   * Index of tweets by years. 
-   * 
-   * Example, get index of tweets posted on 2019/01 : 
+   * Index of tweets by years.
+   *
+   * Example, get index of tweets posted on 2019/01 :
    * **<index>.years[2019][1]**
    */
   get index() {
     if (Settings.ENABLE_CACHE && this._date_index)
       return this._date_index;
-    
+
     const index: TweetDateIndex<PartialTweet> = {};
 
     for (const tweet of this) {
@@ -378,18 +378,18 @@ export class TweetArchive implements TweetLikeContainer<PartialTweet> {
     return this.all.length;
   }
 
-  /** 
+  /**
    * All tweets registered in this archive.
-   * 
+   *
    * Remember that it's not assured that tweets are sorted.
-   * 
+   *
    * To get ordered tweets, use `.sortedIterator()`.
    */
   get all() : PartialTweet[] {
     if (Settings.ENABLE_CACHE) {
       if (this._all)
         return this._all;
-  
+
       return this._all = Object.values(this._index);
     }
     return Object.values(this._index);
@@ -397,7 +397,7 @@ export class TweetArchive implements TweetLikeContainer<PartialTweet> {
 
   /**
    * Returns the local `TweetFinder` instance assigned to this `TweetArchive`.
-   * 
+   *
    * A global exported instance also exists and named `TweetSearcher`.
    */
   get finder() {
@@ -451,9 +451,9 @@ export class TweetArchive implements TweetLikeContainer<PartialTweet> {
 
   /**
    * Iterate through tweets, sorted by year and month.
-   * 
+   *
    * At each iteration: [year: string, month: string, tweet: PartialTweet]
-   * 
+   *
    * @param order Order **months** and **years** by `asc` or `desc`. `asc` by default.
    * This do **NOT** sort tweets, use `.sortedIterator()` instead !
    */
@@ -467,7 +467,7 @@ export class TweetArchive implements TweetLikeContainer<PartialTweet> {
 
   /**
    * Iterate over tweets, which are **genuinely** sorted (date, {order}).
-   * 
+   *
    * @param order Order by `asc` or `desc`. `desc` by default.
    */
   *sortedIterator(order: "asc" | "desc" = "desc") : Generator<PartialTweet, void, undefined> {
@@ -478,7 +478,7 @@ export class TweetArchive implements TweetLikeContainer<PartialTweet> {
 
   /**
    * Iterate over clicked links sorted by tweet ID.
-   * 
+   *
    * @param order Order by `asc` or `desc`. `desc` by default.
    */
   *sortedClickedIterator(order: "asc" | "desc" = "desc") : Generator<ClickedTweet, void, undefined> {
@@ -487,7 +487,7 @@ export class TweetArchive implements TweetLikeContainer<PartialTweet> {
 
   /**
    * Iterate over clicked links sorted by click timestamp.
-   * 
+   *
    * @param order Order by `asc` or `desc`. `desc` by default.
    */
   *dateClickedIterator(order: "asc" | "desc" = "desc") : Generator<ClickedTweet, void, undefined> {
@@ -504,7 +504,7 @@ export class TweetArchive implements TweetLikeContainer<PartialTweet> {
 
   /**
    * Iterate array of tweets by month
-   * 
+   *
    * @param order Order by `asc` or `desc`.
    */
   protected *arrayMonthIterator(order: "asc" | "desc") : Generator<[string, string, PartialTweet[]], void, void> {
@@ -536,7 +536,7 @@ export class TweetArchive implements TweetLikeContainer<PartialTweet> {
 
   /**
    * Needed to convert GDPR tweets to PartialTweets.
-   * 
+   *
    * **You should not use this method! This is for internal purpose.**
    */
   __initUserCache(user_info: {
@@ -681,7 +681,7 @@ const INITIAL_VALIDATORS: TweetSearchValidator[] = [
     keyword: 'since',
     validator: query => {
       const date = dateRegexFromQuery(query);
-      
+
       // Check if query is ok
       if (date) {
         return tweet => dateFromTweet(tweet).getTime() >= date.getTime();
@@ -693,7 +693,7 @@ const INITIAL_VALIDATORS: TweetSearchValidator[] = [
     keyword: 'until',
     validator: query => {
       const date = dateRegexFromQuery(query);
-      
+
       // Check if query is ok
       if (date) {
         date.setDate(date.getDate() + 1);
@@ -768,13 +768,13 @@ export class TweetFinder {
   /**
    * Keywords to use in search query.
    * Each keyword represents a pair **keyword**:**content**.
-   * 
+   *
    * Keywords are used to add search parameters (conditions) that requires a user input
    * (like tweets before a specific date, retweets of a desired user...).
-   * 
+   *
    * If you want to add a condition that is static (test if is a retweet,
    * test if tweet has medias...), see `.static_validators`.
-   * 
+   *
    * See how to add keywords in `TweetSearchValidator` interface.
    */
   validators: TweetSearchValidator[] = [...INITIAL_VALIDATORS];
@@ -782,10 +782,10 @@ export class TweetFinder {
   /**
    * Defined "static validators": Validators that does not depends on user query,
    * like test if a tweet is a retweet or keep only tweets with medias.
-   * 
-   * Validators are represented by its name (in key) 
+   *
+   * Validators are represented by its name (in key)
    * and the validator itself (the check function, in value).
-   * 
+   *
    * You can use them when you search tweets by specifing the static validators names
    * in the `static_validators` parameter of `search()` method.
    */
@@ -795,12 +795,12 @@ export class TweetFinder {
    * Deprecated. Use `.find()` instead, that is more future proof.
    */
   search(
-    tweets: Iterable<PartialTweet>, 
-    query: string, 
-    is_regex: boolean | string = false, 
+    tweets: Iterable<PartialTweet>,
+    query: string,
+    is_regex: boolean | string = false,
     static_validators: string[] = [],
     search_in: string[] = ["text", "user.screen_name"]
-  ) { 
+  ) {
     return [...this.find(query, tweets, {
       use_regex: is_regex,
       static_validators,
@@ -810,51 +810,51 @@ export class TweetFinder {
 
   /**
    * Search into **tweets** using **query**.
-   * 
+   *
    * Query can contain keywords.
    * Default available keywords are:
    * - `since:{YYYY-MM-DD} or {YYYY-MM} or {YYYY}`
    * - `until:{YYYY-MM-DD} or {YYYY-MM} or {YYYY}`
    * - `from:{screen_name,screen_name_2,screen_name_3}`
    * - `retweet_of:{screen_name} (use of , is allowed, like from:)`
-   * 
+   *
    * To be matched, a tweet must validate ALL the keywords.
-   * 
-   * You can add your custom validators by pushing 
+   *
+   * You can add your custom validators by pushing
    * to **this.validators** a object implementing `TweetSearchValidator`.
-   * 
+   *
    * @param tweets Partial tweets array.
-   * 
+   *
    * @param query String to be searched for in the tweet.text / screen_name.
    * You should remember that in tweets, `>` and `<` are encoded as `&gt;` and `&lt;`.
-   * 
+   *
    * @param options.use_regex If the string should be considered as a regex during text.match or not.
    * - If **use_regex** is `true`, regex will be enabled without flags.
    * - If **use_regex** is `false`, **query** will be regex escaped.
    * - If **use_regex** is a `String`, regex will be enabled with **is_regex** as flags.
-   * 
+   *
    * Validators inside the query, such as `since:2018-01-01` will be removed from the query regex/string.
-   * 
-   * @param options.static_validators Array of static validators names that should used. 
+   *
+   * @param options.static_validators Array of static validators names that should used.
    * See `.static_validators`.
-   * 
+   *
    * Default defined static validators are:
    * - `retweets_only`
    * - `medias_only`
    * - `videos_only`
    * - `no_retweets`
-   * 
+   *
    * @param options.search_in Tweet properties to search. This is NOT dynamic you can't specify the property you want.
    * Available properties are:
    * - `text`
    * - `user.screen_name`
    * - `user.name`
-   * 
+   *
    * Default activated properties are `text` and `user.screen_name`.
-   * 
+   *
    * @throws {SyntaxError} Format `{keyword}: Invalid query` if user input is invalid
    * for a specific validator.
-   * 
+   *
    * @throws {ReferenceError} `Validator {name} does not exists` when a invalid static validator is used.
    */
   *find(query: string, tweets: Iterable<PartialTweet>, options: TweetFindOptions = {}) : Generator<PartialTweet, void, undefined> {
@@ -864,30 +864,38 @@ export class TweetFinder {
     // Iterating over validators
     for (const { keyword, validator, separator: raw_separators } of this.validators) {
       // Looking for keyword
-      const separators = Array.isArray(raw_separators) ? 
-        (raw_separators.length ? raw_separators : [":"]) : 
+      const separators = Array.isArray(raw_separators) ?
+        (raw_separators.length ? raw_separators : [":"]) :
         (raw_separators ? [raw_separators] : [":"]);
 
       for (const separator of separators) {
-        const kw_reg = new RegExp(keyword + (separator ? separator : ":") + '(\\S+)');
+        // example (?:src_contains:([^\s"]+))|(?:src_contains:"(.+?)")
+        // where keyword is "src_contains" and separator is ":"
+        const keyword_and_sep = keyword + (separator ? separator : ":");
+        const str_kw_reg = `(?:${keyword_and_sep}([^\\s"]+))|(?:${keyword_and_sep}"(.+?)")`;
+
+        // const kw_reg = new RegExp(keyword + (separator ? separator : ":") + '(\\S+)');
+        const kw_reg = new RegExp(str_kw_reg);
 
         let res: RegExpMatchArray = kw_reg.exec(query);
 
         // If match found
-        while (res && res[1]) {
+        while (res && (res[1] || res[2])) {
+          const matching_group = res[1] || res[2];
+
           // Deleting the keyword:value of the query
-          query = query.replace(new RegExp(kw_reg), '').trim();
+          query = query.replace(new RegExp(str_kw_reg), '').trim();
           let v: ValidatorExecFunction;
 
           // Generate the validator
           try {
-            v = validator(res[1], separator);
+            v = validator(matching_group, separator);
           } catch (e) {}
 
           if (!v) {
             throw new SyntaxError(keyword + ": Invalid query");
           }
-          
+
           // Store the validator
           validators.push(v);
 
@@ -917,8 +925,8 @@ export class TweetFinder {
 
     // Search for desired properties
     const [search_text, search_name, search_sn] = [
-      search_in.includes("text"), 
-      search_in.includes("user.name"), 
+      search_in.includes("text"),
+      search_in.includes("user.name"),
       search_in.includes("user.screen_name")
     ];
 
@@ -929,8 +937,8 @@ export class TweetFinder {
         if (regex_search) {
           // Test desired property
           if (
-            (search_text && regex_search.test(t.text)) || 
-            (search_name && regex_search.test(t.user.name)) || 
+            (search_text && regex_search.test(t.text)) ||
+            (search_name && regex_search.test(t.user.name)) ||
             (search_sn && regex_search.test(t.user.screen_name))
           ) {
             yield t;
@@ -954,44 +962,44 @@ export class TweetFinder {
 export const TweetSearcher = new TweetFinder;
 
 export interface TweetSearchValidator {
-  /** 
+  /**
    * Keyword (word used to identify you keyword, before the **separator**.
-   * Will be interpoled into search regex. 
+   * Will be interpoled into search regex.
    * Should **NOT** contain parenthesis !
    */
   keyword: string;
   /**
    * Method that generate a validator function with user input in your **query**.
    * This method **should** return a *function*.
-   * 
-   * You should verify user-input stored inside {user_query}. 
-   * 
+   *
+   * You should verify user-input stored inside {user_query}.
+   *
    * If the return type is null-ish (`undefined`, `null`, `false`,...), search will be **aborted**
    * with thrown **unwell-formed query error**.
-   * 
+   *
    * ---
-   * 
+   *
    * For example, if you want to validate tweets that are above a date
    * entered by the user, with the schema: `keyword:YYYY-MM-DD`,
    * `YYYY-MM-DD` entered by the user will be given in parameter to this attribute (`.validator`),
    * which should return a function that test if the tweet date is above user entered `YYYY-MM-DD`.
-   * 
+   *
    * **EXAMPLE**
-   * 
+   *
    * *Do not use this example in real case, it does not check well user input.*
-   * 
+   *
    * ```ts
    * validator: user_query => {
    *  // Parse user input
    *  const time = (new Date(user_query)).getTime();
-   * 
+   *
    *  // Check some data validity
    *  if (isNaN(time)) {
    *    // Data could not be used, validator is invalid, returns undefined.
    *    // This will throw an Error.
    *    return undefined;
    *  }
-   *  
+   *
    *  // Return the validator function that returns true if tweet date >= user's date.
    *  return tweet => dateFromTweet(tweet).getTime() >= time;
    * }
@@ -1000,11 +1008,11 @@ export interface TweetSearchValidator {
   validator: (user_query: string, separator: string) => ValidatorExecFunction;
   /**
    * Separator between keyword and user input.
-   * 
+   *
    * Default separator is `:`.
-   * 
+   *
    * Note that spaces are NOT allowed between keyword and separator, and between user input and separator.
-   * 
+   *
    * You can specify multiple allowed separators with a `string[]`.
    */
   separator?: string | string[];

@@ -14,7 +14,7 @@
   "dependencies": {
     "big-integer": "^1.6.48",
     "big-json": "^3.1.0",
-    "events": "^3.1.0",
+    "events": "^3.2.0",
     "js-md5": "^0.7.3",
     "jszip": "^3.5.0",
     "twitter-d": "^0.4.0",
@@ -28,7 +28,7 @@
     "@types/jest": "^24.9.1",
     "@types/js-md5": "^0.4.2",
     "commander": "^4.1.1",
-    "jest": "^26.1.0",
+    "jest": "^26.6.3",
     "timerize": "^1.0.3"
   },
   "jest": {
