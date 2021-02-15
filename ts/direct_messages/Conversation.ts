@@ -74,7 +74,7 @@ abstract class ConversationBase {
     const index = this.index_by_date;
     if (year in index && month in index[year]) {
       const messages = [].concat(...Object.values(index[year][month]).map(e => Object.values(e)));
-      
+
       return new SubConversation(messages, this.info.me);
     }
 
@@ -135,7 +135,7 @@ abstract class ConversationBase {
     }
 
     return new SubConversation(
-      this.all.filter(m => (ids as Set<string>).has(m.senderId) || (ids as Set<string>).has(m.recipientId)), 
+      this.all.filter(m => (ids as Set<string>).has(m.senderId) || (ids as Set<string>).has(m.recipientId)),
       this.info.me
     );
   }
@@ -180,18 +180,18 @@ abstract class ConversationBase {
     }
     if (since instanceof Date && until instanceof Date) {
       until.setDate(until.getDate() + 1);
-  
+
       const since_time = since.getTime();
       const until_time = until.getTime();
-  
+
       const valids: LinkedDirectMessage[] = [];
-  
+
       for (const dm of this) {
         if (dm.createdAtDate.getTime() >= since_time && dm.createdAtDate.getTime() <= until_time) {
           valids.push(dm);
         }
       }
-  
+
       return new SubConversation(valids, this.info.me);
     }
 
@@ -235,9 +235,9 @@ abstract class ConversationBase {
     return id in this._index;
   }
 
-  /** 
-   * Get conversation from a specific day (default to current day) 
-   * 
+  /**
+   * Get conversation from a specific day (default to current day)
+   *
    * @param day The day to search in. Can be a `Date` or a `string`-ified date.
    * If this param is not specified, {day} will be coerced to today.
    */
@@ -263,9 +263,9 @@ abstract class ConversationBase {
     return new SubConversation([], this.info.me);
   }
 
-  /** 
-   * Get conversation of the same day as {day}, but also in previous years. 
-   * 
+  /**
+   * Get conversation of the same day as {day}, but also in previous years.
+   *
    * {day} can be omitted (refers to today), be a `Date` object, or be a `string`-ified date.
    */
   fromThatDay(day?: Date | string) {
@@ -290,7 +290,7 @@ abstract class ConversationBase {
     }
 
     return new SubConversation(messages, this.info.me);
-  } 
+  }
 
   /** Iterates all over the direct messages stored in this conversation. */
   *[Symbol.iterator]() {
@@ -302,9 +302,9 @@ abstract class ConversationBase {
     return this.info.participants;
   }
 
-  /** 
-   * Participants IDs, but without yourself. 
-   * If <return_value>.size > 1, conversation is a group conversation 
+  /**
+   * Participants IDs, but without yourself.
+   * If <return_value>.size > 1, conversation is a group conversation
    */
   get real_participants() : Set<string> {
     const tmp = new Set(this.info.participants);
@@ -378,23 +378,23 @@ abstract class ConversationBase {
 
     for (const msg of this) {
       const [day, month, year] = [
-        msg.createdAtDate.getDate(), 
-        msg.createdAtDate.getMonth() + 1, 
+        msg.createdAtDate.getDate(),
+        msg.createdAtDate.getMonth() + 1,
         msg.createdAtDate.getFullYear()
       ];
-  
+
       if (!index[year]) {
         index[year] = {};
       }
-  
+
       if (!index[year][month]) {
         index[year][month] = {};
       }
-  
+
       if (!index[year][month][day]) {
         index[year][month][day] = {};
       }
-  
+
       index[year][month][day][msg.id] = msg;
     }
 
@@ -436,13 +436,13 @@ abstract class ConversationBase {
 
     return all[all.length - 1];
   }
-  
-  /** 
-   * Get all the events related to this conversation, sorted by date, from oldest to newest. 
-   * 
+
+  /**
+   * Get all the events related to this conversation, sorted by date, from oldest to newest.
+   *
    * By default, this does not include messages, only other events, like conversation join or
    * name change.
-   * 
+   *
    * To include messages, use `true` as first parameter.
    */
   *events(include_messages = false) {
@@ -463,10 +463,10 @@ export class Conversation extends ConversationBase {
 
   protected _names: string[] = [];
 
-  /** 
-   * Create a new Conversation instance, from raw GDPR conversation. 
+  /**
+   * Create a new Conversation instance, from raw GDPR conversation.
    * Need self user_id to recognize which user is you.
-   * 
+   *
    * Note that **.add()** is automatically call with the given conversation.
    */
   constructor(conv: GDPRConversation, me_id: string) {
@@ -477,10 +477,10 @@ export class Conversation extends ConversationBase {
     this.add(conv);
   }
 
-  /** 
-   * Add a new conversation part to actual conversation. 
+  /**
+   * Add a new conversation part to actual conversation.
    * Actual conversation and new part must have the same ID.
-   * 
+   *
    * After you've imported all parts, you **must** call **.indexate()** to see messages !
    */
   add(conv: GDPRConversation) {
@@ -497,10 +497,10 @@ export class Conversation extends ConversationBase {
     return this.unindexed.length === 0;
   }
 
-  /** 
-   * Index imported messages. 
-   * Needed to see all DMs. 
-   * 
+  /**
+   * Index imported messages.
+   * Needed to see all DMs.
+   *
    * Should be call after you've imported all with **.add()**.
    */
   indexate() {
@@ -566,25 +566,25 @@ export class Conversation extends ConversationBase {
       if (event.messageCreate || event.welcomeMessageCreate) {
         // This is a msg, we register it !
         const actual_msg = (event.messageCreate || event.welcomeMessageCreate) as LinkedDirectMessage;
-  
+
         if (!actual_msg.senderId)
           continue;
-  
+
         actual_msg.previous = previous_message;
         actual_msg.next = null;
-  
+
         if (previous_message) {
           previous_message.next = actual_msg;
         }
-  
+
         previous_message = actual_msg;
-  
+
         // Enregistrement participants
         if (actual_msg.recipientId && actual_msg.recipientId !== "0")
           participants.add(actual_msg.recipientId);
-  
+
         participants.add(actual_msg.senderId);
-  
+
         // Enregistrement dans l'index
         this.register(actual_msg);
 
@@ -627,7 +627,7 @@ export class Conversation extends ConversationBase {
       else {
         // This is an event
 
-        // We initialize event container if needed, 
+        // We initialize event container if needed,
         // otherwise we use current object.
         previous_events = previous_events || {};
 
@@ -719,7 +719,7 @@ export class Conversation extends ConversationBase {
 
 /**
  * A big conversation that contains every message.
- * 
+ *
  * Every message will be linked to its original conversation through the `.conversation` property.
  */
 export class GlobalConversation extends ConversationBase {
@@ -737,9 +737,9 @@ export class GlobalConversation extends ConversationBase {
         // Enregistrement participants
         if (msg.recipientId !== "0")
           participants.add(msg.recipientId);
-  
+
         participants.add(msg.senderId);
-  
+
         // Enregistrement dans l'index
         msg.conversation = conversation;
         this.register(msg);

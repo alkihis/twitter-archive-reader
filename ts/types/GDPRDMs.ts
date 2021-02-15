@@ -46,6 +46,15 @@ export interface DirectMessageEvent {
   createdAtDate?: Date;
 }
 
+export interface DirectMessageUrl {
+  /** Shortened URL. */
+  url: string;
+  /** Full, original URL. */
+  expanded: string;
+  /** URL that should be displayed in a HTML representation of the message. */
+  display: string;
+}
+
 export interface DirectMessage extends DirectMessageEvent {
   /**
    * Person who get the DM (Twitter user ID).
@@ -54,6 +63,8 @@ export interface DirectMessage extends DirectMessageEvent {
   recipientId: string;
   /** Content of the DM. */
   text: string;
+  /** Message reactions. If message don't have reaction, this is `undefined` or empty array `[]`. */
+  reactions?: MessageReaction[];
   /**
    * Array of URLs linked to this direct message.
    * Currently, a DM could only contain **one** media.
@@ -66,6 +77,8 @@ export interface DirectMessage extends DirectMessageEvent {
   senderId: string;
   /** Message ID. */
   id: string;
+  /** URLs linked in the message text. This property might be `undefined` on archives before 2021. */
+  urls?: DirectMessageUrl[];
 }
 
 export interface LinkedDirectMessage extends DirectMessage {
@@ -82,8 +95,6 @@ export interface LinkedDirectMessage extends DirectMessage {
     before?: DirectMessageEventsContainer;
     after?: DirectMessageEventsContainer;
   };
-  /** Message reactions. If message don't have reaction, this is `undefined`. */
-  reactions?: MessageReaction[];
 }
 
 /*
