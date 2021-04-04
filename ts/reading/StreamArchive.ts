@@ -6,18 +6,20 @@ import { Readable } from 'stream';
 // @ts-ignore
 import json from 'big-json';
 import Settings from '../utils/Settings';
+import { FolderEntry, FolderArchive } from './FolderArchive';
+import fs from 'fs';
 
 /**
  * string: Filename. WILL USE STREAMING METHOD.
- * 
+ *
  * number[] | Uint8Array | ArrayBuffer: Array of bytes
- * 
+ *
  * Blob: File for browser. WILL USE STREAMING METHOD.
- * 
+ *
  * JSZip | Archive: Existing archives
  */
 export type AcceptedZipSources = string | number[] | Uint8Array | ArrayBuffer | Blob | JSZip | Archive;
-export type ConstructibleArchives = BaseArchive<ZipEntry> | BaseArchive<JSZip.JSZipObject>;
+export type ConstructibleArchives = BaseArchive<ZipEntry> | BaseArchive<JSZip.JSZipObject> | BaseArchive<FolderEntry>;
 
 export interface BaseArchive<T> {
   ready: () => Promise<void>;
@@ -26,16 +28,16 @@ export interface BaseArchive<T> {
   search: (query: RegExp) => T[];
   searchDir: (query: RegExp) => T[];
   get: (
-    name: string, 
-    type?: "text" 
-      | "arraybuffer" 
+    name: string,
+    type?: "text"
+      | "arraybuffer"
       | "blob",
     parse_auto?: boolean
   ) => Promise<any>;
   read: (
-    file: T, 
-    type?: "text" 
-      | "arraybuffer" 
+    file: T,
+    type?: "text"
+      | "arraybuffer"
       | "blob",
     parse_auto?: boolean
   ) => Promise<any>;
@@ -46,9 +48,20 @@ export interface BaseArchive<T> {
 
 export function constructArchive(archive: AcceptedZipSources) : ConstructibleArchives {
   if (
+    archive instanceof FolderArchive ||
+    archive instanceof StreamArchive
+  ) {
+    return archive;
+  }
+
+  if (
     typeof archive === 'string' ||
     (typeof Blob !== 'undefined' && archive instanceof Blob)
   ) {
+    if (typeof archive === 'string' && fs.statSync(archive).isDirectory()) {
+      // Read from a folder
+      return new FolderArchive(archive);
+    }
     // Streaming method
     return new StreamArchive(archive);
   }
@@ -102,7 +115,7 @@ class StreamArchive implements BaseArchive<ZipEntry> {
 
     for (const [name, entry] of Object.entries(copy.entries)) {
       if (!name.match(name_regex)) {
-        to_delete.push(name); 
+        to_delete.push(name);
       }
 
       trimmed_entries[this.ltrim(name, dir_name + "/")] = entry;
@@ -163,10 +176,10 @@ class StreamArchive implements BaseArchive<ZipEntry> {
   }
 
   get(
-    name: string, 
-    type: "text" 
-      | "arraybuffer" 
-      | "blob" 
+    name: string,
+    type: "text"
+      | "arraybuffer"
+      | "blob"
     = "text",
     parse_auto = true
   ) {
@@ -181,10 +194,10 @@ class StreamArchive implements BaseArchive<ZipEntry> {
   }
 
   read(
-    file: ZipEntry, 
-    type: "text" 
-      | "arraybuffer" 
-      | "blob" 
+    file: ZipEntry,
+    type: "text"
+      | "arraybuffer"
+      | "blob"
     = "text",
     parse_auto = true
   ) {
@@ -197,7 +210,7 @@ class StreamArchive implements BaseArchive<ZipEntry> {
           this.push(null);
         }
       });
-  
+
       return readableInstanceStream;
     }
 
@@ -218,15 +231,15 @@ class StreamArchive implements BaseArchive<ZipEntry> {
           }
 
           const buffer_part = data.slice(start_pos);
-          
+
           // > {LAZY_JSON_THRESHOLD} Mo
           if (Settings.LAZY_JSON_PARSE && buffer_part.length > Settings.LAZY_JSON_THRESHOLD * 1024 * 1024) {
             return new Promise((resolve, reject) => {
               const stream_buffer = bufferToStream(buffer_part);
               const parseStream = json.createParseStream();
-  
+
               parseStream.on('data', function(obj: any) {
-                // for an unknown reason, 
+                // for an unknown reason,
                 // arrays are not specified with the right prototype
                 if ('0' in obj) {
                   // Setting prototype does not work,
@@ -240,7 +253,7 @@ class StreamArchive implements BaseArchive<ZipEntry> {
               parseStream.on('error', function(err: any) {
                 reject(err);
               });
-              
+
               stream_buffer.pipe(parseStream);
             }).catch(e => {
               if (e instanceof Error) {
@@ -253,7 +266,7 @@ class StreamArchive implements BaseArchive<ZipEntry> {
               throw e;
             }) as any;
           }
-        
+
           const buffer_as_text = buffer_part.toString();
           try {
             return JSON.parse(buffer_as_text);
@@ -281,7 +294,7 @@ class StreamArchive implements BaseArchive<ZipEntry> {
         else {
           return new Blob([ab]);
         }
-      }); 
+      });
     }
     else {
       return fp;
@@ -365,10 +378,10 @@ export class Archive implements BaseArchive<JSZip.JSZipObject> {
   }
 
   get(
-    name: string, 
-    type: "text" 
-      | "arraybuffer" 
-      | "blob" 
+    name: string,
+    type: "text"
+      | "arraybuffer"
+      | "blob"
     = "text",
     parse_auto = true
   ) {
@@ -396,10 +409,10 @@ export class Archive implements BaseArchive<JSZip.JSZipObject> {
   }
 
   read(
-    file: JSZip.JSZipObject, 
-    type: "text" 
-      | "arraybuffer" 
-      | "blob" 
+    file: JSZip.JSZipObject,
+    type: "text"
+      | "arraybuffer"
+      | "blob"
     = "text",
     parse_auto = true
   ) {
@@ -413,7 +426,7 @@ export class Archive implements BaseArchive<JSZip.JSZipObject> {
         else {
           return data;
         }
-      }); 
+      });
     }
     else {
       return p;
@@ -447,7 +460,7 @@ export class Archive implements BaseArchive<JSZip.JSZipObject> {
 
   /**
    * Create a new instance of Archive from a file contained in this archive.
-   * 
+   *
    * @param name File name or file object
    */
   async fromFile(name: string | JSZip.JSZipObject) {

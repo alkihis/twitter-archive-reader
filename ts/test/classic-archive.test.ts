@@ -5,7 +5,7 @@ import { MediaArchiveType } from '../MediaArchive';
 // Archive load / save could take a long time
 jest.setTimeout(9999999);
 
-const UNIT_TEST_FILE = path.join(__dirname, '../../../Archives Twitter/CLASSIC_ALKIHIS_2018_08.zip');
+const UNIT_TEST_FILE = path.join(__dirname, '../../../../Programmation/Archives Twitter/CLASSIC_ALKIHIS_2018_08.zip');
 const archive = new TwitterArchive(UNIT_TEST_FILE);
 
 test('archive init', async () => {
@@ -31,7 +31,7 @@ test('tweets', async () => {
 
   // Trying to find retweets containing 'lgbt' since 2016/01/01 and until 2019/02/01, case insensitive
   expect(archive.tweets.find("since:2016 until:2019-02 lgbt", "i", ["retweets_only"]).length).toBe(7);
-  
+
   // Trying to find tweets (w/out RTs) containing 'bonjour' at the beginning of the tweet, before 2018/03/25, case insensitive
   expect(archive.tweets.find("until:2018-03-25 ^bonjour", "i", ["no_retweets"]).length).toBe(103);
 
