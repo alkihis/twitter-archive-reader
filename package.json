@@ -1,6 +1,6 @@
 {
   "name": "twitter-archive-reader",
-  "version": "7.1.0",
+  "version": "7.2.0",
   "description": "Explore easily tweets, direct messages, medias and more from Twitter archives.",
   "main": "js/index.js",
   "scripts": {
