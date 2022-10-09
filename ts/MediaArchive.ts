@@ -28,7 +28,7 @@ export class MediaArchive {
 
   protected static readonly DM_SINGLE_FOLDER = ["direct_message_media", "direct_messages_media"];
   protected static readonly DM_GROUP_FOLDER = ["direct_message_group_media", "direct_messages_group_media"];
-  protected static readonly TWEET_FOLDER = "tweet_media";
+  protected static readonly TWEET_FOLDER = ["tweet_media", "tweets_media"];
   protected static readonly PROFILE_FOLDER = "profile_media";
   protected static readonly MOMENT_FOLDER = "moments_media";
 
@@ -392,8 +392,10 @@ export class MediaArchive {
       }
       return "inside";
     }
-    if (archive.searchDir(/tweet_media/).length) {
-      const folder = archive.dir('tweet_media');
+    if (archive.searchDir(/tweets?_media/).length) {
+      const folder = archive.searchDir(/tweets_media/).length
+        ? archive.dir('tweets_media')
+        : archive.dir('tweet_media');
       const query = folder.search(/\.zip$/);
       if (query.length) {
         return "zipped";

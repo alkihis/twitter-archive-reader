@@ -107,17 +107,17 @@ Every `accountId` in this file is available in `archive.followings` set.
 
 ### `ip-audit.js`
 
-Every `ipAudit` in this file is grouped into `archive.user.last_logins` array. 
+Every `ipAudit` in this file is grouped into `archive.user.last_logins` array.
 
 ### `like.js`
 
 Likes are organisated into `archive.favorites`.
-You can get a set of favorited tweets ID with `archive.favorites.registred`, 
+You can get a set of favorited tweets ID with `archive.favorites.registred`,
 and get every `like` object of this file with `archive.favorites.all`.
 
 ### `lists-created.js`, `lists-member.js` and `lists-subscribed.js`
 
-Nested URLs of those files are respectively in `archive.lists.created`, 
+Nested URLs of those files are respectively in `archive.lists.created`,
 `archive.lists.member_of` and `archive.lists.subscribed`.
 
 ### `moment.js`
@@ -170,12 +170,12 @@ Due to lack of information in the package creator dataset, this file could not b
 
 Every `screenNameChange.screenNameChange` object is stored in an array available at `archive.user.screen_name_history`.
 
-### `tweet.js`, `tweet-partX.js`...
+### `tweets.js`, `tweets-partX.js`...
 
-Every tweet is parsed and stored into `archive.tweets` container. 
+Every tweet is parsed and stored into `archive.tweets` container.
 
-Some properties can change in GDPR archive tweets in order to ensure compatibility between 
-multiple types of archives. To know more about tweets, please see the related documentation 
+Some properties can change in GDPR archive tweets in order to ensure compatibility between
+multiple types of archives. To know more about tweets, please see the related documentation
 "Tweet access and manipulating tweets" in the wiki.
 
 ### `verified.js`
@@ -192,7 +192,7 @@ You can access medias with the `MediaArchive` instance, located on the `.medias`
 Some methods available on this object are made to facilitate access to tweet and DM medias. Those methods are
 described in the **Dealing with medias** part of the wiki, please refer to it in order to learn more about them.
 
-### Warning 
+### Warning
 In archives made between **June 2019** and **December 2019**, media files were zipped inside the archive.
 In this case, `twitter-archive-reader` must extract the ZIP from the original archive to read its content.
 
@@ -220,10 +220,10 @@ Here's the folder list to enum reference.
 
 - `direct_message_group_media`: **MediaArchiveType.GroupDM**
 
-- `tweet_media`: **MediaArchiveType.Tweet**
+- `tweets_media`: **MediaArchiveType.Tweet**
 
 - `profile_media`: **MediaArchiveType.Profile**
-  
+
 - `moments_media`: **MediaArchiveType.Moment**
 
 If other folders are present in the archive, they aren't accessible.

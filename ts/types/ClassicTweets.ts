@@ -53,6 +53,8 @@ export interface PartialTweet {
   full_text?: string;
   /** Defined if this tweet is the content of a retweet ({retweeted_status}) and entities has been actualized to be accurate. */
   trimmed_entities?: true;
+  /** Edit information of the tweet */
+  edit_info?: PartialTweetEditInfo;
 }
 
 export interface PartialTweetMediaEntity {
@@ -132,4 +134,13 @@ export interface ClickedTweet {
   id_str: string;
   url: string;
   created_at: Date;
+}
+
+export interface PartialTweetEditInfo {
+  initial: {
+    editTweetIds: string[];
+    editableUntil: string;
+    editsRemaining: string;
+    isEditEligible: boolean;
+  };
 }

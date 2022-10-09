@@ -78,7 +78,7 @@ const test_1 = async () => {
   // DMs archive is group-conversation ready.
   if (archive.is_gdpr) {
     // List the conversations available in the archive (GDPR archive)
-    write('participants', 
+    write('participants',
       archive.messages.all
         .map(e => `Conversation #${e.id} between #${[...e.participants].join(', #')}`)
     );
@@ -87,7 +87,7 @@ const test_1 = async () => {
     write('30_first_dms', archive.messages.all[0].all.slice(0, 10));
 
     const conversation = archive.messages.all[0];
-    
+
     // Search for messages around a specific DM
     // conversation.around("MESSAGE_ID", 30 /* Want 30 messages before and 30 messages after */);
 
@@ -96,7 +96,7 @@ const test_1 = async () => {
 
     // Search for messages between two specific DMs
     // conversation.between("MESSAGE_ID", "MESSAGE_2_ID");
-    
+
     // Search for messages having specific text (use a RegExp to validate)
     write('find_dm', conversation.find(/d'intervention/i));
 
@@ -123,11 +123,11 @@ const test_2 = async () => {
   console.log(archive.tweets.length, "tweets");
   console.log(archive.messages.length, "conversations, with", archive.messages.count, "messages");
   console.log(
-    archive.messages.groups.length, "group conversations with total of", 
+    archive.messages.groups.length, "group conversations with total of",
     archive.messages.groups.reduce((acc, val) => acc + val.length, 0), "messages"
   );
   console.log(
-    archive.messages.directs.length, "direct conversations with total of", 
+    archive.messages.directs.length, "direct conversations with total of",
     archive.messages.directs.reduce((acc, val) => acc + val.length, 0), "messages"
   );
 };
@@ -156,11 +156,11 @@ const test_3 = async () => {
   console.log(archive.tweets.length, "tweets");
   console.log(archive.messages.length, "conversations, with", archive.messages.count, "messages");
   console.log(
-    archive.messages.groups.length, "group conversations with total of", 
+    archive.messages.groups.length, "group conversations with total of",
     archive.messages.groups.reduce((acc, val) => acc + val.length, 0), "messages"
   );
   console.log(
-    archive.messages.directs.length, "direct conversations with total of", 
+    archive.messages.directs.length, "direct conversations with total of",
     archive.messages.directs.reduce((acc, val) => acc + val.length, 0), "messages"
   );
 };

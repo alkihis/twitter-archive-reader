@@ -47,51 +47,51 @@ export type ArchiveReadPart = "tweet" | "dm" | "follower" | "following" | "mute
 
 /**
  * Represents a full Twitter Archive. Support GDPR and classic archive.
- * 
+ *
  * You can check if the archive is a GDPR archive with property `.is_gdpr`.
- * 
+ *
  * Available on both GDPR and old classic archives
  * -----
  * Tweets, that are available in `.tweets`.
  * Remember that, in searchs in particular, tweets are **NOT** sorted.
- * 
+ *
  * Quick user information, like screen name, bio, location, ID and account
  * creation date is available through `.user[.summary]`.
  *
- * 
+ *
  * Available on GDPR archives only
  * -----
- * Favorites, mutes, blocks, followings, followers, that are stored in 
+ * Favorites, mutes, blocks, followings, followers, that are stored in
  * `.favorites`, `.mutes`, `.blocks`, `.followings` and `.followers`.
- * 
- * Direct messages, parsed if archive is a GDPR archive, stored in `.messages`, 
+ *
+ * Direct messages, parsed if archive is a GDPR archive, stored in `.messages`,
  * are returned and sorted from the most older to the more recent.
- * 
+ *
  * Medias stored in archives are in `.medias`.
- * 
+ *
  * User detailled data (screen name history, email address) is in `.user` property.
- * 
+ *
  * Quick start
  * -----
- * 
+ *
  * Initialize a `TwitterArchive` object with a filepath, `Blob`, `ArrayBuffer` or `Uint8Array` objects.
- * 
- * Then, you could add events in order to know archive read steps. 
+ *
+ * Then, you could add events in order to know archive read steps.
  * Finally, wait for ready-ness of the object, and use it !
- * 
+ *
  * ```ts
  * import TwitterArchive, { ArchiveReadStep } from 'twitter-archive-reader';
- * 
+ *
  * // From a local file
  * const archive = new TwitterArchive('filepath.zip');
  * // or file input (browser)
  * const archive = new TwitterArchive(document.querySelector('input[type="file"]').files[0]);
- * 
+ *
  * // Listen for archive steps to give feedback to user
  * archive.events.on('read', ({ step }: { step: ArchiveReadStep }) => {
  *  console.log("Archive reading step:", step);
  * });
- * 
+ *
  * // Wait for ready-ness
  * await archive.ready();
  * console.log("Archive is ready !");
@@ -124,42 +124,42 @@ export class TwitterArchive {
 
   /**
    * Twitter Archive constructor.
-   * 
+   *
    * Don't forget to await the archive ready-ness with `.ready()` method !
-   * 
+   *
    * ```ts
    * // From a local file
    * const archive = new TwitterArchive('filepath.zip');
    * // or file input (browser)
    * const archive = new TwitterArchive(document.querySelector('input[type="file"]').files[0]);
-   * 
+   *
    * await archive.ready();
    * ```
-   * 
+   *
    * @param file Archive to load.
-   * 
+   *
    * If you want to build an archive instance **without** a file, you can pass `null` here.
    * You must then load parts of the archive with `.loadArchivePart()` or `.loadClassicArchivePart()` !
    *
    * @param options.ignore
    * Specify if you want to ignore a specific part of archive, for performance or memory reasons.
-   * 
+   *
    * Available parts are in `ArchiveReadPart` type.
-   * 
+   *
    * By default, all parts are imported from archive.
    * If you want to ignore every part, you can specify `"*"` in the part array.
-   * 
+   *
    * **Profile and account data is always parsed.**
-   * 
+   *
    * ```ts
    * type ArchiveReadPart = "tweet" | "dm" | "follower" | "following" | "mute" | "block" | "favorite" | "list" | "moment" | "ad";
    * ```
-   * 
+   *
    * To manually load a part after archive has been loaded, use `.initArchivePart()` method.
    * Please don't initialize a part twice, it could lead to vicious bugs !
    */
   constructor(
-    file: AcceptedZipSources | Promise<AcceptedZipSources> | null, 
+    file: AcceptedZipSources | Promise<AcceptedZipSources> | null,
     options: TwitterArchiveLoadOptions = {}
   ) {
     let PARTS_TO_READ = new Set<ArchiveReadPart>(["tweet", "dm", "follower", "following", "mute", "block", "favorite", "list", "moment", "ad"]);
@@ -200,7 +200,7 @@ export class TwitterArchive {
         }
         await this.archive.ready();
       })();
-    
+
       this._ready = file_ready_promise
         .then(() => this.init(PARTS_TO_READ))
         .then(() => {
@@ -243,7 +243,7 @@ export class TwitterArchive {
     else {
       this._has_viewer = true;
     }
-            
+
     // Listen for read error events on archives
     this.archive.events.on('read error', ({ filename }: { filename: string }) => {
       this.events.emit('archive file not found error', { filename });
@@ -291,7 +291,7 @@ export class TwitterArchive {
       account: await this.archive.get('account.js'),
       profile: await this.archive.get('profile.js'),
     });
-    
+
     // Starts the tweet read
     this.emitAndChangeState('userinfosready', 'tweet_read');
 
@@ -311,17 +311,17 @@ export class TwitterArchive {
 
     this._messages = new DMArchive(this.user.id);
     await this.initArchivePart(hasOrEmpty("dm"));
-    
+
     // DMs should be ok
 
     this.emitAndChangeState('willreadextended', 'extended_read');
 
     // Init the extended GDPR data
     await this.initArchivePart(
-      hasOrEmpty("follower"), 
-      hasOrEmpty("following"), 
-      hasOrEmpty("favorite"), 
-      hasOrEmpty("mute"), 
+      hasOrEmpty("follower"),
+      hasOrEmpty("following"),
+      hasOrEmpty("favorite"),
+      hasOrEmpty("mute"),
       hasOrEmpty("block"),
       hasOrEmpty("list"),
       hasOrEmpty("moment")
@@ -340,7 +340,7 @@ export class TwitterArchive {
     const js_dir = this.archive.dir('data').dir('js');
 
     this.loadClassicArchivePart({
-      payload: await js_dir.get('payload_details.js'), 
+      payload: await js_dir.get('payload_details.js'),
       user: await js_dir.get('user_details.js'),
     });
 
@@ -348,12 +348,12 @@ export class TwitterArchive {
 
     await this.initArchivePart(
       parts_to_read.has("tweet") ? "tweet" : ""
-    );    
+    );
   }
 
   /**
    * Read one or more archive parts from loaded archive.
-   * 
+   *
    * You don't need to call this method if you use the default constructor.
    */
   async initArchivePart(...parts: (ArchiveReadPart | "")[]) {
@@ -361,13 +361,25 @@ export class TwitterArchive {
 
     if (p.has("tweet")) {
       if (this.is_gdpr) {
-        this.addTweetsToGdprArchive(await this.archive.get('tweet.js'));
+        if (this.archive.has('tweet.js')) {
+          this.addTweetsToGdprArchive(await this.archive.get('tweet.js'));
+        }
+        if (this.archive.has('tweets.js')) {
+          this.addTweetsToGdprArchive(await this.archive.get('tweets.js'));
+        }
 
         let i = 1;
         while (this.archive.has(`tweet-part${i}.js`)) {
-          // Add every tweet in other files 
+          // Add every tweet in other files
           // inside a "new" array in the initial array
           this.addTweetsToGdprArchive(await this.archive.get(`tweet-part${i}.js`));
+          i++;
+        }
+
+        // Same for files with s
+        i = 1;
+        while (this.archive.has(`tweets-part${i}.js`)) {
+          this.addTweetsToGdprArchive(await this.archive.get(`tweets-part${i}.js`));
           i++;
         }
 
@@ -389,7 +401,7 @@ export class TwitterArchive {
         for (const file of files_to_read) {
           tweet_file_promises.push(this.archive.get(file));
         }
-        
+
         // Concat all tweet files
         let tweets: PartialTweet[] = [].concat(...await Promise.all(tweet_file_promises));
 
@@ -412,8 +424,8 @@ export class TwitterArchive {
     if (p.has("dm")) {
        // Init DMs
       const conv_files = [
-        'direct-message.js', 
-        'direct-messages.js', 
+        'direct-message.js',
+        'direct-messages.js',
         'direct-message-group.js',
         'direct-messages-group.js',
       ];
@@ -438,7 +450,7 @@ export class TwitterArchive {
     if (p.has("following")) {
       // Followings
       const followings = new Set<string>();
-          
+
       try {
         const f_following: GDPRFollowings = await this.archive.get('following.js');
         for (const f of f_following) {
@@ -484,7 +496,7 @@ export class TwitterArchive {
     if (p.has("block")) {
       // Blocks
       const blocks = new Set<string>();
-      
+
       try {
         const f_block: GDPRBlocks = await this.archive.get('block.js');
         for (const f of f_block) {
@@ -536,39 +548,39 @@ export class TwitterArchive {
   /* Pure properties */
   /* --------------- */
 
-  /** 
-   * `true` if ZIP file is still loaded inside this instance. 
-   * Can be freed (to save memory, f.e.) with `.releaseZip()`. 
+  /**
+   * `true` if ZIP file is still loaded inside this instance.
+   * Can be freed (to save memory, f.e.) with `.releaseZip()`.
    */
   get is_zip_loaded() {
     return !!this.archive;
   }
 
-  /** 
-   * Archive creation date. 
-   * 
+  /**
+   * Archive creation date.
+   *
    * **Warning**: This is accurate only for classic archives (< 2018, tweet only),
    * or GDPR archives produced after mid-March 2020 (which also have a `manifest.js` file).
-   * 
-   * In other archives, this will be the current date. 
-   * 
+   *
+   * In other archives, this will be the current date.
+   *
    * You can check if the generation date is valid with this tiny snippet.
    * ```ts
    * const date_is_valid = !archive.is_gdpr || archive.has_manifest;
-   * 
+   *
    * if (date_is_valid) {
    *  console.log("Generation date is", archive.generation_date);
    * }
    * ```
-   * 
+   *
    */
   get generation_date() {
     return parseTwitterDate(this._created_at);
   }
 
-  /** 
-   * Archive quick information. 
-   * 
+  /**
+   * Archive quick information.
+   *
    * - `.info.archive` : `{ created_at: string, tweets: number }`
    * - `.info.user`: See `TwitterUserDetails`
    */
@@ -596,7 +608,7 @@ export class TwitterArchive {
 
   /**
    * `true` if archive have a manifest file inside.
-   * 
+   *
    * This only applies to GDPR archives produced by Twitter after mid-March 2020.
    */
   get has_manifest() {
@@ -605,16 +617,16 @@ export class TwitterArchive {
 
   /**
    * Manifest file, indicating generation date, all available JS files, and more.
-   * 
+   *
    * This property is only available for GDPR archives produced by Twitter after mid-March 2020.
    */
   get manifest() {
     return this._manifest;
   }
 
-  /** 
+  /**
    * Raw archive object. Can be used to get specific files.
-   * 
+   *
    * Returns twitter_archive.
    */
   get raw() : ConstructibleArchives {
@@ -640,74 +652,74 @@ export class TwitterArchive {
     return this._tweets;
   }
 
-  /** 
-   * Access to the `FavoriteArchive` object. Contains all the favorited tweets of the archive. 
-   * 
+  /**
+   * Access to the `FavoriteArchive` object. Contains all the favorited tweets of the archive.
+   *
    * If `.is_gdpr === false`, this container will be empty.
    */
   get favorites() {
     return this._favorites;
   }
 
-  /** 
+  /**
    * Access to a set of followers IDs.
-   * 
+   *
    * If `.is_gdpr === false`, this container will be empty.
    */
   get followers() {
     return this.extended_info_container.followers;
   }
 
-  /** 
+  /**
    * Access to a set of followings user IDs.
-   * 
+   *
    * If `.is_gdpr === false`, this container will be empty.
    */
   get followings() {
     return this.extended_info_container.followings;
   }
 
-  /** 
+  /**
    * Access to a set of blocked user IDs.
-   * 
+   *
    * If `.is_gdpr === false`, this container will be empty.
    */
   get blocks() {
     return this.extended_info_container.blocks;
   }
 
-  /** 
+  /**
    * Access to a set of muted user IDs.
-   * 
+   *
    * If `.is_gdpr === false`, this container will be empty.
    */
   get mutes() {
     return this.extended_info_container.mutes;
   }
 
-  /** 
+  /**
    * Access to archive Twitter moments.
-   * 
+   *
    * If `.is_gdpr === false`, this array will be empty.
    */
   get moments() {
     return this.extended_info_container.moments;
   }
 
-  /** 
-   * Access to your subscribed and created lists, and the lists you were added into. 
-   * 
+  /**
+   * Access to your subscribed and created lists, and the lists you were added into.
+   *
    * If `.is_gdpr === false`, this container will be contain empty arrays.
    */
   get lists() {
     return this.extended_info_container.lists;
   }
 
-  /** 
+  /**
    * All the archive owner's user data on Twitter.
-   * 
-   * Contains data sended to Twitter about archive owner, like: 
-   * - **Screen name (@)** 
+   *
+   * Contains data sended to Twitter about archive owner, like:
+   * - **Screen name (@)**
    * - **Tweet name (TN)**
    * - **Account creation date**
    * - **Biography**
@@ -715,19 +727,19 @@ export class TwitterArchive {
    * - **Personnalization** (inferred informations about user interests)
    * - **Email addresses**
    * - *...*
-   * 
+   *
    * If `.is_gdpr === false`, this is will contain only basic data (related to `.user.summary`).
    */
   get user() {
     return this._user;
   }
 
-  /** 
+  /**
    * Informations about which ads archive owner seen or interacted with.
    */
   get ads() {
     return this._ads;
-  } 
+  }
 
   /**
    * Access to medias stored in this archive, like dm images, tweet medias and profile pictures.
@@ -739,10 +751,10 @@ export class TwitterArchive {
   /** -------------------- */
   /** SIDELOADING MANUALLY */
   /** -------------------- */
-  
+
   /**
    * Load a part of a GDPR archive.
-   * 
+   *
    * Set current archive as GDPR archive.
    */
   async loadArchivePart(parts: {
@@ -763,7 +775,7 @@ export class TwitterArchive {
       // Init informations
       try {
         const account = parts.account[0].account;
-  
+
         this._user.loadPart({
           summary: {
             ...this._user.summary,
@@ -790,7 +802,7 @@ export class TwitterArchive {
     if (parts.profile) {
       try {
         const profile = parts.profile[0].profile;
-        
+
         this._user.loadPart({
           summary: {
             ...this._user.summary,
@@ -834,7 +846,7 @@ export class TwitterArchive {
       if (!this._messages) {
         this._messages = new DMArchive(this.user.id);
       }
-      
+
       for (const file of parts.dms) {
         try {
           this._messages.add(file);
@@ -907,7 +919,7 @@ export class TwitterArchive {
 
   /**
    * Load a part of a classic archive.
-   * 
+   *
    * Set current archive as non-gdpr archive.
    */
   loadClassicArchivePart(parts: {
@@ -958,7 +970,7 @@ export class TwitterArchive {
   /**
    * Unload ZIP file inside this instance.
    * Returns `true` if ZIP has been unloaded.
-   * 
+   *
    * ZIP can still be loaded in `archive.medias`, you can use its own `.releaseZip()` method.
    */
   releaseZip() {
@@ -968,7 +980,7 @@ export class TwitterArchive {
 
   /**
    * Résumé of this archive.
-   * 
+   *
    * Contains the 'archive index' (without the tweets),
    * if the archive is GDPR, last tweet date,
    * tweet count and dm count.
@@ -1002,7 +1014,7 @@ export class TwitterArchive {
 
     if (last_year && last_month) {
       const tweets = this._tweets.index[last_year][last_month];
-  
+
       let last_date = 0;
       for (const tweet of Object.values(tweets)) {
         const cur_date = dateFromTweet(tweet).getTime();
