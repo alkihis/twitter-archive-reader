@@ -17,7 +17,6 @@
     "events": "^3.3.0",
     "js-md5": "^0.7.3",
     "jszip": "^3.6.0",
-    "twitter-d": "^0.4.0",
     "twitter-snowflake-to-date": "^1.0.2"
   },
   "files": [
