@@ -5,7 +5,9 @@
   "main": "js/index.js",
   "scripts": {
     "test": "jest",
-    "docs": "typedoc --out docs ts"
+    "docs": "typedoc --out docs ts",
+    "build": "tsc && tsc -d",
+    "watch": "tsc -w"
   },
   "author": "Louis Béranger",
   "license": "CC-BY-SA-4.0",
@@ -26,9 +28,11 @@
     "@types/blob-to-buffer": "^1.2.0",
     "@types/jest": "^24.9.1",
     "@types/js-md5": "^0.4.2",
+    "@types/node": "^22.9.0",
     "commander": "^4.1.1",
-    "jest": "^26.6.3",
-    "timerize": "^1.0.3"
+    "jest": "^29.7.0",
+    "timerize": "^1.0.3",
+    "typescript": "^5.6.3"
   },
   "jest": {
     "testMatch": [

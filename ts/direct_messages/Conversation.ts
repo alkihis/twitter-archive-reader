@@ -454,7 +454,7 @@ abstract class ConversationBase {
  * Conversation between the owner of archive and one or more participants.
  */
 export class Conversation extends ConversationBase {
-  protected info: FullConversationInfo;
+  declare protected info: FullConversationInfo;
   protected unindexed: DirectMessageEventContainer[] = [];
 
   /** Quick access to first and last DMs */
