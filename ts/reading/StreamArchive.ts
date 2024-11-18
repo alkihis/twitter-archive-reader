@@ -18,8 +18,8 @@ import fs from 'fs';
  *
  * JSZip | Archive: Existing archives
  */
-export type AcceptedZipSources = string | number[] | Uint8Array | ArrayBuffer | Blob | JSZip | Archive;
-export type ConstructibleArchives = BaseArchive<ZipEntry> | BaseArchive<JSZip.JSZipObject> | BaseArchive<FolderEntry>;
+export type AcceptedZipSources = string | number[] | Uint8Array | ArrayBuffer | Blob | JSZip | Archive;
+export type ConstructibleArchives = BaseArchive<ZipEntry> | BaseArchive<JSZip.JSZipObject> | BaseArchive<FolderEntry>;
 
 export interface BaseArchive<T> {
   ready: () => Promise<void>;
@@ -292,7 +292,7 @@ class StreamArchive implements BaseArchive<ZipEntry> {
           return ab;
         }
         else {
-          return new Blob([ab]);
+          return new File([ab], file.name);
         }
       });
     }

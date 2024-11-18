@@ -66,6 +66,13 @@ export class FolderArchive implements BaseArchive<FolderEntry> {
         };
       }
       else if (entry.isDirectory()) {
+        entries[relative_path] = {
+          relative_path,
+          path: normalized_path,
+          name: entry.name,
+          stat: await fs.promises.stat(normalized_path),
+        };
+
         Object.assign(entries, await this.getEntries(relative_path));
       }
     }));
@@ -245,17 +252,17 @@ export class FolderArchive implements BaseArchive<FolderEntry> {
           }
         }
 
-        const ab = new ArrayBuffer(data.length);
-        const view = new Uint8Array(ab);
-        for (let i = 0; i < data.length; ++i) {
-          view[i] = data[i];
-        }
-
         if (type === "arraybuffer") {
+          const ab = new ArrayBuffer(data.length);
+          const view = new Uint8Array(ab);
+          for (let i = 0; i < data.length; ++i) {
+            view[i] = data[i];
+          }
+
           return ab;
         }
         else {
-          throw new Error('Blob is not supported on Node.js systems.');
+          return new File([data], file.name);
         }
       });
     }
@@ -277,6 +284,7 @@ export class FolderArchive implements BaseArchive<FolderEntry> {
 
   protected get files() {
     const o: EntryDict = {};
+
     for (const [name, entry] of Object.entries(this.entries)) {
       if (!entry.stat.isDirectory()) {
         o[name] = entry;
@@ -288,6 +296,7 @@ export class FolderArchive implements BaseArchive<FolderEntry> {
 
   protected get dirs() {
     const o: EntryDict = {};
+
     for (const [name, entry] of Object.entries(this.entries)) {
       if (entry.stat.isDirectory()) {
         o[name] = entry;

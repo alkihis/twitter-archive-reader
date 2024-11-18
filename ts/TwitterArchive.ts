@@ -103,7 +103,7 @@ export class TwitterArchive {
 
   protected _ready: Promise<void> = Promise.resolve();
   protected _has_viewer = false;
-  protected _manifest: ArchiveManifest | undefined;
+  protected _manifest: ArchiveManifest | undefined;
   protected archive: ConstructibleArchives;
 
   /** Current archive load state. */
@@ -141,6 +141,11 @@ export class TwitterArchive {
    * If you want to build an archive instance **without** a file, you can pass `null` here.
    * You must then load parts of the archive with `.loadArchivePart()` or `.loadClassicArchivePart()` !
    *
+   * Valid files are local paths (path to a ZIP file or path to an dezipped folder supported) as `string`,
+   * browser `File` entities (typically extracted from `<input>`), Node.js `Buffer`, `UInt8Array` and `JSZip` objects.
+   *
+   * You can also re-use the loaded ZIP/object used in another `TwitterArchive` instance by passing `otherInstance.raw`.
+   *
    * @param options.ignore
    * Specify if you want to ignore a specific part of archive, for performance or memory reasons.
    *
@@ -152,17 +157,17 @@ export class TwitterArchive {
    * **Profile and account data is always parsed.**
    *
    * ```ts
-   * type ArchiveReadPart = "tweet" | "dm" | "follower" | "following" | "mute" | "block" | "favorite" | "list" | "moment" | "ad";
+   * type ArchiveReadPart = "tweet" | "dm" | "follower" | "following" | "mute" | "block" | "favorite" | "list" | "moment" | "ad";
    * ```
    *
    * To manually load a part after archive has been loaded, use `.initArchivePart()` method.
-   * Please don't initialize a part twice, it could lead to vicious bugs !
+   * Please don't initialize a part twice, it could lead to vicious bugs!
    */
   constructor(
     file: AcceptedZipSources | Promise<AcceptedZipSources> | null,
     options: TwitterArchiveLoadOptions = {}
   ) {
-    let PARTS_TO_READ = new Set<ArchiveReadPart>(["tweet", "dm", "follower", "following", "mute", "block", "favorite", "list", "moment", "ad"]);
+    let PARTS_TO_READ = new Set<ArchiveReadPart>(["tweet", "dm", "follower", "following", "mute", "block", "favorite", "list", "moment", "ad"]);
 
     if (options && options.ignore) {
       if (options.ignore.includes("*")) {

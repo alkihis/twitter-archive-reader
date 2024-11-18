@@ -1,6 +1,7 @@
 node_modules
 js
 test_dir
+ts/test/manual_test.ts
 cli_t.js
 wiki_5_00
 docs

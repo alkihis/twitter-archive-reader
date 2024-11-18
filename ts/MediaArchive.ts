@@ -6,7 +6,7 @@ import { MediaGDPREntity } from "./types/GDPRTweets";
 import { FileNotFoundError } from "./utils/Errors";
 
 export type ArchiveDMImagesFormation = "none" | "inside" | "zipped";
-type ExistingArchives = "dm_single" | "dm_group" | "tweet" | "moment" | "profile";
+type ExistingArchives = "dm_single" | "dm_group" | "tweet" | "moment" | "profile";
 
 export enum MediaArchiveType {
   SingleDM = "single-dm",
@@ -58,7 +58,7 @@ export class MediaArchive {
   * const my_media = archive.medias.get(MediaArchiveType.SingleDM, "xxx.jpg", true) as Promise<ArrayBuffer>;
   * ```
   */
-  async get(from: MediaArchiveType | string, name: string, as_array_buffer?: boolean) : Promise<Blob | ArrayBuffer> {
+  async get<T extends boolean>(from: MediaArchiveType | string, name: string, as_array_buffer?: T) : Promise<T extends true ? ArrayBuffer : File> {
     if (!(from in this.folders_to_archive) && this.getFolderOfType(from) === undefined) {
       throw new Error("You need to define your custom archive type before using it.");
     }
@@ -73,7 +73,7 @@ export class MediaArchive {
   *
   * @param of_archive Media archive
   */
-  async list(of_archive: MediaArchiveType | string) {
+  async list(of_archive: MediaArchiveType | string) {
     if (!(of_archive in this.folders_to_archive) && this.getFolderOfType(of_archive) === undefined) {
       throw new Error("You need to define your custom archive type before using it.");
     }
@@ -127,7 +127,7 @@ export class MediaArchive {
    * @param direct_message Direct message object
    * @param as_array_buffer Return an `ArrayBuffer` array, instead of a `Blob` array
    */
-  async ofDm(direct_message: DirectMessage, as_array_buffer?: boolean): Promise<(Blob | ArrayBuffer)[]> {
+  async ofDm<T extends boolean>(direct_message: DirectMessage, as_array_buffer?: T) : Promise<T extends true ? ArrayBuffer[] : File[]> {
     const images: Promise<Blob | ArrayBuffer>[] = [];
 
     const is_group = !direct_message.recipientId || direct_message.recipientId === "0";
@@ -136,13 +136,13 @@ export class MediaArchive {
       images.push(this.fromDmMediaUrl(media, is_group, as_array_buffer));
     }
 
-    return Promise.all(images);
+    return Promise.all(images) as any;
   }
 
   /**
    * Extract the related media file to a URL present in the `mediaUrls` array of a Direct Message.
    */
-  fromDmMediaUrl(url: string, is_group: boolean = false, as_array_buffer?: boolean) : Promise<Blob | ArrayBuffer> {
+  fromDmMediaUrl<T extends boolean>(url: string, is_group: boolean = false, as_array_buffer?: T) : Promise<T extends true ? ArrayBuffer : File> {
     const [, , , , id, , image] = url.split('/');
 
     if (id && image) {
@@ -162,19 +162,19 @@ export class MediaArchive {
   /**
    * Get all the medias related to a tweet.
    */
-  async ofTweet(tweet: PartialTweet, as_array_buffer?: boolean) : Promise<(Blob | ArrayBuffer)[]> {
+  async ofTweet<T extends boolean>(tweet: PartialTweet, as_array_buffer?: T) : Promise<T extends true ? ArrayBuffer[] : File[]> {
     const entities = tweet.extended_entities;
 
-    if (!entities || !entities.media) {
+    if (!entities || !entities.media) {
       return [];
     }
 
-    const medias: Promise<(ArrayBuffer | Blob)>[] = [];
+    const medias: Promise<ArrayBuffer | File>[] = [];
     for (const media of entities.media) {
       medias.push(this.fromTweetMediaEntity(media, as_array_buffer));
     }
 
-    return Promise.all(medias);
+    return Promise.all(medias) as any;
   }
 
   /**
@@ -183,9 +183,9 @@ export class MediaArchive {
    * ```ts
    * const tweet = archive.tweets.all[0];
    *
-   * if (tweet.extended_entities || tweet.entities) {
+   * if (tweet.extended_entities || tweet.entities) {
    *    // Always try to use extended entities instead of classic entities
-   *    const m_entities = (tweet.extended_entities || tweet.entities).media;
+   *    const m_entities = (tweet.extended_entities || tweet.entities).media;
    *
    *    if (m_entities && m_entities.length) {
    *      const media_file = archive.medias.fromTweetMediaEntity(m_entities[0]);
@@ -195,7 +195,7 @@ export class MediaArchive {
    *
    * @throws If not valid media found, promise is rejected.
    */
-  async fromTweetMediaEntity(media_entity: MediaGDPREntity | PartialTweetMediaEntity, as_array_buffer?: boolean) : Promise<Blob | ArrayBuffer> {
+  async fromTweetMediaEntity<T extends boolean>(media_entity: MediaGDPREntity | PartialTweetMediaEntity, as_array_buffer?: T) : Promise<T extends true ? ArrayBuffer : File> {
     if ('video_info' in media_entity) {
       // This is a gif or a video
       // Find the best variant
@@ -214,9 +214,11 @@ export class MediaArchive {
 
     const url = media_entity.media_url_https.split('/').pop();
     const url_without_qs = url.split('?')[0];
+
     if (url_without_qs) {
       return this.get(MediaArchiveType.Tweet, url_without_qs, as_array_buffer);
     }
+
     throw new Error("No valid file in this media entity.");
   }
 
@@ -232,7 +234,7 @@ export class MediaArchive {
    *
    * If user has no banner, this method returns `Promise<void>`.
    */
-  async getProfileBannerOf(user: UserData, as_array_buffer?: boolean) : Promise<Blob | ArrayBuffer> {
+  async getProfileBannerOf<T extends boolean>(user: UserData, as_array_buffer?: T) : Promise<T extends true ? ArrayBuffer : File> {
     if (user.profile_banner_url) {
       const img_name = user.profile_banner_url.split('/').pop();
       if (img_name) {
@@ -248,7 +250,7 @@ export class MediaArchive {
    *
    * If user has no profile picture, this method returns `Promise<void>`.
    */
-  async getProfilePictureOf(user: UserData, as_array_buffer?: boolean) : Promise<Blob | ArrayBuffer> {
+  async getProfilePictureOf<T extends boolean>(user: UserData, as_array_buffer?: T) : Promise<T extends true ? ArrayBuffer : File> {
     if (user.profile_img_url) {
       const img_name = user.profile_img_url.split('/').pop();
       if (img_name) {
@@ -271,7 +273,7 @@ export class MediaArchive {
    *
    * @param name Media filename
    */
-  async fromMomentDirectory(name: string, as_array_buffer?: boolean) : Promise<Blob | ArrayBuffer> {
+  async fromMomentDirectory<T extends boolean>(name: string, as_array_buffer?: T) : Promise<T extends true ? ArrayBuffer : File> {
     return this.get(MediaArchiveType.Moment, name, as_array_buffer);
   }
 
@@ -334,7 +336,7 @@ export class MediaArchive {
     }
   }
 
-  protected async initOrAwaitArchive(archive_type: ExistingArchives | string, init_folder: string | string[]) {
+  protected async initOrAwaitArchive(archive_type: ExistingArchives | string, init_folder: string | string[]) {
     if (!this.folders_to_archive[archive_type]) {
       this.folders_to_archive[archive_type] = new SingleMediaArchive(this.archive, init_folder);
     }
@@ -434,9 +436,11 @@ export class SingleMediaArchive {
 
       this._ready = (async () => {
         let real_dir_name = "";
+
         if (Array.isArray(dir_name)) {
+
           for (const dir of dir_name) {
-            if (full_archive.searchDir(new RegExp(dir)).length) {
+            if (full_archive.searchDir(new RegExp(dir)).filter(x => x.name === dir).length) {
               real_dir_name = dir;
             }
           }
@@ -451,6 +455,7 @@ export class SingleMediaArchive {
 
         const folder = full_archive.dir(real_dir_name);
         const query = folder.search(/\.zip$/);
+
         if (query.length) {
           this._archive = await folder.fromFile(query[0] as any);
           await this._archive.ready();
@@ -479,7 +484,7 @@ export class SingleMediaArchive {
     return Object.keys(this._archive.ls(true)).filter(e => e);
   }
 
-  async file<T extends boolean>(name: string, as_array_buffer?: T) : Promise<T extends true ? ArrayBuffer : Blob> {
+  async file<T extends boolean>(name: string, as_array_buffer?: T) : Promise<T extends true ? ArrayBuffer : File> {
     if (!this._archive || !this._ok) {
       throw new Error("Archive is not loaded or hasn't been initialized properly.");
     }
@@ -492,13 +497,13 @@ export class SingleMediaArchive {
         use_ab = SingleMediaArchive.autoDetectIfArrayBuffer();
       }
 
-      let file: Blob | ArrayBuffer = await this._archive.read(results[0] as any, use_ab ? "arraybuffer" : "blob");
+      let file: File | ArrayBuffer = await this._archive.read(results[0] as any, use_ab ? "arraybuffer" : "blob");
 
       if (!(file instanceof ArrayBuffer)) {
         // file instanceof Blob
         // Detecting MIME type
 
-        file = file.slice(0, file.size, this.detectMimeType(name));
+        file = new File([file], file.name, { type: this.detectMimeType(name) });
       }
 
       // @ts-ignore
