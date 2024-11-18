@@ -264,17 +264,5 @@ const test_7 = async () => {
     await test_7();
   }
 
-  console.log('\n\n')
-
-  const archive = new TwitterArchive(commander.file)
-
-  await archive.ready()
-
-  console.log([...archive.user.screen_name_history.map(x => x.changedFrom), archive.user.screen_name].map(x => `@${x}`))
-
-  console.log(['@xxxxxx', '@xxxxxxxx', '@xxxxxxxx', '@alkihis', '@Alkihis'])
-
-  console.log('\n\n')
-
   console.log("Total time for tests:", timer.elapsed);
 })();
