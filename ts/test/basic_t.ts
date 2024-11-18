@@ -212,8 +212,8 @@ const test_6 = async () => {
 
   await archive.ready();
 
-  const profile = await archive.medias.getProfilePictureOf(archive.user) as ArrayBuffer;
-  const header = await archive.medias.getProfileBannerOf(archive.user) as ArrayBuffer;
+  const profile = await archive.medias.getProfilePictureOf(archive.user, true);
+  const header = await archive.medias.getProfileBannerOf(archive.user, true);
 
   // Find a tweet with a media defined
   const tweet = archive.tweets.all.find(t => t.extended_entities && t.extended_entities.media);
