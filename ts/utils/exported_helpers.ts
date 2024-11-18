@@ -12,11 +12,11 @@ import twitterSnowflakeToDate from "twitter-snowflake-to-date";
 
 /**
  * Iterates over events inside direct messages.
- * 
+ *
  * If you want messages events to be iterated, set {include_messages} to `true`.
  */
 export function* getEventsFromMessages(
-  msgs: LinkedDirectMessage[], 
+  msgs: LinkedDirectMessage[],
   include_messages = false,
   remove_double_linked_list = false,
 ) : Generator<DirectMessageEventContainer, void, void> {
@@ -65,7 +65,7 @@ export function* getEventsFromMessages(
 
 /**
  * Parse a raw date found in `AdImpression.impressionTime` or `AdEngagementAttribute.engagementTime`.
- * 
+ *
  * Should not be used to parse another Twitter Archive date.
  */
 export function parseAdDate(date: string) : Date {
@@ -74,11 +74,11 @@ export function parseAdDate(date: string) : Date {
 
 /**
  * Parse a raw Twitter date, from a `dm.createdAt` or `tweet.created_at`.
- * 
+ *
  * For a tweet, please use `TwitterHelpers.dateFromTweet(tweet)` instead, it's optimized !
- * 
+ *
  * For dates in ad data (everthing that comes from `AdArchive`), use instead `TwitterHelpers.parseAdDate()` !
- * 
+ *
  * For a `LinkedDirectMessage`, use property `.createdAtDate` !
  */
 export function parseTwitterDate(date: string) : Date {
@@ -114,7 +114,7 @@ export function dateFromFavorite(favorite: PartialFavorite) : Date {
 
 /**
  * Parse a date inside a `PushDevice` or a `MessagingDevice` object.
- * 
+ *
  * Should not be used for any other type of object !
  */
 export function parseDeviceDate(date: string) {
@@ -181,25 +181,25 @@ export function sortFavorites(favorites: PartialFavorite[], order: "asc" | "desc
 
 /**
  * True if given tweet is coming from a GDPR archive.
- * 
+ *
  * Tweets getted by available getters are NOT GDPR tweets, they've been converted !
  */
-export function isGDPRTweet(tweet: PartialTweetGDPR | PartialTweet) : tweet is PartialTweetGDPR {
+export function isGDPRTweet(tweet: PartialTweetGDPR | PartialTweet) : tweet is PartialTweetGDPR {
   return 'retweet_count' in tweet;
 }
 
-/** 
+/**
  * Return true if **tweet** contains media(s).
- * 
+ *
  * This includes photos, videos or animated GIF.
  */
 export function isWithMedia(tweet: PartialTweet) {
-  return tweet.entities.media.length > 0;
+  return !!tweet.entities.media?.length;
 }
 
 /**
  * Return true if **tweet** contains a video or one animated GIF.
- * 
+ *
  * Twitter's GIF are mp4 encoded.
  */
 export function isWithVideo(tweet: PartialTweet) {

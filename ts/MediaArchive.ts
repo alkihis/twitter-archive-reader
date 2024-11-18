@@ -58,7 +58,7 @@ export class MediaArchive {
   * const my_media = archive.medias.get(MediaArchiveType.SingleDM, "xxx.jpg", true) as Promise<ArrayBuffer>;
   * ```
   */
-  async get<T extends boolean>(from: MediaArchiveType | string, name: string, as_array_buffer?: T) : Promise<T extends true ? ArrayBuffer : File> {
+  async get<T extends boolean = false>(from: MediaArchiveType | string, name: string, as_array_buffer?: T) : Promise<T extends true ? ArrayBuffer : File> {
     if (!(from in this.folders_to_archive) && this.getFolderOfType(from) === undefined) {
       throw new Error("You need to define your custom archive type before using it.");
     }
@@ -127,7 +127,7 @@ export class MediaArchive {
    * @param direct_message Direct message object
    * @param as_array_buffer Return an `ArrayBuffer` array, instead of a `Blob` array
    */
-  async ofDm<T extends boolean>(direct_message: DirectMessage, as_array_buffer?: T) : Promise<T extends true ? ArrayBuffer[] : File[]> {
+  async ofDm<T extends boolean = false>(direct_message: DirectMessage, as_array_buffer?: T) : Promise<T extends true ? ArrayBuffer[] : File[]> {
     const images: Promise<Blob | ArrayBuffer>[] = [];
 
     const is_group = !direct_message.recipientId || direct_message.recipientId === "0";
@@ -142,7 +142,7 @@ export class MediaArchive {
   /**
    * Extract the related media file to a URL present in the `mediaUrls` array of a Direct Message.
    */
-  fromDmMediaUrl<T extends boolean>(url: string, is_group: boolean = false, as_array_buffer?: T) : Promise<T extends true ? ArrayBuffer : File> {
+  fromDmMediaUrl<T extends boolean = false>(url: string, is_group: boolean = false, as_array_buffer?: T) : Promise<T extends true ? ArrayBuffer : File> {
     const [, , , , id, , image] = url.split('/');
 
     if (id && image) {
@@ -162,7 +162,7 @@ export class MediaArchive {
   /**
    * Get all the medias related to a tweet.
    */
-  async ofTweet<T extends boolean>(tweet: PartialTweet, as_array_buffer?: T) : Promise<T extends true ? ArrayBuffer[] : File[]> {
+  async ofTweet<T extends boolean = false>(tweet: PartialTweet, as_array_buffer?: T) : Promise<T extends true ? ArrayBuffer[] : File[]> {
     const entities = tweet.extended_entities;
 
     if (!entities || !entities.media) {
@@ -195,7 +195,7 @@ export class MediaArchive {
    *
    * @throws If not valid media found, promise is rejected.
    */
-  async fromTweetMediaEntity<T extends boolean>(media_entity: MediaGDPREntity | PartialTweetMediaEntity, as_array_buffer?: T) : Promise<T extends true ? ArrayBuffer : File> {
+  async fromTweetMediaEntity<T extends boolean = false>(media_entity: MediaGDPREntity | PartialTweetMediaEntity, as_array_buffer?: T) : Promise<T extends true ? ArrayBuffer : File> {
     if ('video_info' in media_entity) {
       // This is a gif or a video
       // Find the best variant
@@ -234,7 +234,7 @@ export class MediaArchive {
    *
    * If user has no banner, this method returns `Promise<void>`.
    */
-  async getProfileBannerOf<T extends boolean>(user: UserData, as_array_buffer?: T) : Promise<T extends true ? ArrayBuffer : File> {
+  async getProfileBannerOf<T extends boolean = false>(user: UserData, as_array_buffer?: T) : Promise<T extends true ? ArrayBuffer : File> {
     if (user.profile_banner_url) {
       const img_name = user.profile_banner_url.split('/').pop();
       if (img_name) {
@@ -250,7 +250,7 @@ export class MediaArchive {
    *
    * If user has no profile picture, this method returns `Promise<void>`.
    */
-  async getProfilePictureOf<T extends boolean>(user: UserData, as_array_buffer?: T) : Promise<T extends true ? ArrayBuffer : File> {
+  async getProfilePictureOf<T extends boolean = false>(user: UserData, as_array_buffer?: T) : Promise<T extends true ? ArrayBuffer : File> {
     if (user.profile_img_url) {
       const img_name = user.profile_img_url.split('/').pop();
       if (img_name) {
@@ -273,7 +273,7 @@ export class MediaArchive {
    *
    * @param name Media filename
    */
-  async fromMomentDirectory<T extends boolean>(name: string, as_array_buffer?: T) : Promise<T extends true ? ArrayBuffer : File> {
+  async fromMomentDirectory<T extends boolean = false>(name: string, as_array_buffer?: T) : Promise<T extends true ? ArrayBuffer : File> {
     return this.get(MediaArchiveType.Moment, name, as_array_buffer);
   }
 
